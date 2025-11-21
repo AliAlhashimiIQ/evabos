@@ -1,0 +1,161 @@
+.PurchaseOrdersPage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.PurchaseOrdersPage-actions button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.75rem 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  margin-left: 0.5rem;
+}
+
+.PurchaseOrdersPage-actions .primary {
+  background: linear-gradient(120deg, #22d3ee, #3b82f6);
+  color: #0f172a;
+}
+
+.PurchaseOrdersPage-alert {
+  margin-bottom: 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  padding: 0.8rem 1rem;
+}
+
+.PurchaseOrdersPage-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.PurchaseOrdersPage-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.PurchaseOrdersPage-form input,
+.PurchaseOrdersPage-form select,
+.PurchaseOrdersPage-form textarea {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.65rem 0.85rem;
+  background: rgba(13, 20, 38, 0.85);
+  color: #f8fafc;
+}
+
+.PurchaseOrdersPage-draft,
+.PurchaseOrdersPage-list {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 14, 27, 0.85);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.PurchaseOrdersPage-draft header,
+.PurchaseOrdersPage-list header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.PurchaseOrdersPage-draft table,
+.PurchaseOrdersPage-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.PurchaseOrdersPage-draft th,
+.PurchaseOrdersPage-draft td,
+.PurchaseOrdersPage-list th,
+.PurchaseOrdersPage-list td {
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.PurchaseOrdersPage-draft input {
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.4rem 0.5rem;
+  background: rgba(13, 20, 38, 0.85);
+  color: #f8fafc;
+}
+
+.PurchaseOrdersPage-empty {
+  padding: 2rem;
+  text-align: center;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.PurchaseOrdersPage-delete {
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.9);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.PurchaseOrdersPage-status {
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.PurchaseOrdersPage-status.ordered {
+  background: rgba(14, 165, 233, 0.18);
+  color: #7dd3fc;
+}
+
+.PurchaseOrdersPage-status.received {
+  background: rgba(74, 222, 128, 0.18);
+  color: #86efac;
+}
+
+.PurchaseOrdersPage-variantsOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+}
+
+.PurchaseOrdersPage-variantsCard {
+  width: min(900px, 95vw);
+  background: rgba(13, 20, 38, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.PurchaseOrdersPage-variantsCard header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.PurchaseOrdersPage-variantsCard header button {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  cursor: pointer;
+}
+

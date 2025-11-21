@@ -1,0 +1,97 @@
+.PosLockOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(8px);
+}
+
+.PosLockOverlay-content {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 1.5rem;
+  padding: 3rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.PosLockOverlay-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.PosLockOverlay-content h2 {
+  color: #f8fafc;
+  margin: 0 0 1rem 0;
+  font-size: 1.75rem;
+}
+
+.PosLockOverlay-content p {
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0.5rem 0;
+}
+
+.PosLockOverlay-unlock {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.PosLockOverlay-error {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.PosLockOverlay-button {
+  background: linear-gradient(120deg, #2563eb, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: opacity 0.2s;
+}
+
+.PosLockOverlay-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.PosLockOverlay-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.PosLockOverlay-message {
+  color: rgba(251, 191, 36, 0.9);
+  font-weight: 500;
+  margin-top: 1.5rem;
+}
+
+.PosLockOverlay-user {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  color: rgba(148, 163, 184, 0.8);
+  font-size: 0.9rem;
+}
+
+.PosLockOverlay-user strong {
+  color: #f8fafc;
+}
+

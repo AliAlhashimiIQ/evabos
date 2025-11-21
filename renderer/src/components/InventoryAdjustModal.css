@@ -1,0 +1,97 @@
+.InventoryAdjustModal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.InventoryAdjustModal-card {
+  width: min(480px, 90vw);
+  background: rgba(13, 20, 38, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 40px 80px rgba(2, 6, 23, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.InventoryAdjustModal-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.InventoryAdjustModal-card header button {
+  background: transparent;
+  border: none;
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.InventoryAdjustModal-card form {
+  display: grid;
+  gap: 1rem;
+}
+
+.InventoryAdjustModal-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.InventoryAdjustModal-card input,
+.InventoryAdjustModal-card select,
+.InventoryAdjustModal-card textarea {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.65rem 0.85rem;
+  background: rgba(10, 14, 27, 0.85);
+  color: #f8fafc;
+}
+
+.InventoryAdjustModal-span {
+  grid-column: 1 / -1;
+}
+
+.InventoryAdjustModal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.InventoryAdjustModal-actions button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.InventoryAdjustModal-actions .ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.InventoryAdjustModal-actions button:not(.ghost) {
+  background: linear-gradient(120deg, #22d3ee, #3b82f6);
+  color: #0f172a;
+}
+
+.InventoryAdjustModal-alert {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  border-radius: 0.85rem;
+  padding: 0.75rem 1rem;
+  color: #fecaca;
+  font-size: 0.9rem;
+}
+

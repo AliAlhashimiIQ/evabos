@@ -1,0 +1,22 @@
+.Page {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px var(--shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.Page h1 {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.Page p {
+  margin: 0;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
+}
+

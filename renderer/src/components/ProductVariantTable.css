@@ -1,0 +1,132 @@
+.ProductVariantTable-wrapper {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(10, 14, 27, 0.75);
+  overflow: hidden;
+}
+
+.ProductVariantTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.ProductVariantTable th,
+.ProductVariantTable td {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.ProductVariantTable th {
+  text-align: left;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.ProductVariantTable-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ProductVariantTable-name span {
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 0.85rem;
+}
+
+.ProductVariantTable-stock {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+  font-weight: 600;
+}
+
+.ProductVariantTable-stock.low {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fecaca;
+}
+
+.ProductVariantTable-sku {
+  font-family: 'Courier New', monospace;
+  color: #4a9eff;
+  font-size: 13px;
+}
+
+.ProductVariantTable-barcode {
+  font-family: 'Courier New', monospace;
+  color: #22d3ee;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.ProductVariantTable-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ProductVariantTable-viewButton {
+  background: rgba(74, 158, 255, 0.15);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  color: #4a9eff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.ProductVariantTable-viewButton:hover {
+  background: rgba(74, 158, 255, 0.25);
+  border-color: rgba(74, 158, 255, 0.5);
+}
+
+.ProductVariantTable-labelButton {
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  color: #22d3ee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.ProductVariantTable-labelButton:hover {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+.ProductVariantTable-adjustButton {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ProductVariantTable-adjustButton:hover {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+.ProductVariantTable-deleteButton {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.ProductVariantTable-deleteButton:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+

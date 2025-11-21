@@ -1,0 +1,582 @@
+.Pos {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.Pos-cartPanel {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  overflow: hidden;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.Pos-profileTabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(13, 20, 38, 0.4);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.Pos-profileTabs-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.85);
+  min-width: 90px;
+}
+
+.Pos-profileTabs-label strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.Pos-profileTabs-buttons {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  max-width: 600px;
+}
+
+.Pos-profileTab {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(13, 20, 38, 0.75);
+  color: rgba(248, 250, 252, 0.8);
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 45px;
+  font-size: 0.85rem;
+}
+
+.Pos-profileTab span {
+  font-weight: 600;
+}
+
+.Pos-profileTab small {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.Pos-profileTab.active {
+  border-color: rgba(59, 130, 246, 0.8);
+  background: rgba(59, 130, 246, 0.2);
+  color: #fff;
+}
+
+.Pos-profileTab.filled:not(.active) {
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.Pos-profileTab:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.Pos-panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.Pos-fastToggle {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 999px;
+  background: transparent;
+  color: #bfdbfe;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.Pos-fastToggle.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #fff;
+}
+
+.Pos-search {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.Pos-search input {
+  flex: 1;
+  max-width: none;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.Pos-search input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.Pos-searchButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(59, 130, 246, 0.6);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.3));
+  color: #bfdbfe;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.Pos-searchButton:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.4));
+  border-color: rgba(59, 130, 246, 0.8);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.Pos-searchButton:active {
+  transform: translateY(0);
+}
+
+.Pos-scannerMessage {
+  margin-bottom: 0.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.15);
+  color: #bbf7d0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.Pos-scanHint {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #bfdbfe;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.Pos-scanHint strong {
+  color: #93c5fd;
+}
+
+.Pos-productsList {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.75rem;
+  padding-right: 0.5rem;
+}
+
+.Pos-productCard {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(13, 20, 38, 0.9);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.Pos-productCard:hover {
+  border-color: rgba(59, 130, 246, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.Pos-productCard-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.Pos-productCard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.Pos-productName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.Pos-productVariant {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.8);
+  font-style: italic;
+}
+
+.Pos-productSku {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.6);
+  font-family: 'Courier New', monospace;
+}
+
+.Pos-productCard-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  text-align: right;
+}
+
+.Pos-productPrice {
+  color: rgba(226, 232, 240, 0.95);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.Pos-productStock {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.7);
+  padding: 0.2rem 0.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 0.5rem;
+}
+
+.Pos-cartHeader {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.Pos-cartHeader > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.Pos-cartCount {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.7);
+  font-weight: normal;
+}
+
+.Pos-cartHeaderActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.Pos-clearButton {
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.9);
+  cursor: pointer;
+}
+
+.Pos-returnsButton {
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: rgba(191, 219, 254, 0.95);
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.Pos-cartTableWrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.75rem;
+  background: rgba(13, 20, 38, 0.3);
+}
+
+.Pos-cartTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.Pos-cartTable th,
+.Pos-cartTable td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 0.9rem;
+}
+
+.Pos-cartItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.Pos-cartItemName {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.Pos-cartItemVariant {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.7);
+  font-style: italic;
+}
+
+.Pos-lineTotal {
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.Pos-qtyControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.Pos-qtyControls button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  cursor: pointer;
+}
+
+.Pos-deleteButton {
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.9);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.Pos-bottomSection {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.75rem;
+  max-width: 100%;
+}
+
+.Pos-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  padding: 0.65rem;
+  background: rgba(13, 20, 38, 0.4);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.Pos-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.Pos-controls label > span:first-child {
+  font-weight: 500;
+  color: #f8fafc;
+}
+
+.Pos-controls input,
+.Pos-controls select {
+  border-radius: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.85rem;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.Pos-controls input:focus,
+.Pos-controls select:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.Pos-discountModes {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.Pos-discountModes button {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  padding: 0.2rem 0.8rem;
+  background: transparent;
+  color: rgba(248, 250, 252, 0.65);
+  cursor: pointer;
+}
+
+.Pos-discountModes button.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #fff;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.Pos-discountInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.Pos-discountInput input {
+  flex: 1;
+}
+
+.Pos-clearDiscount {
+  position: absolute;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.9);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Pos-clearDiscount:hover {
+  color: #f87171;
+}
+
+.Pos-summary {
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(13, 20, 38, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 0.65rem 0.85rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.Pos-profit {
+  border-top: 1px dashed rgba(148, 163, 184, 0.3);
+  padding-top: 0.5rem;
+}
+
+.Pos-summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.Pos-discountRow {
+  color: rgba(74, 222, 128, 0.9);
+}
+
+.Pos-total {
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.Pos-total strong {
+  font-size: 1.1rem;
+  color: #22d3ee;
+}
+
+.Pos-profit {
+  border-top: 1px dashed rgba(148, 163, 184, 0.3);
+  padding-top: 0.5rem;
+  margin-top: 0.35rem;
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.Pos-completeButton {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #22d3ee, #3b82f6);
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.4);
+  letter-spacing: 0.5px;
+  max-width: 100%;
+}
+
+.Pos-completeButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(34, 211, 238, 0.4);
+}
+
+.Pos-completeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.Pos-empty {
+  text-align: center;
+  color: rgba(148, 163, 184, 0.85);
+  padding: 2rem;
+}
+
+.Pos-alert {
+  border-radius: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.Pos-alert--error {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  color: #fecaca;
+}
+
+.Pos-alert--success {
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.5);
+  color: #86efac;
+}
+

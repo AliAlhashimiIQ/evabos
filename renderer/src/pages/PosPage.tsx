@@ -1,0 +1,857 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import './Pages.css';
+import './PosPage.css';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { useShortcutKeys } from '../hooks/useShortcutKeys';
+import PrintingModal from '../components/PrintingModal';
+
+type Product = import('../types/electron').Product;
+type Customer = import('../types/electron').Customer;
+type Sale = import('../types/electron').Sale;
+type SaleInput = import('../types/electron').SaleInput;
+
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+const PROFILE_COUNT = 4;
+
+interface PosProfile {
+  cart: CartItem[];
+  selectedCustomerId: number | '';
+  discountMode: 'amount' | 'percent' | 'finalPrice';
+  discountValue: number;
+  paymentMethod: 'cash' | 'card' | 'mixed';
+  success: string | null;
+  error: string | null;
+  isSubmitting: boolean;
+}
+
+const createProfile = (): PosProfile => ({
+  cart: [],
+  selectedCustomerId: '',
+  discountMode: 'finalPrice',
+  discountValue: 0,
+  paymentMethod: 'cash',
+  success: null,
+  error: null,
+  isSubmitting: false,
+});
+
+const PosPage = (): JSX.Element => {
+  const { token, user } = useAuth();
+  const { t } = useLanguage();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [profiles, setProfiles] = useState<PosProfile[]>(() =>
+    Array.from({ length: PROFILE_COUNT }, createProfile),
+  );
+  const [activeProfileIndex, setActiveProfileIndex] = useState(0);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [printSale, setPrintSale] = useState<Sale | null>(null);
+  const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [scannerMessage, setScannerMessage] = useState<string | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number>(1500);
+  const navigate = useNavigate();
+
+  const updateProfileAtIndex = useCallback(
+    (index: number, updater: (profile: PosProfile) => PosProfile) => {
+      setProfiles((prev) => prev.map((profile, idx) => (idx === index ? updater(profile) : profile)));
+    },
+    [],
+  );
+
+  const updateCurrentProfile = useCallback(
+    (updater: (profile: PosProfile) => PosProfile) => {
+      updateProfileAtIndex(activeProfileIndex, updater);
+    },
+    [activeProfileIndex, updateProfileAtIndex],
+  );
+
+  const currentProfile = profiles[activeProfileIndex] ?? createProfile();
+  const {
+    cart,
+    selectedCustomerId,
+    discountMode,
+    discountValue,
+    paymentMethod,
+    success: profileSuccess,
+    error: profileError,
+    isSubmitting,
+  } = currentProfile;
+
+  const loadProducts = useCallback(async () => {
+    if (!window.evaApi || !token) {
+      return;
+    }
+    try {
+      const productResponse = await window.evaApi.products.list(token);
+      setProducts(productResponse.products);
+      
+      // Update products in all cart profiles to reflect new stock levels
+      setProfiles((prevProfiles) =>
+        prevProfiles.map((profile) => ({
+          ...profile,
+          cart: profile.cart.map((item) => {
+            const updatedProduct = productResponse.products.find((p) => p.id === item.product.id);
+            return updatedProduct ? { ...item, product: updatedProduct } : item;
+          }),
+        })),
+      );
+    } catch (err) {
+      console.error('Failed to refresh products:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!window.evaApi || !token) {
+        setGlobalError('Desktop bridge unavailable.');
+        return;
+      }
+      try {
+        setLoading(true);
+        setGlobalError(null);
+        const [productResponse, customerResponse, rateResponse] = await Promise.all([
+          window.evaApi.products.list(token),
+          window.evaApi.customers.list(token),
+          window.evaApi.exchangeRates.getCurrent(),
+        ]);
+        setProducts(productResponse.products);
+        setCustomers(customerResponse);
+        if (rateResponse.currentRate) {
+          setExchangeRate(rateResponse.currentRate.rate);
+        }
+      } catch (err) {
+        setGlobalError(err instanceof Error ? err.message : 'Failed to load data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      loadData();
+    }
+  }, [token]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return products;
+    }
+    const term = searchTerm.toLowerCase().trim();
+    return products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(term) ||
+        product.productName.toLowerCase().includes(term) ||
+        product.sku.toLowerCase().includes(term) ||
+        (product.barcode && product.barcode.toLowerCase().includes(term)) ||
+        (product.baseCode && product.baseCode.toLowerCase().includes(term)),
+    );
+  }, [products, searchTerm]);
+
+  const subtotalIQD = useMemo(
+    () =>
+      cart.reduce((acc, item) => acc + item.product.salePriceIQD * item.quantity, 0),
+    [cart],
+  );
+
+  // Auto-update discountValue to subtotal when in finalPrice mode and cart changes
+  useEffect(() => {
+    if (discountMode === 'finalPrice' && subtotalIQD > 0) {
+      updateCurrentProfile((profile) => {
+        // Only auto-update if discountValue is 0 (initial state) or greater than subtotal (invalid state)
+        // This prevents overwriting user's manual entry while fixing the initial 0 issue
+        if (profile.discountValue === 0 || profile.discountValue > subtotalIQD) {
+          return {
+            ...profile,
+            discountValue: subtotalIQD,
+          };
+        }
+        return profile;
+      });
+    } else if (discountMode === 'finalPrice' && subtotalIQD === 0) {
+      // Reset to 0 when cart is empty
+      updateCurrentProfile((profile) => ({
+        ...profile,
+        discountValue: 0,
+      }));
+    }
+  }, [subtotalIQD, discountMode, updateCurrentProfile]);
+
+  const discountIQD = useMemo(
+    () => {
+      if (discountMode === 'amount') {
+        return Math.min(discountValue, subtotalIQD);
+      } else if (discountMode === 'percent') {
+        return Math.min((subtotalIQD * discountValue) / 100, subtotalIQD);
+      } else if (discountMode === 'finalPrice') {
+        // Final price mode: discount = subtotal - finalPrice
+        const finalPrice = Math.max(0, Math.min(discountValue, subtotalIQD));
+        return Math.max(0, subtotalIQD - finalPrice);
+      }
+      return 0;
+    },
+    [discountMode, discountValue, subtotalIQD],
+  );
+
+  const totalIQD = useMemo(() => Math.max(subtotalIQD - discountIQD, 0), [subtotalIQD, discountIQD]);
+
+  const profitIQD = useMemo(() => {
+    return cart.reduce(
+      (acc, item) =>
+        acc + (item.product.salePriceIQD - item.product.purchaseCostUSD * exchangeRate) * item.quantity,
+      0,
+    );
+  }, [cart, exchangeRate]);
+
+  const addToCart = useCallback(
+    (product: Product) => {
+      // Check if product is out of stock
+      if (product.stockOnHand <= 0) {
+        updateCurrentProfile((profile) => ({
+          ...profile,
+          error: `"${product.productName}" ${t('outOfStock')}`,
+          success: null,
+        }));
+        return;
+      }
+
+      updateCurrentProfile((profile) => {
+        const existing = profile.cart.find((item) => item.product.id === product.id);
+        
+      if (existing) {
+          // Check if adding one more would exceed available stock
+          const newQuantity = existing.quantity + 1;
+          if (newQuantity > product.stockOnHand) {
+            return {
+              ...profile,
+              error: t('onlyXAvailable', { count: String(product.stockOnHand), item: product.stockOnHand === 1 ? t('item') : t('items'), name: product.productName }),
+              success: null,
+            };
+          }
+          
+          const nextCart = profile.cart.map((item) =>
+            item.product.id === product.id ? { ...item, quantity: newQuantity } : item,
+        );
+          return { ...profile, cart: nextCart, error: null, success: null };
+        } else {
+          // Adding new item to cart
+          const nextCart = [...profile.cart, { product, quantity: 1 }];
+          return { ...profile, cart: nextCart, error: null, success: null };
+        }
+    });
+    },
+    [updateCurrentProfile],
+  );
+
+  const removeLastItem = useCallback(() => {
+    updateCurrentProfile((profile) => ({
+      ...profile,
+      cart: profile.cart.slice(0, -1),
+      error: null,
+      success: null,
+    }));
+  }, [updateCurrentProfile]);
+
+  const updateQuantity = (productId: number, delta: number) => {
+    updateCurrentProfile((profile) => {
+      const cartItem = profile.cart.find((item) => item.product.id === productId);
+      if (!cartItem) {
+        return profile;
+      }
+
+      const newQuantity = cartItem.quantity + delta;
+      
+      // Check if trying to increase beyond available stock
+      if (delta > 0 && newQuantity > cartItem.product.stockOnHand) {
+        return {
+          ...profile,
+          error: t('onlyXAvailable', { count: String(cartItem.product.stockOnHand), item: cartItem.product.stockOnHand === 1 ? t('item') : t('items'), name: cartItem.product.productName }),
+          success: null,
+        };
+      }
+
+      // Check if product is out of stock and trying to add
+      if (delta > 0 && cartItem.product.stockOnHand <= 0) {
+        return {
+          ...profile,
+          error: `"${cartItem.product.productName}" ${t('outOfStockCannotAdd')}`,
+          success: null,
+        };
+      }
+
+      const updatedCart = profile.cart
+        .map((item) =>
+          item.product.id === productId ? { ...item, quantity: Math.max(newQuantity, 1) } : item,
+        )
+        .filter((item) => item.quantity > 0);
+
+      return {
+        ...profile,
+        cart: updatedCart,
+        error: null,
+        success: null,
+      };
+    });
+  };
+
+  const removeItem = (productId: number) => {
+    updateCurrentProfile((profile) => ({
+      ...profile,
+      cart: profile.cart.filter((item) => item.product.id !== productId),
+      error: null,
+      success: null,
+    }));
+  };
+
+  const handleCompleteSale = useCallback(
+    async (profileIndex = activeProfileIndex) => {
+      console.log('[POS] handleCompleteSale called', { profileIndex, activeProfileIndex, profilesLength: profiles.length });
+      const targetProfile = profiles[profileIndex];
+      if (!targetProfile) {
+        console.error('[POS] No target profile at index', profileIndex);
+        return;
+      }
+      const {
+        cart: targetCart,
+        selectedCustomerId: targetCustomerId,
+        paymentMethod: targetPaymentMethod,
+        discountMode: targetDiscountMode,
+        discountValue: targetDiscountValue,
+      } = targetProfile;
+
+    if (!window.evaApi) {
+        setGlobalError('Desktop bridge unavailable.');
+        return;
+      }
+      if (!token) {
+        setGlobalError('Authentication token missing.');
+        return;
+      }
+      if (targetCart.length === 0) {
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: t('addAtLeastOne'),
+          success: null,
+        }));
+        return;
+      }
+
+      // Final stock validation before completing sale - check against latest product data
+      const outOfStockItems: Array<{ item: CartItem; currentStock: number }> = [];
+      const overStockItems: Array<{ item: CartItem; currentStock: number }> = [];
+      
+      for (const cartItem of targetCart) {
+        const currentProduct = products.find((p) => p.id === cartItem.product.id);
+        if (!currentProduct) {
+          // Product no longer exists
+          outOfStockItems.push({ item: cartItem, currentStock: 0 });
+          continue;
+        }
+        
+        if (currentProduct.stockOnHand <= 0) {
+          outOfStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
+        } else if (cartItem.quantity > currentProduct.stockOnHand) {
+          overStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
+        }
+      }
+      
+      if (outOfStockItems.length > 0) {
+        const itemNames = outOfStockItems.map(({ item }) => item.product.productName).join(', ');
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: t('cannotCompleteOutOfStock', { items: itemNames }),
+          success: null,
+        }));
+      return;
+    }
+
+      if (overStockItems.length > 0) {
+        const itemDetails = overStockItems
+          .map(({ item, currentStock }) => `"${item.product.productName}" (only ${currentStock} available, ${item.quantity} requested)`)
+          .join(', ');
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: t('cannotCompleteQuantity', { details: itemDetails }),
+          success: null,
+        }));
+      return;
+    }
+
+      const subtotal = targetCart.reduce((acc, item) => acc + item.product.salePriceIQD * item.quantity, 0);
+      const discount =
+        targetDiscountMode === 'amount'
+          ? Math.min(targetDiscountValue, subtotal)
+          : targetDiscountMode === 'percent'
+          ? Math.min((subtotal * targetDiscountValue) / 100, subtotal)
+          : targetDiscountMode === 'finalPrice'
+          ? Math.max(0, subtotal - Math.max(0, Math.min(targetDiscountValue, subtotal)))
+          : 0;
+      const total = Math.max(subtotal - discount, 0);
+
+      try {
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          isSubmitting: true,
+          error: null,
+          success: null,
+        }));
+      const sale: SaleInput = {
+        branchId: user?.branchId ?? 1,
+        cashierId: user?.userId ?? 1,
+          customerId: targetCustomerId ? Number(targetCustomerId) : null,
+        saleDate: new Date().toISOString(),
+          subtotalIQD: subtotal,
+          discountIQD: discount,
+          totalIQD: total,
+          paymentMethod: targetPaymentMethod,
+          items: targetCart.map((item) => ({
+          variantId: item.product.id,
+          quantity: item.quantity,
+          unitPriceIQD: item.product.salePriceIQD,
+          unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
+          lineTotalIQD: item.product.salePriceIQD * item.quantity,
+        })),
+      };
+
+        const created = await window.evaApi.sales.create(token, sale);
+      setPrintSale(created);
+        
+        // Refresh products to update stock levels
+        await loadProducts();
+        
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          cart: [],
+          discountValue: 0,
+          paymentMethod: 'cash',
+          selectedCustomerId: '',
+          success: 'Sale completed successfully!',
+          error: null,
+          isSubmitting: false,
+        }));
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : t('failedToCompleteSale');
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: errorMessage,
+          success: null,
+          isSubmitting: false,
+        }));
+        setGlobalError(errorMessage);
+    }
+    },
+    [activeProfileIndex, exchangeRate, profiles, products, token, updateProfileAtIndex, user, loadProducts],
+  );
+
+  const handleScan = useCallback(
+    (value: string) => {
+      // Clear search when scanning
+      setSearchTerm('');
+      
+      // Try exact match first (barcode or SKU)
+      let variant = products.find((p) => p.barcode === value || p.sku === value);
+      
+      // If no exact match, try case-insensitive
+      if (!variant) {
+        variant = products.find(
+          (p) =>
+            p.barcode?.toLowerCase() === value.toLowerCase() ||
+            p.sku.toLowerCase() === value.toLowerCase(),
+        );
+      }
+      
+      if (variant) {
+        // Check stock before adding
+        if (variant.stockOnHand <= 0) {
+          setScannerMessage(`❌ "${variant.productName}" is out of stock`);
+        } else {
+          addToCart(variant);
+          setScannerMessage(`✅ Added ${variant.productName}`);
+        }
+      } else {
+        setScannerMessage(`❌ No match for ${value}`);
+      }
+      setTimeout(() => setScannerMessage(null), 2500);
+    },
+    [products, addToCart, isSubmitting, setSearchTerm],
+  );
+
+  useBarcodeScanner({ onScan: handleScan });
+
+  const shortcutMap = useMemo(
+    () => ({
+      F1: () => navigate('/pos'),
+      F2: () => navigate('/products'),
+      F3: () => navigate('/customers'),
+      F4: () => navigate('/reports'),
+      Enter: (e?: KeyboardEvent) => {
+        // Don't trigger complete sale if user is typing in an input field
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+          return; // Let the input handle Enter key
+        }
+        if (!isSubmitting && cart.length > 0) {
+          handleCompleteSale();
+        }
+      },
+      Delete: removeLastItem,
+    }),
+    [navigate, handleCompleteSale, isSubmitting, removeLastItem, cart.length],
+  );
+
+  useShortcutKeys(shortcutMap);
+
+  return (
+    <div className="Pos">
+      <section className="Pos-cartPanel">
+        <div className="Pos-search">
+          <input
+            type="text"
+            placeholder={t('scanBarcode')}
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            onKeyDown={(e) => {
+              // If Enter is pressed, try to scan
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent shortcut handler from firing
+                if (searchTerm.trim().length >= 5) {
+                  handleScan(searchTerm.trim());
+                } else {
+                  setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
+                  setTimeout(() => setScannerMessage(null), 2000);
+                }
+              }
+            }}
+            autoFocus
+          />
+          <button
+            className="Pos-searchButton"
+            onClick={() => {
+              if (searchTerm.trim().length >= 5) {
+                handleScan(searchTerm.trim());
+              } else {
+                setScannerMessage('❌ Please enter a barcode or SKU (at least 5 characters)');
+                setTimeout(() => setScannerMessage(null), 2000);
+              }
+            }}
+            title={t('scan')}
+          >
+            🔍 {t('scan')}
+          </button>
+        </div>
+        {scannerMessage && <div className="Pos-scannerMessage">{scannerMessage}</div>}
+        
+        <header className="Pos-cartHeader">
+          <div>
+            <h2>{t('cart')}</h2>
+            {cart.length > 0 && (
+              <span className="Pos-cartCount">{cart.length} {cart.length === 1 ? t('item') : t('items')}</span>
+            )}
+          </div>
+          <div className="Pos-cartHeaderActions">
+            {cart.length > 0 && (
+              <button
+                className="Pos-clearButton"
+                onClick={() => {
+                if (window.confirm(t('clearAllItems'))) {
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      cart: [],
+                      discountValue: 0,
+                      success: null,
+                      error: null,
+                    }));
+                }
+                }}
+                title={t('clearCart')}
+              >
+                🗑️ {t('clear')}
+              </button>
+            )}
+            <button className="Pos-returnsButton" onClick={() => navigate('/returns')} title={t('processReturns')}>
+              🔄 {t('returns')}
+            </button>
+          </div>
+        </header>
+
+        <div className="Pos-profileTabs">
+          <div className="Pos-profileTabs-label">
+            <strong>{t('posTabs')}</strong>
+            <span>{t('holdUpToCustomers', { count: String(PROFILE_COUNT) })}</span>
+          </div>
+          <div className="Pos-profileTabs-buttons">
+            {profiles.map((profile, index) => (
+              <button
+                key={index}
+                type="button"
+                className={`Pos-profileTab ${index === activeProfileIndex ? 'active' : ''} ${
+                  profile.cart.length > 0 ? 'filled' : ''
+                }`}
+                onClick={() => setActiveProfileIndex(index)}
+                title={
+                  profile.cart.length > 0
+                    ? `${profile.cart.length} ${profile.cart.length === 1 ? t('item') : t('items')} ${t('inCart')}`
+                    : t('emptyTab')
+                }
+              >
+                <span>Tab {index + 1}</span>
+                {profile.cart.length > 0 ? (
+                  <small>{profile.cart.length} {profile.cart.length === 1 ? t('item') : t('items')}</small>
+                ) : (
+                  <small>{t('empty')}</small>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {globalError && <div className="Pos-alert Pos-alert--error">{globalError}</div>}
+        {profileError && <div className="Pos-alert Pos-alert--error">{profileError}</div>}
+        {profileSuccess && <div className="Pos-alert Pos-alert--success">{profileSuccess}</div>}
+
+        <div className="Pos-cartTableWrapper">
+          {cart.length === 0 ? (
+            <div className="Pos-empty">{t('noItemsInCart')}</div>
+          ) : (
+            <table className="Pos-cartTable">
+              <thead>
+                <tr>
+                  <th>{t('itemHeader')}</th>
+                  <th>{t('qty')}</th>
+                  <th>{t('unitPrice')}</th>
+                  <th>{t('lineTotal')}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map((item) => (
+                  <tr key={item.product.id}>
+                    <td>
+                      <div className="Pos-cartItem">
+                        <span className="Pos-cartItemName">{item.product.productName}</span>
+                        {(item.product.color || item.product.size) && (
+                          <span className="Pos-cartItemVariant">
+                            {[item.product.color, item.product.size].filter(Boolean).join(' / ')}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="Pos-qtyControls">
+                        <button onClick={() => updateQuantity(item.product.id, -1)}>-</button>
+                        <span>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, 1)}>+</button>
+                      </div>
+                    </td>
+                    <td>{item.product.salePriceIQD.toLocaleString('en-IQ')}</td>
+                    <td className="Pos-lineTotal">{(item.product.salePriceIQD * item.quantity).toLocaleString('en-IQ')}</td>
+                    <td>
+                      <button className="Pos-deleteButton" onClick={() => removeItem(item.product.id)} title={t('removeItem')}>
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="Pos-bottomSection">
+          <div className="Pos-controls">
+            <label>
+              {t('customer')}
+              <select
+                value={selectedCustomerId}
+                onChange={(event) =>
+                  updateCurrentProfile((profile) => ({
+                    ...profile,
+                    selectedCustomerId: event.target.value ? Number(event.target.value) : '',
+                  }))
+                }
+              >
+                <option value="">{t('walkIn')}</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t('discount')}
+              <div className="Pos-discountModes">
+                <button
+                  type="button"
+                  className={discountMode === 'finalPrice' ? 'active' : ''}
+                  onClick={() =>
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      discountMode: 'finalPrice',
+                      discountValue: subtotalIQD,
+                    }))
+                  }
+                  title={t('discountByFinalPrice') || 'Enter final price customer will pay'}
+                >
+                  💰 {t('finalPrice') || 'Final Price'}
+                </button>
+                <button
+                  type="button"
+                  className={discountMode === 'percent' ? 'active' : ''}
+                  onClick={() =>
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      discountMode: 'percent',
+                      discountValue: 0,
+                    }))
+                  }
+                  title={t('discountByPercent')}
+                >
+                  % {t('percent')}
+                </button>
+                <button
+                  type="button"
+                  className={discountMode === 'amount' ? 'active' : ''}
+                  onClick={() =>
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      discountMode: 'amount',
+                      discountValue: 0,
+                    }))
+                  }
+                  title={t('discountByAmount')}
+                >
+                  💵 {t('amount')}
+                </button>
+              </div>
+              <div className="Pos-discountInput">
+                <input
+                  type="number"
+                  min="0"
+                  max={discountMode === 'percent' ? 100 : discountMode === 'finalPrice' ? subtotalIQD : undefined}
+                  value={discountValue}
+                  onChange={(event) =>
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      discountValue: Number(event.target.value) || 0,
+                    }))
+                  }
+                  placeholder={
+                    discountMode === 'percent' 
+                      ? '0-100' 
+                      : discountMode === 'finalPrice' 
+                      ? (t('enterFinalPrice') || 'Enter final price')
+                      : t('amount')
+                  }
+                />
+                {discountValue > 0 && (
+                  <button
+                    className="Pos-clearDiscount"
+                    onClick={() =>
+                      updateCurrentProfile((profile) => ({
+                        ...profile,
+                        discountValue: 0,
+                      }))
+                    }
+                    title={t('clearDiscount')}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </label>
+
+            <label>
+              {t('paymentMethod')}
+              <select
+                value={paymentMethod}
+                onChange={(event) =>
+                  updateCurrentProfile((profile) => ({
+                    ...profile,
+                    paymentMethod: event.target.value as 'cash' | 'card' | 'mixed',
+                  }))
+                }
+              >
+                <option value="cash">{t('cash')}</option>
+                <option value="card">{t('card')}</option>
+                <option value="mixed">{t('mixed')}</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="Pos-summary">
+          <div className="Pos-summaryRow">
+            <span>{t('subtotal')}</span>
+            <strong>{subtotalIQD.toLocaleString('en-IQ')} IQD</strong>
+          </div>
+          {discountIQD > 0 && (
+            <div className="Pos-summaryRow Pos-discountRow">
+              <span>
+                {t('discount')} (
+                {discountMode === 'percent' 
+                  ? `${discountValue}%` 
+                  : discountMode === 'finalPrice'
+                  ? (t('finalPrice') || 'Final Price')
+                  : t('amount')}
+                )
+              </span>
+              <strong>-{discountIQD.toLocaleString('en-IQ')} IQD</strong>
+            </div>
+          )}
+          <div className="Pos-summaryRow Pos-total">
+            <span>{t('total')}</span>
+            <strong>{totalIQD.toLocaleString('en-IQ')} IQD</strong>
+          </div>
+          {user?.role === 'admin' && (
+            <div className="Pos-summaryRow Pos-profit">
+              <span>💰 {t('estimatedProfit')}</span>
+              <strong>{profitIQD.toLocaleString('en-IQ')} IQD</strong>
+            </div>
+          )}
+          </div>
+        </div>
+
+        <button 
+          className="Pos-completeButton" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[POS] Complete Sale button clicked', { isSubmitting, cartLength: cart.length, activeProfileIndex });
+            if (!isSubmitting && cart.length > 0) {
+              handleCompleteSale();
+            } else {
+              console.warn('[POS] Button click ignored', { isSubmitting, cartLength: cart.length });
+            }
+          }} 
+          disabled={isSubmitting || cart.length === 0}
+          title={cart.length === 0 ? t('addItemsFirst') : t('completeSaleEnter')}
+        >
+          {isSubmitting ? (
+            <>⏳ {t('processing')}</>
+          ) : (
+            <>✅ {t('completeSale')} ({totalIQD.toLocaleString('en-IQ')} IQD)</>
+          )}
+        </button>
+      </section>
+
+      <PrintingModal
+        visible={!!printSale}
+        sale={printSale ?? undefined}
+        printerName={preferredPrinter}
+        onPrinterChange={setPreferredPrinter}
+        onClose={() => setPrintSale(null)}
+      />
+    </div>
+  );
+};
+
+export default PosPage;
+

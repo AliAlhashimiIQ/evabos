@@ -1,0 +1,90 @@
+.BrowserWarning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 2rem;
+}
+
+.BrowserWarning-content {
+  background: rgba(15, 23, 42, 0.95);
+  border: 2px solid rgba(251, 191, 36, 0.5);
+  border-radius: 1.5rem;
+  padding: 3rem;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.BrowserWarning-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.BrowserWarning-content h2 {
+  color: #f8fafc;
+  margin: 0 0 1rem 0;
+  font-size: 1.75rem;
+}
+
+.BrowserWarning-content p {
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
+}
+
+.BrowserWarning-content strong {
+  color: #fde68a;
+}
+
+.BrowserWarning-steps {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.BrowserWarning-steps h3 {
+  color: #f8fafc;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.BrowserWarning-steps ol {
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0;
+  padding-left: 1.5rem;
+  line-height: 2;
+}
+
+.BrowserWarning-steps code {
+  background: rgba(15, 23, 42, 0.8);
+  color: #86efac;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.BrowserWarning-note {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fde68a;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.BrowserWarning-note strong {
+  color: #fcd34d;
+}
+

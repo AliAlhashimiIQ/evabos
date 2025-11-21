@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+dist-package/
+*.log
+.DS_Store
+*.db
+*.db-journal
+.vscode/
+.idea/
+build/icon.ico
+

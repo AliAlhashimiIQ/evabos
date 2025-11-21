@@ -1,0 +1,259 @@
+.Users {
+  padding: 20px;
+}
+
+.Users-addButton {
+  padding: 10px 20px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.Users-addButton:hover {
+  background: #357abd;
+}
+
+.Users-error {
+  background: #2a1f1f;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.Users-table {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.Users-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.Users-table th {
+  background: #252525;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.Users-table td {
+  padding: 12px;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ccc;
+}
+
+.Users-table tr:hover {
+  background: #252525;
+}
+
+.Users-role {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.Users-role-admin {
+  background: #e74c3c;
+  color: white;
+}
+
+.Users-role-manager {
+  background: #f39c12;
+  color: white;
+}
+
+.Users-role-cashier {
+  background: #3498db;
+  color: white;
+}
+
+.Users-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.Users-status-active {
+  background: #27ae60;
+  color: white;
+}
+
+.Users-status-locked {
+  background: #7f8c8d;
+  color: white;
+}
+
+.Users-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.Users-edit,
+.Users-delete {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.Users-edit {
+  background: #4a90e2;
+  color: white;
+}
+
+.Users-edit:hover {
+  background: #357abd;
+}
+
+.Users-delete {
+  background: #e74c3c;
+  color: white;
+}
+
+.Users-delete:hover {
+  background: #c0392b;
+}
+
+.Users-modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.Users-modal {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.Users-modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #333;
+}
+
+.Users-modalHeader h2 {
+  margin: 0;
+  color: #fff;
+}
+
+.Users-modalClose {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Users-modalClose:hover {
+  color: #fff;
+}
+
+.Users-form {
+  padding: 20px;
+}
+
+.Users-formGroup {
+  margin-bottom: 20px;
+}
+
+.Users-formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.Users-formGroup input,
+.Users-formGroup select {
+  width: 100%;
+  padding: 10px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.Users-formGroup input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.Users-formGroup input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.Users-formActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.Users-cancel,
+.Users-save {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.Users-cancel {
+  background: #444;
+  color: #fff;
+}
+
+.Users-cancel:hover {
+  background: #555;
+}
+
+.Users-save {
+  background: #4a90e2;
+  color: white;
+}
+
+.Users-save:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.Users-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

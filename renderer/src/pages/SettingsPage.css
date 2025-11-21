@@ -1,0 +1,379 @@
+.SettingsPage {
+  padding: 2rem;
+  background: transparent;
+}
+
+.SettingsPage .Page-header p {
+  color: #7f8c8d;
+  margin-top: 0.5rem;
+}
+
+.SettingsPage-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.SettingsPage-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 12px var(--shadow);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.SettingsPage-section h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.SettingsPage-section > p {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+/* Language Options */
+.SettingsPage-languageOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.SettingsPage-langButton {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.SettingsPage-langButton:hover {
+  border-color: #3498db;
+  background: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.SettingsPage-langButton.active {
+  border-color: #3498db;
+  background: var(--hover-bg);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+}
+
+.SettingsPage-langButton .flag {
+  font-size: 2.5rem;
+}
+
+.SettingsPage-langButton .label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+  transition: color 0.3s ease;
+}
+
+.SettingsPage-langButton .sublabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.SettingsPage-langButton .check {
+  margin-left: auto;
+}
+
+/* Theme Options */
+.SettingsPage-themeOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.SettingsPage-themeButton {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.SettingsPage-themeButton:hover {
+  border-color: #3498db;
+  background: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.SettingsPage-themeButton.active {
+  border-color: #3498db;
+  background: var(--hover-bg);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+}
+
+.SettingsPage-themeButton .theme-icon {
+  font-size: 2.5rem;
+}
+
+.SettingsPage-themeButton .label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+  transition: color 0.3s ease;
+}
+
+.SettingsPage-themeButton .sublabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.SettingsPage-themeButton .check {
+  margin-left: auto;
+  color: #3498db;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.SettingsPage-langButton .check {
+  color: #27ae60;
+  font-size: 1.75rem;
+  font-weight: bold;
+}
+
+/* Exchange Rate */
+.SettingsPage-exchangeRate {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.SettingsPage-currentRate {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.SettingsPage-currentRate .label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.SettingsPage-currentRate .value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.SettingsPage-currentRate .sublabel {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.SettingsPage-updateRate label {
+  display: block;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.SettingsPage-updateRate .input-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.SettingsPage-updateRate input {
+  flex: 1;
+  padding: 0.875rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.SettingsPage-updateRate input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.SettingsPage-updateButton {
+  padding: 0.875rem 1.5rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.SettingsPage-updateButton:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.SettingsPage-updateButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.SettingsPage-success {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #d4edda;
+  color: #155724;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.SettingsPage-error {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f8d7da;
+  color: #721c24;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Margin Calculator */
+.SettingsPage-calculator {
+  background: var(--bg-tertiary);
+  padding: 1.5rem;
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.SettingsPage-calcInputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.SettingsPage-calcField label {
+  display: block;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.SettingsPage-calcField input {
+  width: 100%;
+  padding: 0.875rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.SettingsPage-calcField input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.SettingsPage-calcResults {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.SettingsPage-calcResult {
+  background: var(--bg-card);
+  padding: 1.25rem;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 4px solid #3498db;
+  transition: background-color 0.3s ease;
+}
+
+.SettingsPage-calcResult .label {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.SettingsPage-calcResult .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.SettingsPage-calcFormula {
+  padding: 1rem;
+  background: #fff3cd;
+  border-left: 4px solid #f39c12;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #856404;
+}
+
+.SettingsPage-calcFormula strong {
+  color: #533f03;
+}
+
+/* Placeholder */
+.SettingsPage-placeholder {
+  text-align: center;
+  padding: 2rem;
+  color: #95a5a6;
+}
+
+/* RTL Support */
+[dir="rtl"] .SettingsPage-section h2,
+[dir="rtl"] .SettingsPage-section p,
+[dir="rtl"] .SettingsPage-updateRate label,
+[dir="rtl"] .SettingsPage-calcField label {
+  text-align: right;
+}
+
+[dir="rtl"] .SettingsPage-langButton {
+  text-align: right;
+}
+
+[dir="rtl"] .SettingsPage-langButton .check {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .SettingsPage {
+    padding: 1rem;
+  }
+
+  .SettingsPage-exchangeRate {
+    grid-template-columns: 1fr;
+  }
+
+  .SettingsPage-languageOptions {
+    grid-template-columns: 1fr;
+  }
+
+  .SettingsPage-calcInputs,
+  .SettingsPage-calcResults {
+    grid-template-columns: 1fr;
+  }
+}

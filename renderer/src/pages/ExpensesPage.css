@@ -1,0 +1,152 @@
+.ExpensesPage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.ExpensesPage-header button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.75rem 1.3rem;
+  background: linear-gradient(120deg, #14b8a6, #0ea5e9);
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ExpensesPage-alert {
+  margin-bottom: 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  padding: 0.8rem 1rem;
+}
+
+.ExpensesPage-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ExpensesPage-summary div {
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(13, 20, 38, 0.85);
+  padding: 1rem;
+}
+
+.ExpensesPage-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ExpensesPage-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ExpensesPage-filters input,
+.ExpensesPage-filters select {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.6rem 0.85rem;
+  background: rgba(10, 15, 30, 0.85);
+  color: #f8fafc;
+}
+
+.ExpensesPage-formCard {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 15, 30, 0.85);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.ExpensesPage-formCard form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.ExpensesPage-formCard label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ExpensesPage-formCard input,
+.ExpensesPage-formCard select,
+.ExpensesPage-formCard textarea {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.6rem 0.85rem;
+  background: rgba(10, 15, 30, 0.85);
+  color: #f8fafc;
+}
+
+.ExpensesPage-span {
+  grid-column: 1 / -1;
+}
+
+.ExpensesPage-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ExpensesPage-actions button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.7rem 1.4rem;
+  background: linear-gradient(120deg, #f97316, #ec4899);
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ExpensesPage-list {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 15, 30, 0.85);
+  padding: 1.25rem;
+}
+
+.ExpensesPage-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ExpensesPage-list th,
+.ExpensesPage-list td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.ExpensesPage-list th {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.ExpensesPage-list button {
+  border: none;
+  border-radius: 0.7rem;
+  padding: 0.35rem 0.8rem;
+  background: rgba(248, 113, 113, 0.2);
+  color: #fecaca;
+  cursor: pointer;
+}
+
+.ExpensesPage-empty {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(148, 163, 184, 0.85);
+}
+

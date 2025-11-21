@@ -1,0 +1,98 @@
+ .PrintingModal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 6, 23, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1200;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.PrintingModal-card {
+  width: min(900px, 95vw);
+  max-height: 90vh;
+  background: rgba(13, 20, 38, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.PrintingModal-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.PrintingModal-card header button {
+  background: transparent;
+  border: none;
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.PrintingModal-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.PrintingModal-controls label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.PrintingModal-controls select {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 0.6rem 0.8rem;
+  background: rgba(10, 15, 30, 0.85);
+  color: #f8fafc;
+}
+
+.PrintingModal-preview {
+  flex: 1;
+  background: rgba(2, 6, 23, 0.6);
+  border-radius: 1rem;
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.PrintingModal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.PrintingModal-actions button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.PrintingModal-actions .ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.PrintingModal-actions button:not(.ghost) {
+  background: linear-gradient(120deg, #22d3ee, #3b82f6);
+  color: #0f172a;
+}
+

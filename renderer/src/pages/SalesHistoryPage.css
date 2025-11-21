@@ -1,0 +1,227 @@
+.SalesHistory {
+  padding: 20px;
+}
+
+.SalesHistory-back {
+  padding: 8px 16px;
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 16px;
+}
+
+.SalesHistory-back:hover {
+  background: #555;
+}
+
+.SalesHistory-print {
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.SalesHistory-print:hover {
+  background: #357abd;
+}
+
+.SalesHistory-filters {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.SalesHistory-filterGroup {
+  flex: 1;
+}
+
+.SalesHistory-filterGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.SalesHistory-filterGroup input {
+  width: 100%;
+  padding: 10px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.SalesHistory-search {
+  padding: 10px 20px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  height: fit-content;
+}
+
+.SalesHistory-search:hover {
+  background: #357abd;
+}
+
+.SalesHistory-error {
+  background: #2a1f1f;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.SalesHistory-loading {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.SalesHistory-table {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.SalesHistory-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.SalesHistory-table th {
+  background: #252525;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.SalesHistory-table td {
+  padding: 12px;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ccc;
+}
+
+.SalesHistory-table tr:hover {
+  background: #252525;
+}
+
+.SalesHistory-empty {
+  text-align: center;
+  color: #666;
+  padding: 40px;
+}
+
+.SalesHistory-view {
+  padding: 6px 12px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.SalesHistory-view:hover {
+  background: #357abd;
+}
+
+.SalesHistory-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.SalesHistory-detailSection {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.SalesHistory-detailSection h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.SalesHistory-detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.SalesHistory-detailGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.SalesHistory-detailGrid label {
+  font-size: 12px;
+  color: #999;
+}
+
+.SalesHistory-detailGrid span {
+  font-size: 16px;
+  color: #fff;
+}
+
+.SalesHistory-total {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.SalesHistory-profit {
+  font-size: 18px;
+  font-weight: bold;
+  color: #4a90e2;
+}
+
+.SalesHistory-itemsTable {
+  margin-top: 16px;
+}
+
+.SalesHistory-itemsTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.SalesHistory-itemsTable th {
+  background: #252525;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.SalesHistory-itemsTable td {
+  padding: 12px;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ccc;
+}
+
+.SalesHistory-itemsTable tr:hover {
+  background: #252525;
+}
+

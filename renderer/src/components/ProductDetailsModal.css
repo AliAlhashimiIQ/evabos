@@ -1,0 +1,217 @@
+.ProductDetailsModal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ProductDetailsModal-content {
+  background: #1e1e1e;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.ProductDetailsModal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #333;
+}
+
+.ProductDetailsModal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ProductDetailsModal-close {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.ProductDetailsModal-close:hover {
+  background: #333;
+  color: #fff;
+}
+
+.ProductDetailsModal-body {
+  padding: 24px;
+}
+
+.ProductDetailsModal-section {
+  margin-bottom: 32px;
+}
+
+.ProductDetailsModal-section:last-child {
+  margin-bottom: 0;
+}
+
+.ProductDetailsModal-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #4a9eff;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+.ProductDetailsModal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.ProductDetailsModal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ProductDetailsModal-field label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  font-weight: 500;
+}
+
+.ProductDetailsModal-value {
+  font-size: 15px;
+  color: #fff;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.ProductDetailsModal-sku {
+  font-family: 'Courier New', monospace;
+  color: #4a9eff;
+  font-weight: 600;
+}
+
+.ProductDetailsModal-barcode {
+  font-family: 'Courier New', monospace;
+  color: #22d3ee;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.ProductDetailsModal-price {
+  color: #4caf50;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.ProductDetailsModal-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ProductDetailsModal-status.active {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.ProductDetailsModal-status.inactive {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+
+.ProductDetailsModal-stock {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ProductDetailsModal-stock:not(.low) {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.ProductDetailsModal-stock.low {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+
+.ProductDetailsModal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ProductDetailsModal-closeButton {
+  padding: 10px 24px;
+  background: #4a9eff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ProductDetailsModal-closeButton:hover {
+  background: #3a8eef;
+}
+
+.ProductDetailsModal-printLabelButton {
+  padding: 10px 24px;
+  background: #22d3ee;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ProductDetailsModal-printLabelButton:hover {
+  background: #06b6d4;
+}
+
+@media (max-width: 768px) {
+  .ProductDetailsModal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
