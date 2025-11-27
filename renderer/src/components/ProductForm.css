@@ -9,6 +9,7 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
+
 .ProductForm-grid textarea {
   resize: vertical;
   min-height: 90px;
@@ -149,4 +150,3 @@
 .ProductForm-profitMargin-value.negative {
   color: #f87171;
 }
-

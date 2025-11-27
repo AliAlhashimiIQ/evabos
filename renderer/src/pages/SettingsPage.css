@@ -31,7 +31,7 @@
   transition: color 0.3s ease;
 }
 
-.SettingsPage-section > p {
+.SettingsPage-section>p {
   margin: 0 0 1.5rem 0;
   color: var(--text-secondary);
   font-size: 0.95rem;
@@ -193,7 +193,7 @@
 .SettingsPage-updateRate label {
   display: block;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
@@ -205,9 +205,11 @@
 .SettingsPage-updateRate input {
   flex: 1;
   padding: 0.875rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.2s;
 }
 
@@ -272,7 +274,7 @@
 .SettingsPage-calcField label {
   display: block;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
@@ -280,9 +282,11 @@
 .SettingsPage-calcField input {
   width: 100%;
   padding: 0.875rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.2s;
 }
 
@@ -318,7 +322,7 @@
 .SettingsPage-calcResult .value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .SettingsPage-calcFormula {

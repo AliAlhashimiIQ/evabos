@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -162,8 +162,8 @@ const DashboardPage = (): JSX.Element => {
 
   // Calculate additional metrics
   const netProfit = kpis.todaySales.profitIQD - kpis.todayExpenses;
-  const profitMargin = kpis.todaySales.totalIQD > 0 
-    ? ((kpis.todaySales.profitIQD / kpis.todaySales.totalIQD) * 100).toFixed(1) 
+  const profitMargin = kpis.todaySales.totalIQD > 0
+    ? ((kpis.todaySales.profitIQD / kpis.todaySales.totalIQD) * 100).toFixed(1)
     : '0.0';
 
   return (
@@ -182,14 +182,14 @@ const DashboardPage = (): JSX.Element => {
               onChange={(e) => setDatePreset(e.target.value as DateRangePreset)}
               className="Dashboard-datePreset"
             >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="last2days">Last 2 Days</option>
-              <option value="last7days">Last 7 Days</option>
-              <option value="last30days">Last 30 Days</option>
-              <option value="thisMonth">This Month</option>
-              <option value="lastMonth">Last Month</option>
-              <option value="custom">Custom Range</option>
+              <option value="today">{t('today')}</option>
+              <option value="yesterday">{t('yesterday')}</option>
+              <option value="last2days">{t('last2days')}</option>
+              <option value="last7days">{t('last7days')}</option>
+              <option value="last30days">{t('last30days')}</option>
+              <option value="thisMonth">{t('thisMonth')}</option>
+              <option value="lastMonth">{t('lastMonth')}</option>
+              <option value="custom">{t('customRange')}</option>
             </select>
             {datePreset === 'custom' && (
               <div className="Dashboard-customDates">
@@ -199,7 +199,7 @@ const DashboardPage = (): JSX.Element => {
                   onChange={(e) => setCustomStartDate(e.target.value)}
                   className="Dashboard-dateInput"
                 />
-                <span>to</span>
+                <span>{t('to')}</span>
                 <input
                   type="date"
                   value={customEndDate}
@@ -222,10 +222,10 @@ const DashboardPage = (): JSX.Element => {
           <div className="Dashboard-kpiCard Dashboard-kpiCard--primary">
             <div className="Dashboard-kpiIcon">💰</div>
             <div className="Dashboard-kpiContent">
-              <div className="Dashboard-kpiLabel">{datePreset === 'today' ? t('todaySales') : 'Sales'}</div>
+              <div className="Dashboard-kpiLabel">{datePreset === 'today' ? t('todaySales') : t('sales')}</div>
               <div className="Dashboard-kpiValue">{kpis.todaySales.totalIQD.toLocaleString('en-IQ')} IQD</div>
               <div className="Dashboard-kpiSubtext">
-                <strong>{kpis.todaySales.count}</strong> {kpis.todaySales.count === 1 ? 'sale' : 'sales'}
+                <strong>{kpis.todaySales.count}</strong> {kpis.todaySales.count === 1 ? t('sale') : t('sales')}
               </div>
             </div>
           </div>
@@ -305,9 +305,9 @@ const DashboardPage = (): JSX.Element => {
                     <div className="Dashboard-saleInfo">
                       <div className="Dashboard-saleId">{t('sale')} #{sale.id}</div>
                       <div className="Dashboard-saleDate">
-                        {new Date(sale.saleDate).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                        {new Date(sale.saleDate).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </div>
                     </div>

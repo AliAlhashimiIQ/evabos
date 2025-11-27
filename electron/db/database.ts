@@ -1,5 +1,6 @@
 import path from 'path';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import sqlite3 from 'sqlite3';
 import { app } from 'electron';
 import {
@@ -51,6 +52,8 @@ import {
   SaleDetail,
   SaleDetailItem,
   DashboardKPIs,
+  PaginationParams,
+  PaginatedResponse,
 } from './types';
 
 sqlite3.verbose();
@@ -142,8 +145,30 @@ const all = <T = unknown>(sql: string, params: SqlValue[] = []): Promise<T[]> =>
   });
 };
 
-const hashPassword = (input: string): string =>
-  crypto.createHash('sha256').update(input).digest('hex');
+// Password hashing with bcrypt (secure, salted)
+const SALT_ROUNDS = 12;
+
+const hashPassword = async (password: string): Promise<string> => {
+  return await bcrypt.hash(password, SALT_ROUNDS);
+};
+
+// Verify password with hybrid support (old SHA-256 + new bcrypt)
+const verifyPassword = async (password: string, storedHash: string): Promise<boolean> => {
+  // Check if it's old SHA-256 hash (64 chars hex)
+  if (storedHash.length === 64 && /^[a-f0-9]+$/i.test(storedHash)) {
+    // Old hash format - verify with SHA-256
+    const oldHash = crypto.createHash('sha256').update(password).digest('hex');
+    return oldHash === storedHash;
+  }
+
+  // New bcrypt hash
+  try {
+    return await bcrypt.compare(password, storedHash);
+  } catch (err) {
+    console.error('[auth] Password verification error:', err);
+    return false;
+  }
+};
 
 const slugify = (value?: string | null): string =>
   (value ?? '')
@@ -456,12 +481,13 @@ const seedInitialData = async (): Promise<void> => {
   );
 
   if (!adminUser && branchId) {
+    const passwordHash = await hashPassword('admin123');
     await run(
       `
       INSERT INTO users (username, passwordHash, role, branchId)
       VALUES (?, ?, ?, ?)
     `,
-      ['admin', hashPassword('admin123'), 'admin', branchId],
+      ['admin', passwordHash, 'admin', branchId],
     );
   }
 
@@ -740,7 +766,48 @@ export async function adjustVariantStock(args: {
   );
 }
 
-export async function listProducts(): Promise<ProductsListResponse> {
+// Product count cache
+let productCountCache: { count: number; timestamp: number } | null = null;
+
+export async function getProductCount(): Promise<number> {
+  const now = Date.now();
+  const CACHE_TTL = 60000; // 1 minute
+
+  if (productCountCache && (now - productCountCache.timestamp) < CACHE_TTL) {
+    return productCountCache.count;
+  }
+
+  const result = await get<{ count: number }>(
+    'SELECT COUNT(*) as count FROM product_variants'
+  );
+
+  const count = result?.count ?? 0;
+  productCountCache = { count, timestamp: now };
+
+  return count;
+}
+
+export async function listProducts(
+  params: PaginationParams = {}
+): Promise<PaginatedResponse<Product>> {
+  const limit = params.limit ?? 100;
+  const cursor = params.cursor ?? 0;
+  const search = params.search?.toLowerCase().trim() ?? '';
+
+  const whereClause = search
+    ? `AND (
+        LOWER(p.name) LIKE ? OR 
+        LOWER(pv.sku) LIKE ? OR 
+        LOWER(pv.barcode) LIKE ? OR
+        LOWER(p.category) LIKE ?
+      )`
+    : '';
+
+  const searchParam = `%${search}%`;
+  const queryParams: SqlValue[] = search
+    ? [cursor, searchParam, searchParam, searchParam, searchParam, limit + 1]
+    : [cursor, limit + 1];
+
   const rows = await all<ProductVariantRow>(
     `
     SELECT
@@ -762,12 +829,29 @@ export async function listProducts(): Promise<ProductsListResponse> {
     FROM product_variants pv
     JOIN products p ON p.id = pv.productId
     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+    WHERE pv.id > ? ${whereClause}
     GROUP BY pv.id
-    ORDER BY p.name ASC, pv.color ASC, pv.size ASC
+    ORDER BY pv.id ASC
+    LIMIT ?
   `,
+    queryParams
   );
 
-  return { products: rows.map(mapVariantRow) };
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].variantId : null;
+
+  return {
+    items: items.map(mapVariantRow),
+    nextCursor,
+    hasMore,
+  };
+}
+
+// Legacy function for backward compatibility
+export async function listProductsLegacy(): Promise<ProductsListResponse> {
+  const result = await listProducts({ limit: 10000 }); // Load all
+  return { products: result.items };
 }
 
 export async function listSuppliers(): Promise<Supplier[]> {
@@ -1031,6 +1115,7 @@ export async function getExpenseSummary(range: DateRange): Promise<ExpenseSummar
 }
 
 export async function getAdvancedReports(range: DateRange): Promise<AdvancedReports> {
+  const products = (await listProductsLegacy()).products;
   const dailySales = await all<DailySalesEntry>(
     `
     SELECT
@@ -1536,7 +1621,7 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
 
       const currentStock = stock?.quantity ?? 0;
       const currentAvg = variant.avgCostUSD ?? item.costUSD;
-      
+
       // Calculate weighted average: (currentStock * currentAvg + newQty * newCost) / (currentStock + newQty)
       // If no current stock, use the new cost as the average
       const newAvg = currentStock > 0
@@ -1801,7 +1886,28 @@ interface ExchangeRateRow {
   branchId?: number | null;
 }
 
-export async function getCurrentExchangeRate(): Promise<ExchangeRateResponse> {
+// Exchange rate cache
+let exchangeRateCache: {
+  rate: ExchangeRate | null;
+  timestamp: number;
+} | null = null;
+
+const EXCHANGE_RATE_CACHE_TTL = 300000; // 5 minutes
+
+export async function getCurrentExchangeRate(
+  bypassCache = false
+): Promise<ExchangeRateResponse> {
+  const now = Date.now();
+
+  // Check cache (unless bypass requested)
+  if (!bypassCache && exchangeRateCache) {
+    const age = now - exchangeRateCache.timestamp;
+    if (age < EXCHANGE_RATE_CACHE_TTL) {
+      return { currentRate: exchangeRateCache.rate };
+    }
+  }
+
+  // Query database
   const row = await get<ExchangeRateRow>(
     `
     SELECT *
@@ -1811,9 +1917,15 @@ export async function getCurrentExchangeRate(): Promise<ExchangeRateResponse> {
   `,
   );
 
-  return {
-    currentRate: row ? mapExchangeRateRow(row) : null,
+  const rate = row ? mapExchangeRateRow(row) : null;
+
+  // Update cache
+  exchangeRateCache = {
+    rate,
+    timestamp: now,
   };
+
+  return { currentRate: rate };
 }
 
 export async function updateExchangeRate(
@@ -1828,7 +1940,10 @@ export async function updateExchangeRate(
     [input.rate, effectiveDate, input.note ?? null],
   );
 
-  return getCurrentExchangeRate();
+  // IMPORTANT: Invalidate cache immediately
+  exchangeRateCache = null;
+
+  return getCurrentExchangeRate(true); // Bypass cache
 }
 
 export async function ensureAdminUser(): Promise<void> {
@@ -1855,23 +1970,25 @@ export async function ensureAdminUser(): Promise<void> {
 
   if (!adminUser) {
     // Create admin user
+    const passwordHash = await hashPassword('admin123');
     await run(
       `
       INSERT INTO users (username, passwordHash, role, branchId)
       VALUES (?, ?, ?, ?)
     `,
-      ['admin', hashPassword('admin123'), 'admin', branchId],
+      ['admin', passwordHash, 'admin', branchId],
     );
     console.log('[db] Admin user created: admin / admin123');
   } else {
     // Reset admin password to ensure it's correct
+    const passwordHash = await hashPassword('admin123');
     await run(
       `
       UPDATE users
       SET passwordHash = ?, role = 'admin'
       WHERE username = 'admin'
     `,
-      [hashPassword('admin123')],
+      [passwordHash],
     );
     console.log('[db] Admin user password reset: admin / admin123');
   }
@@ -1900,9 +2017,17 @@ export async function login(username: string, password: string): Promise<LoginRe
     return null;
   }
 
-  const passwordHash = hashPassword(password);
-  if (passwordHash !== user.passwordHash) {
+  // Verify password (supports old SHA-256 and new bcrypt)
+  const isValid = await verifyPassword(password, user.passwordHash);
+  if (!isValid) {
     return null;
+  }
+
+  // Auto-upgrade old SHA-256 hash to bcrypt
+  if (user.passwordHash.length === 64 && /^[a-f0-9]+$/i.test(user.passwordHash)) {
+    const newHash = await hashPassword(password);
+    await run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, user.id]);
+    console.log(`[auth] Upgraded password hash for user: ${username}`);
   }
 
   const token = crypto.randomBytes(24).toString('hex');
@@ -2035,7 +2160,7 @@ export async function createUser(input: UserInput): Promise<User> {
     }
   }
 
-  const passwordHash = hashPassword(input.password);
+  const passwordHash = await hashPassword(input.password);
   const result = await runWithResult(
     `
     INSERT INTO users (username, passwordHash, role, branchId)
@@ -2121,7 +2246,8 @@ export async function updateUser(input: UserUpdateInput): Promise<User> {
 
   if (input.password) {
     updates.push('passwordHash = ?');
-    params.push(hashPassword(input.password));
+    const passwordHash = await hashPassword(input.password);
+    params.push(passwordHash);
   }
 
   if (input.role) {
@@ -2387,7 +2513,7 @@ export async function updateProduct(input: ProductUpdateInput): Promise<Product>
   }
 
   // Return updated product
-  const productsResponse = await listProducts();
+  const productsResponse = await listProductsLegacy();
   const updated = productsResponse.products.find((p: Product) => p.id === input.id);
   if (!updated) {
     throw new Error('Failed to update product');

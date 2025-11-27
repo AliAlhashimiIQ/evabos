@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useLanguage } from '../contexts/LanguageContext';
 import './BarcodeLabelModal.css';
+
+type Product = import('../types/electron').Product;
 
 interface BarcodeLabelModalProps {
   product: Product;
@@ -10,7 +12,7 @@ interface BarcodeLabelModalProps {
 }
 
 interface LabelSettings {
-  labelSize: '2x1' | '4x2';
+  // labelSize removed, fixed to 50x25mm
   showProductName: boolean;
   showVariant: boolean;
   showSku: boolean;
@@ -27,16 +29,16 @@ interface LabelSettings {
 }
 
 const defaultSettings: LabelSettings = {
-  labelSize: '2x1',
+  // labelSize fixed to 50x25mm
   showProductName: true,
   showVariant: true,
   showSku: true,
   showPrice: true,
-  fontSize: 7,
-  barcodeHeight: 35,
+  fontSize: 6,
+  barcodeHeight: 25,
   barcodeWidth: 2,
   textAlign: 'center',
-  labelPadding: 3,
+  labelPadding: 1,
   customText1: '',
   customText2: '',
   customText3: '',
@@ -85,7 +87,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
       // Set canvas size explicitly
       canvas.width = 300;
       canvas.height = 100;
-      
+
       JsBarcode(canvas, product.barcode, {
         format: 'EAN13',
         width: settings.barcodeWidth,
@@ -96,7 +98,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         background: '#ffffff',
         lineColor: '#000000',
       });
-      
+
       setBarcodeReady(true);
     } catch (error) {
       console.error('Failed to generate barcode:', error);
@@ -152,24 +154,18 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
   }
 
   const getLabelDimensions = () => {
-    switch (settings.labelSize) {
-      case '2x1':
-        return { width: '2in', height: '1in' };
-      case '4x2':
-        return { width: '4in', height: '2in' };
-      default:
-        return { width: '2in', height: '1in' };
-    }
+    // Always return 50x25mm (using 48x23mm for safety margins)
+    return { width: '48mm', height: '23mm' };
   };
 
   const generateLabelHtml = (): string => {
     const dimensions = getLabelDimensions();
-    
+
     // Ensure barcode is ready
     if (!barcodeCanvasRef.current || !barcodeReady) {
       throw new Error('Barcode not ready for printing');
     }
-    
+
     const barcodeDataUrl = barcodeCanvasRef.current.toDataURL('image/png');
 
     return `
@@ -184,98 +180,70 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
       }
       body {
         margin: 0;
-        padding: ${settings.labelPadding}px;
+        padding: 0;
         width: ${dimensions.width};
         height: ${dimensions.height};
         box-sizing: border-box;
         font-family: Arial, sans-serif;
         display: flex;
         flex-direction: column;
-        justify-content: ${settings.labelSize === '2x1' ? 'space-evenly' : 'space-between'};
-        align-items: ${settings.textAlign === 'left' ? 'flex-start' : settings.textAlign === 'right' ? 'flex-end' : 'center'};
-        overflow: hidden;
-      }
-      .label-header {
-        text-align: ${settings.textAlign};
-        width: 100%;
-        flex-shrink: 0;
-        max-height: ${settings.labelSize === '2x1' ? '20%' : '30%'};
-        overflow: hidden;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        /* border: 1px solid #ddd; */ /* Removed border for print */
       }
       .label-name {
         font-size: ${settings.fontSize}px;
         font-weight: bold;
-        margin-bottom: ${settings.labelSize === '2x1' ? '2px' : '4px'};
-        word-wrap: break-word;
+        color: #000;
+        margin-bottom: 2px;
         line-height: 1.2;
+        width: 100%;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: ${settings.labelSize === '2x1' ? '1' : '2'};
-        -webkit-box-orient: vertical;
-        text-align: ${settings.textAlign};
       }
       .label-price {
+        font-size: ${settings.fontSize * 1.2}px;
+        font-weight: 900;
+        color: #000;
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+      .label-store {
         font-size: ${settings.fontSize * 0.9}px;
         font-weight: bold;
-        color: #000;
-        margin-bottom: ${settings.labelSize === '2x1' ? '2px' : '4px'};
-        line-height: 1.2;
-        text-align: ${settings.textAlign};
-      }
-      .label-custom {
-        font-size: ${settings.fontSize * 0.8}px;
-        color: #333;
-        margin-bottom: ${settings.labelSize === '2x1' ? '2px' : '4px'};
-        line-height: 1.2;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        width: 100%;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
-        text-align: ${settings.textAlign};
       }
       .label-barcode {
-        text-align: ${settings.textAlign};
-        margin: ${settings.labelSize === '2x1' ? '1px 0' : '4px 0'};
-        flex: 1;
+        margin-top: 2px;
+        width: 100%;
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
+        flex: 1;
         min-height: 0;
       }
       .label-barcode img {
-        max-width: 95%;
-        height: auto;
-        max-height: ${settings.labelSize === '2x1' ? '30px' : '60px'};
+        max-width: 100%;
+        height: 100%;
+        max-height: ${settings.barcodeHeight}px;
         object-fit: contain;
-      }
-      .label-footer {
-        text-align: ${settings.textAlign};
-        width: 100%;
-        font-size: ${settings.fontSize * 0.75}px;
-        line-height: 1.1;
-        flex-shrink: 0;
-        max-height: ${settings.labelSize === '2x1' ? '15%' : '20%'};
-      }
-      .label-sku {
-        font-family: 'Courier New', monospace;
-        color: #333;
-        margin-top: ${settings.labelSize === '2x1' ? '0px' : '4px'};
-        font-size: ${settings.fontSize * 0.7}px;
-        line-height: 1;
       }
     </style>
   </head>
   <body>
-    <div class="label-header">
-      ${product.productName ? `<div class="label-name">${product.productName}</div>` : ''}
-      ${product.salePriceIQD ? `<div class="label-price">${product.salePriceIQD.toLocaleString('en-IQ')} د.ع</div>` : ''}
-      ${settings.customText3 ? `<div class="label-custom">${settings.customText3}</div>` : ''}
-    </div>
+    ${settings.showProductName && product.productName ? `<div class="label-name">${product.productName}</div>` : ''}
+    ${settings.showPrice && product.salePriceIQD ? `<div class="label-price">${product.salePriceIQD.toLocaleString('en-IQ')} د.ع</div>` : ''}
+    ${settings.showSku && product.sku ? `<div class="label-store">SKU: ${product.sku}</div>` : ''}
+    ${settings.customText3 ? `<div class="label-store">${settings.customText3}</div>` : ''}
     <div class="label-barcode">
       <img src="${barcodeDataUrl}" alt="Barcode" />
-    </div>
-    <div class="label-footer">
-      ${settings.showSku ? `<div class="label-sku">SKU: ${product.sku}</div>` : ''}
     </div>
   </body>
 </html>
@@ -284,7 +252,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
 
   const handlePrint = async () => {
     if (!window.evaApi) {
-      alert('Desktop bridge unavailable');
+      alert(t('desktopBridgeUnavailable'));
       return;
     }
 
@@ -301,7 +269,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
       const isPdfPrinter = printerName?.toLowerCase().includes('pdf') ?? false;
       if (isPdfPrinter) {
         // Show info message for PDF
-        console.log('Generating PDF - save dialog will appear');
+        console.log(t('generatingPDF'));
       }
 
       // Print multiple labels
@@ -310,16 +278,16 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
           console.log(`Printing label ${i + 1} of ${quantity}...`);
           console.log('HTML length:', labelHtml.length);
           console.log('Printer:', printerName);
-          
+
           await window.evaApi.printing.print({ html: labelHtml, printerName });
           console.log(`Label ${i + 1} printed successfully`);
-          
+
           // For PDF, show message after first print
           if (isPdfPrinter && i === 0) {
             // Message is handled by the save dialog in the main process
-            console.log('PDF generated successfully');
+            console.log(t('pdfGenerated'));
           }
-          
+
           // Small delay between prints
           if (i < quantity - 1) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -327,7 +295,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         } catch (error) {
           console.error(`Failed to print label ${i + 1}:`, error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          alert(`Failed to print label ${i + 1}: ${errorMessage}\n\nCheck the browser console (F12) for more details.`);
+          alert(t('failedToPrintLabel', { index: (i + 1).toString(), error: errorMessage }));
           return; // Stop printing on error
         }
       }
@@ -337,7 +305,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
     } catch (error) {
       console.error('Failed to generate label HTML:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to generate label: ${errorMessage}\n\nCheck the browser console (F12) for more details.`);
+      alert(t('failedToGenerateLabel', { error: errorMessage }));
     }
   };
 
@@ -347,7 +315,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
     <div className="BarcodeLabelModal-overlay" onClick={onClose}>
       <div className="BarcodeLabelModal-content" onClick={(e) => e.stopPropagation()}>
         <div className="BarcodeLabelModal-header">
-          <h2>Print Barcode Label</h2>
+          <h2>{t('printBarcodeLabel')}</h2>
           <button className="BarcodeLabelModal-close" onClick={onClose}>
             ✕
           </button>
@@ -361,140 +329,146 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
           ) : (
             <>
               <div className="BarcodeLabelModal-controls">
-            <div className="BarcodeLabelModal-controlGroup">
-              <label>
+                <div className="BarcodeLabelModal-controlGroup">
+                  <label>
                     {t('quantity')}
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                />
-              </label>
-            </div>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                    />
+                  </label>
+                </div>
 
-            <div className="BarcodeLabelModal-controlGroup">
-              <label>
+                <div className="BarcodeLabelModal-controlGroup">
+                  <label>
                     {t('printer')}
-                <select value={printerName ?? ''} onChange={(e) => setPrinterName(e.target.value || null)}>
+                    <select value={printerName ?? ''} onChange={(e) => setPrinterName(e.target.value || null)}>
                       <option value="">{t('systemDefault')}</option>
-                  {printers.map((printer) => (
-                    <option key={printer.name} value={printer.name}>
-                      {printer.name} {printer.isDefault ? '(Default)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
+                      {printers.map((printer) => (
+                        <option key={printer.name} value={printer.name}>
+                          {printer.name} {printer.isDefault ? '(Default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
 
-          <div className="BarcodeLabelModal-preview">
-            <h3>{t('preview')}</h3>
-            <div
-              className="BarcodeLabelModal-previewLabel"
-              style={{
-                width: dimensions.width,
-                height: dimensions.height,
-                minHeight: settings.labelSize === '2x1' ? '96px' : '192px',
-                padding: `${settings.labelPadding}px`,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: settings.labelSize === '2x1' ? 'space-evenly' : 'space-between',
-                alignItems: settings.textAlign === 'left' ? 'flex-start' : settings.textAlign === 'right' ? 'flex-end' : 'center',
-                overflow: 'hidden',
-              }}
-            >
-              <div className="BarcodeLabelModal-previewHeader" style={{ textAlign: settings.textAlign, width: '100%', flexShrink: 0, maxHeight: settings.labelSize === '2x1' ? '20px' : 'auto' }}>
-                {settings.customText1 && (
-                  <div style={{ fontSize: `${settings.fontSize * 0.8}px`, color: '#333', lineHeight: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
-                    {settings.customText1}
-                  </div>
-                )}
-                {product.productName && (
-                  <div 
-                    className="BarcodeLabelModal-previewName" 
-                    style={{ 
-                      fontSize: `${settings.fontSize}px`, 
-                      fontWeight: 'bold',
+              <div className="BarcodeLabelModal-preview">
+                <h3>{t('preview')}</h3>
+                <div
+                  className="BarcodeLabelModal-previewLabel"
+                  style={{
+                    width: dimensions.width,
+                    height: dimensions.height,
+                    minHeight: '96px',
+                    padding: `${settings.labelPadding}px`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    textAlign: 'center',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#fff'
+                  }}
+                >
+                  {settings.showProductName && product.productName && (
+                    <div
+                      style={{
+                        fontSize: `${settings.fontSize}px`,
+                        fontWeight: 'bold',
+                        color: '#000',
+                        lineHeight: '1.2',
+                        marginBottom: '2px',
+                        width: '100%',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {product.productName}
+                    </div>
+                  )}
+                  {settings.showPrice && product.salePriceIQD && (
+                    <div style={{
+                      fontSize: `${settings.fontSize * 1.2}px`,
+                      fontWeight: '900',
+                      color: '#000',
                       lineHeight: '1.2',
-                      marginBottom: '4px',
+                      marginBottom: '2px',
+                    }}>
+                      {product.salePriceIQD.toLocaleString('en-IQ')} د.ع
+                    </div>
+                  )}
+                  {settings.showSku && product.sku && (
+                    <div style={{
+                      fontSize: `${settings.fontSize * 0.9}px`,
+                      fontWeight: 'bold',
+                      color: '#000',
+                      lineHeight: '1.2',
+                      marginBottom: '2px',
+                      width: '100%',
+                      whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: settings.labelSize === '2x1' ? 1 : 2,
-                      WebkitBoxOrient: 'vertical',
-                      textAlign: settings.textAlign,
-                    }}
-                  >
-                    {product.productName}
-                  </div>
-                )}
-                {product.salePriceIQD && (
-                  <div style={{ 
-                    fontSize: `${settings.fontSize * 0.9}px`, 
-                    fontWeight: 'bold',
-                    color: '#000', 
-                    lineHeight: '1.2', 
-                    marginBottom: '4px',
-                    textAlign: settings.textAlign,
+                    }}>
+                      SKU: {product.sku}
+                    </div>
+                  )}
+                  {settings.customText3 && (
+                    <div style={{
+                      fontSize: `${settings.fontSize * 0.9}px`,
+                      fontWeight: 'bold',
+                      textTransform: 'uppercase',
+                      color: '#000',
+                      lineHeight: '1.2',
+                      width: '100%',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      marginBottom: '2px',
+                    }}>
+                      {settings.customText3}
+                    </div>
+                  )}
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    minHeight: 0,
+                    marginTop: '2px'
                   }}>
-                    {product.salePriceIQD.toLocaleString('en-IQ')} د.ع
+                    <canvas
+                      ref={barcodeCanvasRef}
+                      style={{
+                        display: barcodeReady ? 'block' : 'none',
+                        maxWidth: '100%',
+                        maxHeight: settings.barcodeHeight,
+                        height: '100%',
+                        objectFit: 'contain',
+                      }}
+                    />
+                    {!barcodeReady && (
+                      <div style={{ padding: '10px', textAlign: 'center', color: '#999', fontSize: '10px' }}>
+                        Generating...
+                      </div>
+                    )}
                   </div>
-                )}
-                {settings.customText3 && (
-                  <div style={{ 
-                    fontSize: `${settings.fontSize * 0.8}px`, 
-                    color: '#333', 
-                    lineHeight: '1.2', 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap', 
-                    marginBottom: '2px',
-                    textAlign: settings.textAlign,
-                  }}>
-                    {settings.customText3}
-                  </div>
-                )}
+                </div>
+                <p className="BarcodeLabelModal-previewNote">
+                  {t('size')}: {dimensions.width} × {dimensions.height} | {t('quantity')}: {quantity}
+                  <br />
+                  <small style={{ color: '#999', fontSize: '0.85rem' }}>
+                    {t('customizeInSettings')}
+                  </small>
+                </p>
               </div>
-              <div className="BarcodeLabelModal-previewBarcode" style={{ textAlign: settings.textAlign, flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
-                <canvas 
-                  ref={barcodeCanvasRef} 
-                  style={{ 
-                    display: barcodeReady ? 'block' : 'none', 
-                    maxWidth: '95%', 
-                    maxHeight: settings.labelSize === '2x1' ? '30px' : '60px',
-                    height: 'auto',
-                    objectFit: 'contain',
-                  }} 
-                />
-                {!barcodeReady && (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                    Generating barcode...
-                  </div>
-                )}
-              </div>
-              <div className="BarcodeLabelModal-previewFooter" style={{ textAlign: settings.textAlign, fontSize: `${settings.fontSize * 0.75}px`, width: '100%', flexShrink: 0, lineHeight: '1.1' }}>
-                {settings.showSku && (
-                  <div className="BarcodeLabelModal-previewSku" style={{ fontSize: `${settings.fontSize * 0.7}px`, lineHeight: '1' }}>
-                    SKU: {product.sku}
-                  </div>
-                )}
-                {settings.showPrice && (
-                  <div className="BarcodeLabelModal-previewPrice" style={{ fontSize: `${settings.fontSize * 0.85}px`, lineHeight: '1' }}>
-                    {product.salePriceIQD.toLocaleString('en-IQ')} IQD
-                  </div>
-                )}
-              </div>
-            </div>
-            <p className="BarcodeLabelModal-previewNote">
-              {t('size')}: {dimensions.width} × {dimensions.height} | {t('quantity')}: {quantity}
-              <br />
-              <small style={{ color: '#999', fontSize: '0.85rem' }}>
-                {t('customizeInSettings')}
-              </small>
-            </p>
-          </div>
             </>
           )}
         </div>
@@ -503,8 +477,8 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
           <button className="BarcodeLabelModal-cancelButton" onClick={onClose}>
             Cancel
           </button>
-          <button 
-            className="BarcodeLabelModal-printButton" 
+          <button
+            className="BarcodeLabelModal-printButton"
             onClick={handlePrint}
             disabled={!barcodeReady}
           >
@@ -512,9 +486,8 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
 export default BarcodeLabelModal;
-

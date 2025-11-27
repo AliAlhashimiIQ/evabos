@@ -22,6 +22,7 @@ const SalesHistoryPage = (): JSX.Element => {
   );
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [printSale, setPrintSale] = useState<SaleDetail | null>(null);
+  const [printSummary, setPrintSummary] = useState<import('../components/PrintingModal').SalesSummaryData | null>(null);
 
   useEffect(() => {
     if (saleId) {
@@ -72,6 +73,24 @@ const SalesHistoryPage = (): JSX.Element => {
 
   const handlePrintSale = (sale: SaleDetail) => {
     setPrintSale(sale);
+  };
+
+  const handlePrintSummary = () => {
+    if (sales.length === 0) return;
+
+    const totalAmount = sales.reduce((sum, sale) => sum + sale.totalIQD, 0);
+    const summaryData: import('../components/PrintingModal').SalesSummaryData = {
+      startDate,
+      endDate,
+      totalCount: sales.length,
+      totalAmount,
+      sales: sales.map(sale => ({
+        id: sale.id,
+        date: sale.saleDate,
+        total: sale.totalIQD
+      }))
+    };
+    setPrintSummary(summaryData);
   };
 
   if (saleId && selectedSale) {
@@ -204,6 +223,14 @@ const SalesHistoryPage = (): JSX.Element => {
           <button className="SalesHistory-search" onClick={loadSales}>
             Search
           </button>
+          <button
+            className="SalesHistory-print-report"
+            onClick={handlePrintSummary}
+            disabled={sales.length === 0}
+            style={{ marginLeft: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            🖨️ Print Report
+          </button>
         </div>
 
         {error && <div className="SalesHistory-error">{error}</div>}
@@ -258,9 +285,24 @@ const SalesHistoryPage = (): JSX.Element => {
           </div>
         )}
       </div>
+
+      {printSale && (
+        <PrintingModal
+          visible={!!printSale}
+          sale={printSale as any}
+          onClose={() => setPrintSale(null)}
+        />
+      )}
+
+      {printSummary && (
+        <PrintingModal
+          visible={!!printSummary}
+          salesSummary={printSummary}
+          onClose={() => setPrintSummary(null)}
+        />
+      )}
     </div>
   );
 };
 
 export default SalesHistoryPage;
-

@@ -1,258 +1,259 @@
  .CustomersPage-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   margin-bottom: 1.5rem;
+ }
 
-.CustomersPage-actions {
-  display: flex;
-  gap: 0.75rem;
-}
+ .CustomersPage-actions {
+   display: flex;
+   gap: 0.75rem;
+ }
 
-.CustomersPage-actions input {
-  border-radius: 0.9rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.65rem 0.9rem;
-  background: rgba(10, 15, 30, 0.85);
-  color: #f8fafc;
-}
+ .CustomersPage-actions input {
+   border-radius: 0.9rem;
+   border: 1px solid rgba(148, 163, 184, 0.2);
+   padding: 0.65rem 0.9rem;
+   background: rgba(10, 15, 30, 0.85);
+   color: #f8fafc;
+ }
 
-.CustomersPage-actions button {
-  border: none;
-  border-radius: 0.9rem;
-  padding: 0.65rem 1.25rem;
-  background: linear-gradient(120deg, #38bdf8, #6366f1);
-  color: #0f172a;
-  font-weight: 600;
-  cursor: pointer;
-}
+ .CustomersPage-actions button {
+   border: none;
+   border-radius: 0.9rem;
+   padding: 0.65rem 1.25rem;
+   background: linear-gradient(120deg, #38bdf8, #6366f1);
+   color: #0f172a;
+   font-weight: 600;
+   cursor: pointer;
+ }
 
-.CustomersPage-alert {
-  margin-bottom: 1rem;
-  border-radius: 0.9rem;
-  border: 1px solid rgba(248, 113, 113, 0.5);
-  background: rgba(248, 113, 113, 0.12);
-  color: #fecaca;
-  padding: 0.8rem 1rem;
-}
+ .CustomersPage-alert {
+   margin-bottom: 1rem;
+   border-radius: 0.9rem;
+   border: 1px solid rgba(248, 113, 113, 0.5);
+   background: rgba(248, 113, 113, 0.12);
+   color: #fecaca;
+   padding: 0.8rem 1rem;
+ }
 
-.CustomersPage-content {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 1.5rem;
-}
+ .CustomersPage-content {
+   display: grid;
+   grid-template-columns: 320px 1fr;
+   gap: 1.5rem;
+ }
 
-.CustomersPage-list {
-  background: rgba(11, 16, 31, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1.25rem;
-  overflow: hidden;
-  max-height: calc(100vh - 250px);
-}
+ .CustomersPage-list {
+   background: rgba(11, 16, 31, 0.9);
+   border: 1px solid rgba(148, 163, 184, 0.2);
+   border-radius: 1.25rem;
+   overflow: hidden;
+   max-height: calc(100vh - 250px);
+ }
 
-.CustomersPage-list ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: calc(100vh - 250px);
-  overflow-y: auto;
-}
+ .CustomersPage-list ul {
+   list-style: none;
+   margin: 0;
+   padding: 0;
+   max-height: calc(100vh - 250px);
+   overflow-y: auto;
+ }
 
-.CustomersPage-list li {
-  padding: 1rem 1.2rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
+ .CustomersPage-list li {
+   padding: 1rem 1.2rem;
+   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+   cursor: pointer;
+   display: flex;
+   flex-direction: column;
+   gap: 0.2rem;
+ }
 
-.CustomersPage-list li.active {
-  background: rgba(59, 130, 246, 0.15);
-}
+ .CustomersPage-list li.active {
+   background: rgba(59, 130, 246, 0.15);
+ }
 
-.CustomersPage-list small {
-  color: rgba(148, 163, 184, 0.8);
-  font-size: 0.8rem;
-}
+ .CustomersPage-list small {
+   color: rgba(148, 163, 184, 0.8);
+   font-size: 0.8rem;
+ }
 
-.CustomersPage-details {
-  background: rgba(10, 15, 30, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
-  min-height: calc(100vh - 250px);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
+ .CustomersPage-details {
+   background: rgba(10, 15, 30, 0.85);
+   border: 1px solid rgba(148, 163, 184, 0.2);
+   border-radius: 1.25rem;
+   padding: 1.5rem;
+   min-height: calc(100vh - 250px);
+   display: flex;
+   flex-direction: column;
+   gap: 1.25rem;
+ }
 
-.CustomersPage-metrics {
-  display: grid;
-.CustomersPage-tier {
-  display: inline-block;
-  margin-top: 0.3rem;
-  padding: 0.2rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-}
+ .CustomersPage-metrics {
+   display: grid;
 
-.CustomersPage-tier.tier-platinum {
-  background: rgba(248, 250, 252, 0.2);
-  color: #f8fafc;
-}
+   .CustomersPage-tier {
+     display: inline-block;
+     margin-top: 0.3rem;
+     padding: 0.2rem 0.8rem;
+     border-radius: 999px;
+     font-size: 0.8rem;
+     text-transform: uppercase;
+   }
 
-.CustomersPage-tier.tier-gold {
-  background: rgba(250, 204, 21, 0.2);
-  color: #facc15;
-}
+   .CustomersPage-tier.tier-platinum {
+     background: rgba(248, 250, 252, 0.2);
+     color: #f8fafc;
+   }
 
-.CustomersPage-tier.tier-silver {
-  background: rgba(148, 163, 184, 0.2);
-  color: #cbd5f5;
-}
+   .CustomersPage-tier.tier-gold {
+     background: rgba(250, 204, 21, 0.2);
+     color: #facc15;
+   }
 
-.CustomersPage-tier.tier-bronze {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-}
+   .CustomersPage-tier.tier-silver {
+     background: rgba(148, 163, 184, 0.2);
+     color: #cbd5f5;
+   }
 
-.CustomersPage-historyHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
+   .CustomersPage-tier.tier-bronze {
+     background: rgba(251, 191, 36, 0.2);
+     color: #fbbf24;
+   }
 
-.CustomersPage-historyHeader select {
-  border-radius: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
-  color: #f8fafc;
-  padding: 0.4rem 0.7rem;
-}
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-}
+   .CustomersPage-historyHeader {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     margin-bottom: 0.75rem;
+   }
 
-.CustomersPage-metrics div {
-  background: rgba(15, 23, 42, 0.7);
-  border-radius: 0.9rem;
-  padding: 0.8rem 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-}
+   .CustomersPage-historyHeader select {
+     border-radius: 0.85rem;
+     border: 1px solid rgba(148, 163, 184, 0.2);
+     background: var(--bg-input);
+     color: #f8fafc;
+     padding: 0.4rem 0.7rem;
+   }
 
-.CustomersPage-historyList {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
-}
+   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+   gap: 1rem;
+ }
 
-.CustomersPage-historyList article {
-  border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  padding: 1rem;
-  background: rgba(15, 23, 42, 0.7);
-}
+ .CustomersPage-metrics div {
+   background: var(--bg-tertiary);
+   border-radius: 0.9rem;
+   padding: 0.8rem 1rem;
+   border: 1px solid rgba(148, 163, 184, 0.15);
+ }
 
-.CustomersPage-historyList article header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.6rem;
-}
+ .CustomersPage-historyList {
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+   max-height: 400px;
+   overflow-y: auto;
+ }
 
-.CustomersPage-historyList ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
+ .CustomersPage-historyList article {
+   border-radius: 1rem;
+   border: 1px solid rgba(148, 163, 184, 0.15);
+   padding: 1rem;
+   background: var(--bg-tertiary);
+ }
 
-.CustomersPage-historyList li {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-  font-size: 0.9rem;
-  color: rgba(226, 232, 240, 0.9);
-}
+ .CustomersPage-historyList article header {
+   display: flex;
+   justify-content: space-between;
+   margin-bottom: 0.6rem;
+ }
 
-.CustomersPage-modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-}
+ .CustomersPage-historyList ul {
+   list-style: none;
+   margin: 0;
+   padding: 0;
+ }
 
-.CustomersPage-modal {
-  width: min(500px, 90vw);
-  background: rgba(13, 20, 38, 0.96);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+ .CustomersPage-historyList li {
+   display: flex;
+   justify-content: space-between;
+   padding: 0.25rem 0;
+   font-size: 0.9rem;
+   color: rgba(226, 232, 240, 0.9);
+ }
 
-.CustomersPage-modal form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
+ .CustomersPage-modalOverlay {
+   position: fixed;
+   inset: 0;
+   background: rgba(0, 0, 0, 0.6);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   z-index: 1100;
+ }
 
-.CustomersPage-modal label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
+ .CustomersPage-modal {
+   width: min(500px, 90vw);
+   background: var(--bg-input);
+   border: 1px solid rgba(148, 163, 184, 0.2);
+   border-radius: 1.25rem;
+   padding: 1.5rem;
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+ }
 
-.CustomersPage-modal input,
-.CustomersPage-modal textarea {
-  border-radius: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.6rem 0.85rem;
-  background: rgba(10, 14, 27, 0.85);
-  color: #f8fafc;
-}
+ .CustomersPage-modal form {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+   gap: 1rem;
+ }
 
-.CustomersPage-span {
-  grid-column: 1 / -1;
-}
+ .CustomersPage-modal label {
+   display: flex;
+   flex-direction: column;
+   gap: 0.4rem;
+ }
 
-.CustomersPage-modal header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+ .CustomersPage-modal input,
+ .CustomersPage-modal textarea {
+   border-radius: 0.85rem;
+   border: 1px solid rgba(148, 163, 184, 0.2);
+   padding: 0.6rem 0.85rem;
+   background: var(--bg-input);
+   color: #f8fafc;
+ }
 
-.CustomersPage-modal header button {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  color: rgba(248, 250, 252, 0.6);
-  cursor: pointer;
-}
+ .CustomersPage-span {
+   grid-column: 1 / -1;
+ }
 
-.CustomersPage-actions button.ghost {
-  background: transparent;
-  color: rgba(248, 250, 252, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-}
+ .CustomersPage-modal header {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+ }
 
-.CustomersPage-actions button:not(.ghost) {
-  background: linear-gradient(120deg, #34d399, #10b981);
-  color: #022c22;
-}
+ .CustomersPage-modal header button {
+   background: transparent;
+   border: none;
+   font-size: 1.2rem;
+   color: rgba(248, 250, 252, 0.6);
+   cursor: pointer;
+ }
 
-.CustomersPage-empty {
-  text-align: center;
-  padding: 2rem;
-  color: rgba(148, 163, 184, 0.85);
-}
+ .CustomersPage-actions button.ghost {
+   background: transparent;
+   color: rgba(248, 250, 252, 0.85);
+   border: 1px solid rgba(148, 163, 184, 0.4);
+ }
 
+ .CustomersPage-actions button:not(.ghost) {
+   background: linear-gradient(120deg, #34d399, #10b981);
+   color: #022c22;
+ }
+
+ .CustomersPage-empty {
+   text-align: center;
+   padding: 2rem;
+   color: rgba(148, 163, 184, 0.85);
+ }

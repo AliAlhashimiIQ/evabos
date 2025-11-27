@@ -1,5 +1,5 @@
 .Page--transparent {
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--bg-card);
 }
 
 .ProductsPage-header {
@@ -29,7 +29,8 @@
 
 .ProductsPage-importButton:hover {
   background: rgba(148, 163, 184, 0.25);
-  border-color: rgba(148, 163, 184, 0.5);
+  border-color: var(--text-secondary);
+  /* was: rgba(148, 163, 184, 0.5); */
 }
 
 .ProductsPage-addButton {
@@ -46,7 +47,7 @@
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
   overflow: hidden;
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-card);
 }
 
 .ProductsPage-table {
@@ -66,7 +67,8 @@
   font-size: 0.85rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.9);
+  color: var(--text-secondary);
+  /* was: rgba(148, 163, 184, 0.9); */
 }
 
 .ProductsPage-table tbody tr:hover {
@@ -76,7 +78,8 @@
 .ProductsPage-empty {
   padding: 2rem;
   text-align: center;
-  color: rgba(148, 163, 184, 0.9);
+  color: var(--text-secondary);
+  /* was: rgba(148, 163, 184, 0.9); */
 }
 
 .ProductsPage-alert {
@@ -100,7 +103,7 @@
 
 .ProductsPage-modal {
   width: min(640px, 90vw);
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--bg-card);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
   padding: 1.5rem;
@@ -117,8 +120,8 @@
 .ProductsPage-closeButton {
   background: transparent;
   border: none;
-  color: rgba(248, 250, 252, 0.6);
+  color: var(--text-secondary);
+  /* was: rgba(248, 250, 252, 0.6); */
   font-size: 1.2rem;
   cursor: pointer;
 }
-

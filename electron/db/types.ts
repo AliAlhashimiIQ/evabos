@@ -143,7 +143,7 @@ export interface PurchaseOrderItem {
   costIQD: number;
 }
 
-export interface PurchaseOrderItemInput extends Omit<PurchaseOrderItem, 'id' | 'purchaseOrderId'> {}
+export interface PurchaseOrderItemInput extends Omit<PurchaseOrderItem, 'id' | 'purchaseOrderId'> { }
 
 export interface PurchaseOrderInput extends Omit<PurchaseOrder, 'id' | 'status' | 'orderedAt' | 'receivedAt'> {
   status?: PurchaseOrder['status'];
@@ -211,7 +211,7 @@ export interface Customer {
 export interface CustomerInput extends Omit<
   Customer,
   'id' | 'totalVisits' | 'totalSpentIQD' | 'lastVisitAt' | 'loyaltyPoints'
-> {}
+> { }
 
 export interface CustomerUpdateInput extends Partial<CustomerInput> {
   id: number;
@@ -242,7 +242,7 @@ export interface Expense {
   enteredBy?: number | null;
 }
 
-export interface ExpenseInput extends Omit<Expense, 'id'> {}
+export interface ExpenseInput extends Omit<Expense, 'id'> { }
 
 export interface ExpenseSummary {
   totalIQD: number;
@@ -403,6 +403,20 @@ export interface VariantUpdateInput {
   defaultPriceIQD?: number;
   purchaseCostUSD?: number;
   isActive?: boolean;
+}
+
+// Pagination types
+export interface PaginationParams {
+  limit?: number;      // Default 100
+  cursor?: number;     // Last seen ID
+  search?: string;     // Optional search term
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  nextCursor: number | null;  // null if no more items
+  hasMore: boolean;
+  total?: number;  // Optional total count
 }
 
 export interface SaleDetailItem extends SaleItem {

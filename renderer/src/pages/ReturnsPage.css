@@ -54,8 +54,8 @@
   border-radius: 0.85rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 0.65rem 0.85rem;
-  background: rgba(13, 20, 38, 0.85);
-  color: #f8fafc;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .ReturnsPage-span {
@@ -75,10 +75,11 @@
   color: #bfdbfe;
   cursor: pointer;
 }
+
 .ReturnsPage-saleInfo {
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
+  background: var(--bg-input);
   padding: 1.25rem;
   margin-bottom: 1.5rem;
 }
@@ -139,15 +140,15 @@
   width: 100%;
   border-radius: 0.7rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
-  color: #f8fafc;
+  background: var(--bg-input);
+  color: var(--text-primary);
   padding: 0.4rem 0.6rem;
 }
 
 .ReturnsPage-empty {
   text-align: center;
   padding: 2rem;
-  color: rgba(148, 163, 184, 0.85);
+  color: var(--text-secondary);
 }
 
 .ReturnsPage-delete {
@@ -170,7 +171,7 @@
 
 .ReturnsPage-variantsCard {
   width: min(900px, 95vw);
-  background: rgba(13, 20, 38, 0.96);
+  background: var(--bg-input);
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 1.25rem;
   padding: 1.5rem;
@@ -189,7 +190,6 @@
   background: transparent;
   border: none;
   font-size: 1.2rem;
-  color: rgba(248, 250, 252, 0.6);
+  color: var(--text-secondary);
   cursor: pointer;
 }
-

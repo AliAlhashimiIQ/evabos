@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -46,6 +46,9 @@ const PosPage = (): JSX.Element => {
   const { token, user } = useAuth();
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [profiles, setProfiles] = useState<PosProfile[]>(() =>
     Array.from({ length: PROFILE_COUNT }, createProfile),
@@ -86,20 +89,34 @@ const PosPage = (): JSX.Element => {
     isSubmitting,
   } = currentProfile;
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (reset = false) => {
     if (!window.evaApi || !token) {
       return;
     }
     try {
-      const productResponse = await window.evaApi.products.list(token);
-      setProducts(productResponse.products);
-      
+      const cursor = reset ? 0 : (nextCursor ?? 0);
+      const productResponse = await window.evaApi.products.list(token, { limit: 100, cursor });
+
+      // Handle both paginated and legacy responses
+      const newProducts = productResponse.products || productResponse.items || [];
+      const cursor_next = productResponse.nextCursor ?? null;
+      const more = productResponse.hasMore ?? false;
+
+      if (reset) {
+        setProducts(newProducts);
+      } else {
+        setProducts(prev => [...prev, ...newProducts]);
+      }
+
+      setNextCursor(cursor_next);
+      setHasMore(more);
+
       // Update products in all cart profiles to reflect new stock levels
       setProfiles((prevProfiles) =>
         prevProfiles.map((profile) => ({
           ...profile,
           cart: profile.cart.map((item) => {
-            const updatedProduct = productResponse.products.find((p) => p.id === item.product.id);
+            const updatedProduct = newProducts.find((p) => p.id === item.product.id);
             return updatedProduct ? { ...item, product: updatedProduct } : item;
           }),
         })),
@@ -107,29 +124,44 @@ const PosPage = (): JSX.Element => {
     } catch (err) {
       console.error('Failed to refresh products:', err);
     }
-  }, [token]);
+  }, [token, nextCursor]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || isLoadingMore) return;
+    setIsLoadingMore(true);
+    await loadProducts(false);
+    setIsLoadingMore(false);
+  }, [hasMore, isLoadingMore, loadProducts]);
 
   useEffect(() => {
     const loadData = async () => {
       if (!window.evaApi || !token) {
-        setGlobalError('Desktop bridge unavailable.');
+        setGlobalError(t('desktopBridgeUnavailable'));
         return;
       }
       try {
         setLoading(true);
         setGlobalError(null);
-        const [productResponse, customerResponse, rateResponse] = await Promise.all([
-          window.evaApi.products.list(token),
+
+        // Load first 100 products with pagination
+        const productResponse = await window.evaApi.products.list(token, { limit: 100, cursor: 0 });
+        const newProducts = productResponse.products || productResponse.items || [];
+        setProducts(newProducts);
+        setNextCursor(productResponse.nextCursor ?? null);
+        setHasMore(productResponse.hasMore ?? false);
+
+        // Load customers and exchange rate
+        const [customerResponse, rateResponse] = await Promise.all([
           window.evaApi.customers.list(token),
           window.evaApi.exchangeRates.getCurrent(),
         ]);
-        setProducts(productResponse.products);
+
         setCustomers(customerResponse);
         if (rateResponse.currentRate) {
           setExchangeRate(rateResponse.currentRate.rate);
         }
       } catch (err) {
-        setGlobalError(err instanceof Error ? err.message : 'Failed to load data.');
+        setGlobalError(err instanceof Error ? err.message : t('failedToLoadData'));
       } finally {
         setLoading(false);
       }
@@ -140,20 +172,7 @@ const PosPage = (): JSX.Element => {
     }
   }, [token]);
 
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return products;
-    }
-    const term = searchTerm.toLowerCase().trim();
-    return products.filter(
-      (product) =>
-        product.name.toLowerCase().includes(term) ||
-        product.productName.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term) ||
-        (product.barcode && product.barcode.toLowerCase().includes(term)) ||
-        (product.baseCode && product.baseCode.toLowerCase().includes(term)),
-    );
-  }, [products, searchTerm]);
+
 
   const subtotalIQD = useMemo(
     () =>
@@ -224,8 +243,8 @@ const PosPage = (): JSX.Element => {
 
       updateCurrentProfile((profile) => {
         const existing = profile.cart.find((item) => item.product.id === product.id);
-        
-      if (existing) {
+
+        if (existing) {
           // Check if adding one more would exceed available stock
           const newQuantity = existing.quantity + 1;
           if (newQuantity > product.stockOnHand) {
@@ -235,17 +254,17 @@ const PosPage = (): JSX.Element => {
               success: null,
             };
           }
-          
+
           const nextCart = profile.cart.map((item) =>
             item.product.id === product.id ? { ...item, quantity: newQuantity } : item,
-        );
+          );
           return { ...profile, cart: nextCart, error: null, success: null };
         } else {
           // Adding new item to cart
           const nextCart = [...profile.cart, { product, quantity: 1 }];
           return { ...profile, cart: nextCart, error: null, success: null };
         }
-    });
+      });
     },
     [updateCurrentProfile],
   );
@@ -267,7 +286,7 @@ const PosPage = (): JSX.Element => {
       }
 
       const newQuantity = cartItem.quantity + delta;
-      
+
       // Check if trying to increase beyond available stock
       if (delta > 0 && newQuantity > cartItem.product.stockOnHand) {
         return {
@@ -312,10 +331,8 @@ const PosPage = (): JSX.Element => {
 
   const handleCompleteSale = useCallback(
     async (profileIndex = activeProfileIndex) => {
-      console.log('[POS] handleCompleteSale called', { profileIndex, activeProfileIndex, profilesLength: profiles.length });
       const targetProfile = profiles[profileIndex];
       if (!targetProfile) {
-        console.error('[POS] No target profile at index', profileIndex);
         return;
       }
       const {
@@ -326,8 +343,8 @@ const PosPage = (): JSX.Element => {
         discountValue: targetDiscountValue,
       } = targetProfile;
 
-    if (!window.evaApi) {
-        setGlobalError('Desktop bridge unavailable.');
+      if (!window.evaApi) {
+        setGlobalError(t('desktopBridgeUnavailable'));
         return;
       }
       if (!token) {
@@ -346,7 +363,7 @@ const PosPage = (): JSX.Element => {
       // Final stock validation before completing sale - check against latest product data
       const outOfStockItems: Array<{ item: CartItem; currentStock: number }> = [];
       const overStockItems: Array<{ item: CartItem; currentStock: number }> = [];
-      
+
       for (const cartItem of targetCart) {
         const currentProduct = products.find((p) => p.id === cartItem.product.id);
         if (!currentProduct) {
@@ -354,14 +371,14 @@ const PosPage = (): JSX.Element => {
           outOfStockItems.push({ item: cartItem, currentStock: 0 });
           continue;
         }
-        
+
         if (currentProduct.stockOnHand <= 0) {
           outOfStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
         } else if (cartItem.quantity > currentProduct.stockOnHand) {
           overStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
         }
       }
-      
+
       if (outOfStockItems.length > 0) {
         const itemNames = outOfStockItems.map(({ item }) => item.product.productName).join(', ');
         updateProfileAtIndex(profileIndex, (profile) => ({
@@ -369,8 +386,8 @@ const PosPage = (): JSX.Element => {
           error: t('cannotCompleteOutOfStock', { items: itemNames }),
           success: null,
         }));
-      return;
-    }
+        return;
+      }
 
       if (overStockItems.length > 0) {
         const itemDetails = overStockItems
@@ -381,18 +398,18 @@ const PosPage = (): JSX.Element => {
           error: t('cannotCompleteQuantity', { details: itemDetails }),
           success: null,
         }));
-      return;
-    }
+        return;
+      }
 
       const subtotal = targetCart.reduce((acc, item) => acc + item.product.salePriceIQD * item.quantity, 0);
       const discount =
         targetDiscountMode === 'amount'
           ? Math.min(targetDiscountValue, subtotal)
           : targetDiscountMode === 'percent'
-          ? Math.min((subtotal * targetDiscountValue) / 100, subtotal)
-          : targetDiscountMode === 'finalPrice'
-          ? Math.max(0, subtotal - Math.max(0, Math.min(targetDiscountValue, subtotal)))
-          : 0;
+            ? Math.min((subtotal * targetDiscountValue) / 100, subtotal)
+            : targetDiscountMode === 'finalPrice'
+              ? Math.max(0, subtotal - Math.max(0, Math.min(targetDiscountValue, subtotal)))
+              : 0;
       const total = Math.max(subtotal - discount, 0);
 
       try {
@@ -402,30 +419,30 @@ const PosPage = (): JSX.Element => {
           error: null,
           success: null,
         }));
-      const sale: SaleInput = {
-        branchId: user?.branchId ?? 1,
-        cashierId: user?.userId ?? 1,
+        const sale: SaleInput = {
+          branchId: user?.branchId ?? 1,
+          cashierId: user?.userId ?? 1,
           customerId: targetCustomerId ? Number(targetCustomerId) : null,
-        saleDate: new Date().toISOString(),
+          saleDate: new Date().toISOString(),
           subtotalIQD: subtotal,
           discountIQD: discount,
           totalIQD: total,
           paymentMethod: targetPaymentMethod,
           items: targetCart.map((item) => ({
-          variantId: item.product.id,
-          quantity: item.quantity,
-          unitPriceIQD: item.product.salePriceIQD,
-          unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
-          lineTotalIQD: item.product.salePriceIQD * item.quantity,
-        })),
-      };
+            variantId: item.product.id,
+            quantity: item.quantity,
+            unitPriceIQD: item.product.salePriceIQD,
+            unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
+            lineTotalIQD: item.product.salePriceIQD * item.quantity,
+          })),
+        };
 
         const created = await window.evaApi.sales.create(token, sale);
-      setPrintSale(created);
-        
+        setPrintSale(created);
+
         // Refresh products to update stock levels
         await loadProducts();
-        
+
         updateProfileAtIndex(profileIndex, (profile) => ({
           ...profile,
           cart: [],
@@ -436,7 +453,7 @@ const PosPage = (): JSX.Element => {
           error: null,
           isSubmitting: false,
         }));
-    } catch (err) {
+      } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('failedToCompleteSale');
         updateProfileAtIndex(profileIndex, (profile) => ({
           ...profile,
@@ -445,7 +462,7 @@ const PosPage = (): JSX.Element => {
           isSubmitting: false,
         }));
         setGlobalError(errorMessage);
-    }
+      }
     },
     [activeProfileIndex, exchangeRate, profiles, products, token, updateProfileAtIndex, user, loadProducts],
   );
@@ -454,10 +471,10 @@ const PosPage = (): JSX.Element => {
     (value: string) => {
       // Clear search when scanning
       setSearchTerm('');
-      
+
       // Try exact match first (barcode or SKU)
       let variant = products.find((p) => p.barcode === value || p.sku === value);
-      
+
       // If no exact match, try case-insensitive
       if (!variant) {
         variant = products.find(
@@ -466,17 +483,17 @@ const PosPage = (): JSX.Element => {
             p.sku.toLowerCase() === value.toLowerCase(),
         );
       }
-      
+
       if (variant) {
         // Check stock before adding
         if (variant.stockOnHand <= 0) {
-          setScannerMessage(`❌ "${variant.productName}" is out of stock`);
+          setScannerMessage(`❌ "${variant.productName}" ${t('outOfStock')}`);
         } else {
           addToCart(variant);
-          setScannerMessage(`✅ Added ${variant.productName}`);
+          setScannerMessage(`✅ ${t('added')} ${variant.productName}`);
         }
       } else {
-        setScannerMessage(`❌ No match for ${value}`);
+        setScannerMessage(`❌ ${t('noMatchFor')} ${value}`);
       }
       setTimeout(() => setScannerMessage(null), 2500);
     },
@@ -538,7 +555,7 @@ const PosPage = (): JSX.Element => {
               if (searchTerm.trim().length >= 5) {
                 handleScan(searchTerm.trim());
               } else {
-                setScannerMessage('❌ Please enter a barcode or SKU (at least 5 characters)');
+                setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
                 setTimeout(() => setScannerMessage(null), 2000);
               }
             }}
@@ -548,7 +565,31 @@ const PosPage = (): JSX.Element => {
           </button>
         </div>
         {scannerMessage && <div className="Pos-scannerMessage">{scannerMessage}</div>}
-        
+
+        {/* Load More button for pagination */}
+        {hasMore && (
+          <div style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              style={{
+                padding: '0.5rem 1.5rem',
+                backgroundColor: isLoadingMore ? '#ccc' : 'var(--primary-color)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isLoadingMore ? 'not-allowed' : 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+              }}
+              title={t('productsLoadedTitle', { count: products.length })}
+            >
+              {isLoadingMore ? `⏳ ${t('loading')}` : `📦 ${t('loadMoreCount', { count: products.length })}`}
+            </button>
+          </div>
+        )}
+
         <header className="Pos-cartHeader">
           <div>
             <h2>{t('cart')}</h2>
@@ -561,7 +602,7 @@ const PosPage = (): JSX.Element => {
               <button
                 className="Pos-clearButton"
                 onClick={() => {
-                if (window.confirm(t('clearAllItems'))) {
+                  if (window.confirm(t('clearAllItems'))) {
                     updateCurrentProfile((profile) => ({
                       ...profile,
                       cart: [],
@@ -569,7 +610,7 @@ const PosPage = (): JSX.Element => {
                       success: null,
                       error: null,
                     }));
-                }
+                  }
                 }}
                 title={t('clearCart')}
               >
@@ -592,9 +633,8 @@ const PosPage = (): JSX.Element => {
               <button
                 key={index}
                 type="button"
-                className={`Pos-profileTab ${index === activeProfileIndex ? 'active' : ''} ${
-                  profile.cart.length > 0 ? 'filled' : ''
-                }`}
+                className={`Pos-profileTab ${index === activeProfileIndex ? 'active' : ''} ${profile.cart.length > 0 ? 'filled' : ''
+                  }`}
                 onClick={() => setActiveProfileIndex(index)}
                 title={
                   profile.cart.length > 0
@@ -602,7 +642,7 @@ const PosPage = (): JSX.Element => {
                     : t('emptyTab')
                 }
               >
-                <span>Tab {index + 1}</span>
+                <span>{t('tab')} {index + 1}</span>
                 {profile.cart.length > 0 ? (
                   <small>{profile.cart.length} {profile.cart.length === 1 ? t('item') : t('items')}</small>
                 ) : (
@@ -745,11 +785,11 @@ const PosPage = (): JSX.Element => {
                     }))
                   }
                   placeholder={
-                    discountMode === 'percent' 
-                      ? '0-100' 
-                      : discountMode === 'finalPrice' 
-                      ? (t('enterFinalPrice') || 'Enter final price')
-                      : t('amount')
+                    discountMode === 'percent'
+                      ? '0-100'
+                      : discountMode === 'finalPrice'
+                        ? t('enterFinalPrice')
+                        : t('amount')
                   }
                 />
                 {discountValue > 0 && (
@@ -788,49 +828,46 @@ const PosPage = (): JSX.Element => {
           </div>
 
           <div className="Pos-summary">
-          <div className="Pos-summaryRow">
-            <span>{t('subtotal')}</span>
-            <strong>{subtotalIQD.toLocaleString('en-IQ')} IQD</strong>
-          </div>
-          {discountIQD > 0 && (
-            <div className="Pos-summaryRow Pos-discountRow">
-              <span>
-                {t('discount')} (
-                {discountMode === 'percent' 
-                  ? `${discountValue}%` 
-                  : discountMode === 'finalPrice'
-                  ? (t('finalPrice') || 'Final Price')
-                  : t('amount')}
-                )
-              </span>
-              <strong>-{discountIQD.toLocaleString('en-IQ')} IQD</strong>
+            <div className="Pos-summaryRow">
+              <span>{t('subtotal')}</span>
+              <strong>{subtotalIQD.toLocaleString('en-IQ')} IQD</strong>
             </div>
-          )}
-          <div className="Pos-summaryRow Pos-total">
-            <span>{t('total')}</span>
-            <strong>{totalIQD.toLocaleString('en-IQ')} IQD</strong>
-          </div>
-          {user?.role === 'admin' && (
-            <div className="Pos-summaryRow Pos-profit">
-              <span>💰 {t('estimatedProfit')}</span>
-              <strong>{profitIQD.toLocaleString('en-IQ')} IQD</strong>
+            {discountIQD > 0 && (
+              <div className="Pos-summaryRow Pos-discountRow">
+                <span>
+                  {t('discount')} (
+                  {discountMode === 'percent'
+                    ? `${discountValue}%`
+                    : discountMode === 'finalPrice'
+                      ? t('finalPrice')
+                      : t('amount')}
+                  )
+                </span>
+                <strong>-{discountIQD.toLocaleString('en-IQ')} IQD</strong>
+              </div>
+            )}
+            <div className="Pos-summaryRow Pos-total">
+              <span>{t('total')}</span>
+              <strong>{totalIQD.toLocaleString('en-IQ')} IQD</strong>
             </div>
-          )}
+            {user?.role === 'admin' && (
+              <div className="Pos-summaryRow Pos-profit">
+                <span>💰 {t('estimatedProfit')}</span>
+                <strong>{profitIQD.toLocaleString('en-IQ')} IQD</strong>
+              </div>
+            )}
           </div>
         </div>
 
-        <button 
-          className="Pos-completeButton" 
+        <button
+          className="Pos-completeButton"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('[POS] Complete Sale button clicked', { isSubmitting, cartLength: cart.length, activeProfileIndex });
             if (!isSubmitting && cart.length > 0) {
               handleCompleteSale();
-            } else {
-              console.warn('[POS] Button click ignored', { isSubmitting, cartLength: cart.length });
             }
-          }} 
+          }}
           disabled={isSubmitting || cart.length === 0}
           title={cart.length === 0 ? t('addItemsFirst') : t('completeSaleEnter')}
         >
@@ -840,7 +877,7 @@ const PosPage = (): JSX.Element => {
             <>✅ {t('completeSale')} ({totalIQD.toLocaleString('en-IQ')} IQD)</>
           )}
         </button>
-      </section>
+      </section >
 
       <PrintingModal
         visible={!!printSale}
@@ -848,8 +885,9 @@ const PosPage = (): JSX.Element => {
         printerName={preferredPrinter}
         onPrinterChange={setPreferredPrinter}
         onClose={() => setPrintSale(null)}
+        autoPrint={true}
       />
-    </div>
+    </div >
   );
 };
 

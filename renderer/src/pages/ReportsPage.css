@@ -4,6 +4,7 @@
   align-items: center;
   font-weight: 600;
 }
+
 .Reports {
   display: flex;
   flex-direction: column;
@@ -48,7 +49,7 @@
 .Reports-filters input {
   border-radius: 0.8rem;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-input);
   color: #f8fafc;
   padding: 0.6rem 0.8rem;
 }
@@ -71,7 +72,7 @@
 
 .Reports-stats div {
   border-radius: 1rem;
-  background: rgba(13, 20, 38, 0.85);
+  background: var(--bg-input);
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 1.25rem;
   display: flex;
@@ -82,7 +83,7 @@
 .Reports-tableWrapper {
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
+  background: var(--bg-input);
   overflow: hidden;
 }
 
@@ -95,7 +96,7 @@
 .Reports-grid article {
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
+  background: var(--bg-input);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -150,4 +151,3 @@
   border: 1px solid rgba(248, 113, 113, 0.6);
   color: #fecaca;
 }
-

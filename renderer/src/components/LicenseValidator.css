@@ -54,7 +54,7 @@
   text-align: center;
 }
 
-.LicenseValidator-errorContent > p {
+.LicenseValidator-errorContent>p {
   color: #f8fafc;
   font-size: 1.1rem;
   margin-bottom: 1.5rem;
@@ -97,4 +97,3 @@
   color: #f8fafc !important;
   font-weight: 500;
 }
-

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Product } from '../types/electron';
 import './InventoryAdjustModal.css';
 
 interface InventoryAdjustModalProps {

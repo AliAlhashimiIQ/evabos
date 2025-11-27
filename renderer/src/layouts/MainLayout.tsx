@@ -23,7 +23,7 @@ const MainLayout = (): JSX.Element => {
     { to: '/pos', label: t('pointOfSale') },
     { to: '/sales', label: t('sales') },
     { to: '/products', label: t('products') },
-    { to: '/suppliers', label: 'Suppliers' },
+    { to: '/suppliers', label: t('suppliers') },
     { to: '/purchase-orders', label: t('purchasing') },
     { to: '/customers', label: t('customers') },
     { to: '/returns', label: t('returns') },
@@ -31,7 +31,7 @@ const MainLayout = (): JSX.Element => {
     { to: '/reports', label: t('reports') },
     { to: '/users', label: t('users') },
     { to: '/branches', label: t('branches') },
-    { to: '/activity-logs', label: 'Activity Logs' },
+    { to: '/activity-logs', label: t('activityLogs') },
     { to: '/backup', label: t('backup') },
     { to: '/settings', label: t('settings') },
   ];
@@ -77,7 +77,7 @@ const MainLayout = (): JSX.Element => {
 
       <div className="Layout-main">
         <header className="Layout-header">
-          <h1>EVA POS – Offline</h1>
+          <h1>{t('appName')} – {t('offlineMode')}</h1>
           <div className="Layout-headerActions">
             <div className="Layout-status">
               EVA Main • {user?.username ?? 'Unknown'} ({user?.role ?? '—'})
@@ -86,9 +86,9 @@ const MainLayout = (): JSX.Element => {
               <button
                 onClick={handleLockToggle}
                 className={`Layout-lockButton ${posLocked ? 'Layout-lockButton--locked' : ''}`}
-                title={posLocked ? 'Unlock POS' : 'Lock POS'}
+                title={posLocked ? t('unlockPOS') : t('lockPOS')}
               >
-                {posLocked ? '🔒 Locked' : '🔓 Unlocked'}
+                {posLocked ? `🔒 ${t('locked')}` : `🔓 ${t('unlocked')}`}
               </button>
             )}
           </div>

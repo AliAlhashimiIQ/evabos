@@ -11,9 +11,9 @@ const logError = (...args: any[]) => {
   console.error(...args); // Always log errors
 };
 
-const createPrintWindow = async (html: string, options?: { printerName?: string | null }) => {
+const createPrintWindow = async (html: string, options?: { printerName?: string | null; silent?: boolean }) => {
   log('[Print] Starting print job');
-  
+
   // Create window
   const win = new BrowserWindow({
     width: 800,
@@ -51,11 +51,12 @@ const createPrintWindow = async (html: string, options?: { printerName?: string 
   // Now safe to print
   return new Promise<void>((resolve, reject) => {
     const hasPrinter = !!(options?.printerName && options.printerName.trim() !== '');
-    
+
     const printOptions: Electron.WebContentsPrintOptions = {
-      silent: false, // Show dialog (change to true for silent printing)
+      silent: options?.silent ?? false, // Use provided silent option or default to false
       printBackground: true,
       landscape: false,
+      margins: { marginType: 'none' },
     };
 
     if (hasPrinter) {
@@ -121,11 +122,11 @@ export function registerPrintingIpc(): void {
 
   ipcMain.handle(
     'printing:print',
-    async (_event, payload: { html: string; printerName?: string | null }) => {
-      log('[Print] IPC received, printer:', payload.printerName || 'System Default');
-      
+    async (_event, payload: { html: string; printerName?: string | null; silent?: boolean }) => {
+      log('[Print] IPC received, printer:', payload.printerName || 'System Default', 'silent:', payload.silent);
+
       try {
-        await createPrintWindow(payload.html, { printerName: payload.printerName });
+        await createPrintWindow(payload.html, { printerName: payload.printerName, silent: payload.silent });
         return true;
       } catch (error) {
         logError('[Print] Error:', error);

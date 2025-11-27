@@ -49,6 +49,7 @@ const CustomersPage = (): JSX.Element => {
       setHistory(response);
     } catch (err) {
       console.error('Failed to load history', err);
+      setError(t('failedToLoadHistory'));
     }
   };
 
@@ -74,11 +75,11 @@ const CustomersPage = (): JSX.Element => {
   }, [history, historyFilter]);
 
   const loyaltyTier = (points: number) => {
-    if (points > 200) return 'Platinum';
-    if (points > 100) return 'Gold';
-    if (points > 50) return 'Silver';
-    if (points > 10) return 'Bronze';
-    return 'New';
+    if (points > 200) return t('platinum');
+    if (points > 100) return t('gold');
+    if (points > 50) return t('silver');
+    if (points > 10) return t('bronze');
+    return t('new');
   };
 
   const filteredCustomers = useMemo(() => {
@@ -177,7 +178,7 @@ const CustomersPage = (): JSX.Element => {
                     <strong>{selectedCustomer.totalVisits}</strong>
                   </div>
                   <div>
-                    <span>Loyalty Points</span>
+                    <span>{t('loyaltyPoints')}</span>
                     <strong>{selectedCustomer.loyaltyPoints.toFixed(1)}</strong>
                   </div>
                 </div>
@@ -185,11 +186,11 @@ const CustomersPage = (): JSX.Element => {
 
               <section className="CustomersPage-history">
                 <div className="CustomersPage-historyHeader">
-                  <h3>Purchase History</h3>
+                  <h3>{t('purchaseHistory')}</h3>
                   <select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)}>
-                    <option value="all">All</option>
-                    <option value="30">Last 30 days</option>
-                    <option value="90">Last 90 days</option>
+                    <option value="all">{t('all')}</option>
+                    <option value="30">{t('last30days')}</option>
+                    <option value="90">{t('last90days')}</option>
                   </select>
                 </div>
                 {filteredHistory.length === 0 ? (
@@ -200,11 +201,11 @@ const CustomersPage = (): JSX.Element => {
                       <article key={entry.saleId}>
                         <header>
                           <div>
-                            <strong>Sale #{entry.saleId}</strong>
+                            <strong>{t('sale')} #{entry.saleId}</strong>
                             <span>{new Date(entry.saleDate).toLocaleString()}</span>
                           </div>
                           <div>
-                            <span>{entry.paymentMethod ?? 'Unknown method'}</span>
+                            <span>{entry.paymentMethod ?? t('unknownMethod')}</span>
                             <strong>{entry.totalIQD.toLocaleString('en-IQ')} IQD</strong>
                           </div>
                         </header>
@@ -212,7 +213,7 @@ const CustomersPage = (): JSX.Element => {
                           {entry.items.map((item) => (
                             <li key={`${entry.saleId}-${item.variantId}`}>
                               <span>
-                                {item.productName} – {item.color ?? 'Any'} / {item.size ?? 'Any'}
+                                {item.productName} – {item.color ?? t('any')} / {item.size ?? t('any')}
                               </span>
                               <span>
                                 {item.quantity} × {item.lineTotalIQD.toLocaleString('en-IQ')} IQD
@@ -267,7 +268,7 @@ const CustomersPage = (): JSX.Element => {
               </label>
               <div className="CustomersPage-actions">
                 <button type="button" className="ghost" onClick={() => setModalOpen(false)}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" disabled={submitting}>
                   {submitting ? t('saving') : t('saveCustomer')}

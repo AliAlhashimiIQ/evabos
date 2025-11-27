@@ -35,7 +35,7 @@ const ReportsPage = (): JSX.Element => {
       const response = await window.evaApi.reports.advanced(token, range);
       setReports(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports.');
+      setError(err instanceof Error ? err.message : t('failedToLoadReports'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ const ReportsPage = (): JSX.Element => {
 
   const printReport = async () => {
     if (!reports || !window.evaApi) return;
-    
+
     // Generate formatted HTML report
     const reportHtml = `
 <!DOCTYPE html>
@@ -363,11 +363,11 @@ const ReportsPage = (): JSX.Element => {
 </body>
 </html>
     `;
-    
+
     try {
       await window.evaApi.printing.print({ html: reportHtml, printerName: null });
     } catch (error) {
-      alert(`Failed to print report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`${t('failedToPrintReport')}: ${error instanceof Error ? error.message : t('unknownError')}`);
     }
   };
 
@@ -388,7 +388,7 @@ const ReportsPage = (): JSX.Element => {
 
       <section className="Reports-filters">
         <label>
-          Start Date
+          {t('startDate')}
           <input
             type="date"
             value={range.startDate}
@@ -411,7 +411,7 @@ const ReportsPage = (): JSX.Element => {
       {error && <div className="Reports-alert Reports-alert--error">{error}</div>}
 
       {!reports ? (
-        <div className="Reports-empty">Run the report to see data.</div>
+        <div className="Reports-empty">{t('runReportToSeeData')}</div>
       ) : (
         <>
           <section className="Reports-stats">
@@ -440,18 +440,18 @@ const ReportsPage = (): JSX.Element => {
           <section className="Reports-grid">
             <article>
               <header>
-                <h3>Daily Sales Summary</h3>
+                <h3>{t('dailySalesSummary')}</h3>
               </header>
               {reports.dailySales.length === 0 ? (
-                <div className="Reports-empty">No sales in this range.</div>
+                <div className="Reports-empty">{t('noSalesInRange')}</div>
               ) : (
                 <table>
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Orders</th>
-                      <th>Total</th>
-                      <th>Avg Ticket</th>
+                      <th>{t('date')}</th>
+                      <th>{t('ordersReport')}</th>
+                      <th>{t('totalReport')}</th>
+                      <th>{t('avgTicket')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -470,14 +470,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Best Selling Items</h3>
+                <h3>{t('bestSellingItems')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Sales IQD</th>
+                    <th>{t('item')}</th>
+                    <th>{t('qty')}</th>
+                    <th>{t('salesIQD')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -494,14 +494,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Sales by Size</h3>
+                <h3>{t('salesBySize')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Size</th>
-                    <th>Qty</th>
-                    <th>Sales</th>
+                    <th>{t('size')}</th>
+                    <th>{t('qty')}</th>
+                    <th>{t('salesReport')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -518,14 +518,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Sales by Color</h3>
+                <h3>{t('salesByColor')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Color</th>
-                    <th>Qty</th>
-                    <th>Sales</th>
+                    <th>{t('colorReport')}</th>
+                    <th>{t('qty')}</th>
+                    <th>{t('salesReport')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -542,14 +542,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Top Customers</h3>
+                <h3>{t('topCustomers')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Customer</th>
-                    <th>Orders</th>
-                    <th>Spend</th>
+                    <th>{t('customer')}</th>
+                    <th>{t('ordersReport')}</th>
+                    <th>{t('spend')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -566,18 +566,18 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Low Stock Alerts</h3>
+                <h3>{t('lowStockAlerts')}</h3>
               </header>
               {reports.lowStock.length === 0 ? (
-                <div className="Reports-empty">Stock levels look healthy.</div>
+                <div className="Reports-empty">{t('stockLevelsHealthy')}</div>
               ) : (
                 <table>
                   <thead>
                     <tr>
-                      <th>SKU</th>
-                      <th>Product</th>
-                      <th>Variant</th>
-                      <th>Qty</th>
+                      <th>{t('skuReport')}</th>
+                      <th>{t('product')}</th>
+                      <th>{t('variant')}</th>
+                      <th>{t('qty')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -586,7 +586,7 @@ const ReportsPage = (): JSX.Element => {
                         <td>{entry.sku}</td>
                         <td>{entry.productName}</td>
                         <td>
-                          {entry.color ?? 'Any'} / {entry.size ?? 'Any'}
+                          {entry.color ?? t('any')} / {entry.size ?? t('any')}
                         </td>
                         <td>{entry.quantity}</td>
                       </tr>
@@ -598,14 +598,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Expenses vs Sales</h3>
+                <h3>{t('expensesVsSales')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Sales</th>
-                    <th>Expenses</th>
+                    <th>{t('date')}</th>
+                    <th>{t('salesReport')}</th>
+                    <th>{t('expensesReport')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -622,14 +622,14 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>Activity Logs</h3>
+                <h3>{t('activityLogs')}</h3>
               </header>
               <table>
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>User</th>
-                    <th>Action</th>
+                    <th>{t('time')}</th>
+                    <th>{t('user')}</th>
+                    <th>{t('action')}</th>
                   </tr>
                 </thead>
                 <tbody>

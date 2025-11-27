@@ -3,7 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import './LabelSettingsSection.css';
 
 interface LabelSettings {
-  labelSize: '2x1' | '4x2';
+  // labelSize removed, fixed to 50x25mm
   showProductName: boolean;
   showVariant: boolean;
   showSku: boolean;
@@ -20,7 +20,7 @@ interface LabelSettings {
 }
 
 const defaultSettings: LabelSettings = {
-  labelSize: '2x1',
+  // labelSize fixed to 50x25mm
   showProductName: true,
   showVariant: true,
   showSku: true,
@@ -99,13 +99,7 @@ const LabelSettingsSection = (): JSX.Element => {
           {/* Basic Settings */}
           <div className="LabelSettings-group">
             <h3>{t('basicSettings')}</h3>
-            <label>
-              {t('labelSize')}
-              <select value={settings.labelSize} onChange={(e) => updateSetting('labelSize', e.target.value as '2x1' | '4x2')}>
-                <option value="2x1">{t('smallLabel')}</option>
-                <option value="4x2">{t('largeLabel')}</option>
-              </select>
-            </label>
+
             <label>
               {t('fontSize')}
               <input
@@ -180,8 +174,8 @@ const LabelSettingsSection = (): JSX.Element => {
               {t('barcodeHeight')}
               <input
                 type="number"
-                min="30"
-                max="120"
+                min="10"
+                max="200"
                 value={settings.barcodeHeight}
                 onChange={(e) => updateSetting('barcodeHeight', parseInt(e.target.value) || 35)}
               />
@@ -191,7 +185,7 @@ const LabelSettingsSection = (): JSX.Element => {
               <input
                 type="number"
                 min="1"
-                max="5"
+                max="10"
                 step="0.5"
                 value={settings.barcodeWidth}
                 onChange={(e) => updateSetting('barcodeWidth', parseFloat(e.target.value) || 2)}
@@ -209,7 +203,7 @@ const LabelSettingsSection = (): JSX.Element => {
                 type="text"
                 value={settings.customText1}
                 onChange={(e) => updateSetting('customText1', e.target.value)}
-                placeholder="e.g., VIP"
+                placeholder={t('exampleVIP')}
                 maxLength={50}
               />
             </label>
@@ -223,19 +217,17 @@ const LabelSettingsSection = (): JSX.Element => {
                 type="text"
                 value={settings.customText3}
                 onChange={(e) => updateSetting('customText3', e.target.value)}
-                placeholder="e.g., EVA CLOTHING"
+                placeholder={t('exampleStoreName')}
                 maxLength={50}
               />
             </label>
           </div>
-        </div>
 
-        {success && <div className="LabelSettings-success">{success}</div>}
-        
-        <div className="LabelSettings-actions">
-          <button onClick={saveSettings} disabled={saving} className="LabelSettings-saveButton">
-            {saving ? t('saving') : `💾 ${t('saveLabelSettings')}`}
-          </button>
+          <div className="LabelSettings-actions">
+            <button onClick={saveSettings} disabled={saving} className="LabelSettings-saveButton">
+              {saving ? t('saving') : `💾 ${t('saveLabelSettings')}`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

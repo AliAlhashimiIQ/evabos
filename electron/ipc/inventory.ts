@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron';
 import {
   listProducts,
+  listProductsLegacy,
+  getProductCount,
   createProduct,
   updateProduct,
   updateVariant,
@@ -10,7 +12,7 @@ import {
   createSupplier,
 } from '../db/database';
 import { importProductsFromExcel } from '../db/excelImport';
-import type { ProductInput, ProductUpdateInput, VariantUpdateInput, SupplierInput } from '../db/types';
+import type { ProductInput, ProductUpdateInput, VariantUpdateInput, SupplierInput, PaginationParams } from '../db/types';
 import { requireRole } from './auth';
 
 let handlersRegistered = false;
@@ -20,10 +22,26 @@ export function registerInventoryIpc(): void {
     return;
   }
 
+  // Paginated product list
   ipcMain.handle(
     'inventory:products:list',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const params = args[0] as PaginationParams | undefined;
+      if (params !== undefined) {
+        // New paginated version
+        return listProducts(params);
+      } else {
+        // Legacy - load all products
+        return listProductsLegacy();
+      }
+    }),
+  );
+
+  // Product count (for UI pagination)
+  ipcMain.handle(
+    'inventory:products:count',
     requireRole(['admin', 'manager', 'cashier'])(async () => {
-      return listProducts();
+      return getProductCount();
     }),
   );
 
@@ -105,7 +123,7 @@ export function registerInventoryIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
       if (!session) throw new Error('Unauthorized');
       const { fileBuffer, branchId } = args[0] as { fileBuffer: number[] | Buffer; branchId?: number };
-      
+
       // Convert array to Buffer if needed (renderer sends as array)
       let buffer: Buffer;
       if (Buffer.isBuffer(fileBuffer)) {
@@ -115,7 +133,7 @@ export function registerInventoryIpc(): void {
       } else {
         throw new Error('Invalid file buffer format');
       }
-      
+
       return importProductsFromExcel(buffer, branchId ?? session.branchId ?? 1);
     }),
   );

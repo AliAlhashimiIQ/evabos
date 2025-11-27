@@ -7,7 +7,7 @@
 }
 
 .Pos-cartPanel {
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-input);
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 1rem;
@@ -27,7 +27,7 @@
   gap: 0.75rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  background: rgba(13, 20, 38, 0.4);
+  background: var(--bg-tertiary);
   border-radius: 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.15);
 }
@@ -42,7 +42,7 @@
 }
 
 .Pos-profileTabs-label strong {
-  color: #f8fafc;
+  color: var(--text-primary);
   font-size: 0.95rem;
 }
 
@@ -57,8 +57,8 @@
 .Pos-profileTab {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 0.5rem;
-  background: rgba(13, 20, 38, 0.75);
-  color: rgba(248, 250, 252, 0.8);
+  background: var(--bg-card);
+  color: var(--text-primary);
   padding: 0.35rem 0.5rem;
   display: flex;
   flex-direction: column;
@@ -127,8 +127,8 @@
   max-width: none;
   border-radius: 0.75rem;
   border: 2px solid rgba(59, 130, 246, 0.4);
-  background: rgba(15, 23, 42, 0.95);
-  color: #f8fafc;
+  background: var(--bg-input);
+  color: var(--text-primary);
   padding: 0.75rem 1rem;
   font-size: 1rem;
   transition: all 0.2s;
@@ -206,7 +206,7 @@
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1rem;
   padding: 1rem;
-  background: rgba(13, 20, 38, 0.9);
+  background: var(--bg-card);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -236,7 +236,7 @@
 .Pos-productName {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .Pos-productVariant {
@@ -260,7 +260,7 @@
 }
 
 .Pos-productPrice {
-  color: rgba(226, 232, 240, 0.95);
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -281,7 +281,7 @@
   padding: 0.5rem 0;
 }
 
-.Pos-cartHeader > div:first-child {
+.Pos-cartHeader>div:first-child {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -322,7 +322,7 @@
   overflow-x: hidden;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 0.75rem;
-  background: rgba(13, 20, 38, 0.3);
+  background: var(--bg-tertiary);
 }
 
 .Pos-cartTable {
@@ -345,7 +345,7 @@
 
 .Pos-cartItemName {
   font-weight: 600;
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .Pos-cartItemVariant {
@@ -356,7 +356,7 @@
 
 .Pos-lineTotal {
   font-weight: 600;
-  color: rgba(226, 232, 240, 0.9);
+  color: var(--text-primary);
 }
 
 .Pos-qtyControls {
@@ -396,7 +396,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 0.6rem;
   padding: 0.65rem;
-  background: rgba(13, 20, 38, 0.4);
+  background: var(--bg-tertiary);
   border-radius: 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.15);
 }
@@ -409,17 +409,17 @@
   color: rgba(148, 163, 184, 0.9);
 }
 
-.Pos-controls label > span:first-child {
+.Pos-controls label>span:first-child {
   font-weight: 500;
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .Pos-controls input,
 .Pos-controls select {
   border-radius: 0.65rem;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(15, 23, 42, 0.9);
-  color: #f8fafc;
+  background: var(--bg-input);
+  color: var(--text-primary);
   padding: 0.55rem 0.65rem;
   font-size: 0.85rem;
   width: 100%;
@@ -443,7 +443,7 @@
   border-radius: 999px;
   padding: 0.2rem 0.8rem;
   background: transparent;
-  color: rgba(248, 250, 252, 0.65);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -484,7 +484,7 @@
 .Pos-summary {
   flex-shrink: 0;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(13, 20, 38, 0.95), rgba(15, 23, 42, 0.95));
+  background: var(--bg-input);
   border: 1px solid rgba(59, 130, 246, 0.3);
   padding: 0.65rem 0.85rem;
   display: grid;
@@ -492,6 +492,7 @@
   font-size: 0.85rem;
   min-width: 0;
 }
+
 .Pos-profit {
   border-top: 1px dashed rgba(148, 163, 184, 0.3);
   padding-top: 0.5rem;
@@ -579,4 +580,3 @@
   border: 1px solid rgba(74, 222, 128, 0.5);
   color: #86efac;
 }
-

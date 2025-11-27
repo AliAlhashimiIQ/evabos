@@ -16,7 +16,7 @@ const translations = {
   en: {
     // App
     appName: 'EVA POS',
-    
+
     // Navigation
     dashboard: 'Dashboard',
     pointOfSale: 'Point of Sale',
@@ -31,7 +31,25 @@ const translations = {
     branches: 'Branches',
     backup: 'Backup',
     logout: 'Logout',
-    
+    suppliers: 'Suppliers',
+    offlineMode: 'Offline',
+    lockPOS: 'Lock POS',
+    unlockPOS: 'Unlock POS',
+    locked: 'Locked',
+    unlocked: 'Unlocked',
+
+    // Date Presets
+    today: 'Today',
+    yesterday: 'Yesterday',
+    last2days: 'Last 2 Days',
+    last7days: 'Last 7 Days',
+    last30days: 'Last 30 Days',
+    last90days: 'Last 90 Days',
+    thisMonth: 'This Month',
+    lastMonth: 'Last Month',
+    customRange: 'Custom Range',
+    to: 'to',
+
     // Common
     save: 'Save',
     cancel: 'Cancel',
@@ -51,7 +69,7 @@ const translations = {
     confirm: 'Confirm',
     yes: 'Yes',
     no: 'No',
-    
+
     // Dashboard
     welcomeBack: 'Welcome back',
     todaySales: 'Today\'s Sales',
@@ -78,7 +96,7 @@ const translations = {
     viewReports: 'View Reports',
     backupData: 'Backup Data',
     left: 'left',
-    
+
     // Products
     products: 'Products',
     productName: 'Product Name',
@@ -88,7 +106,7 @@ const translations = {
     barcode: 'Barcode',
     addProduct: 'Add Product',
     editProduct: 'Edit Product',
-    
+
     // Sales
     sale: 'Sale',
     sales: 'Sales',
@@ -98,7 +116,7 @@ const translations = {
     cash: 'Cash',
     card: 'Card',
     completeSale: 'Complete Sale',
-    
+
     // Settings
     language: 'Language',
     english: 'English',
@@ -111,23 +129,32 @@ const translations = {
     darkModeDesc: 'Easy on the eyes',
     lightMode: 'Light Mode',
     lightModeDesc: 'Soft and comfortable',
-    
+
     // Printing
     printReceipt: 'Print Receipt',
     printLabel: 'Print Label',
     printReport: 'Print Report',
     printer: 'Printer',
-    
+
     // Auth
     login: 'Login',
     username: 'Username',
     password: 'Password',
-    
+    enterUsernameAndPassword: 'Please enter both username and password',
+    invalidCredentials: 'Invalid username or password',
+    loginFailed: 'Login failed',
+    posSystem: 'Point of Sale System',
+    enterUsername: 'Enter username',
+    enterPassword: 'Enter password',
+    signingIn: 'Signing in...',
+    signIn: 'Sign In',
+    copyright: '© 2024 EVA POS. All rights reserved.',
+
     // Backup
     createBackup: 'Create Backup',
     restoreBackup: 'Restore Backup',
     selectBackupFile: 'Select Backup File',
-    
+
     // POS Page
     scanBarcode: 'Scan barcode...',
     scanReceiptBarcode: 'Scan the barcode from the receipt to automatically load sale information',
@@ -141,7 +168,7 @@ const translations = {
     clear: 'Clear',
     clearCart: 'Clear cart',
     clearAllItems: 'Clear all items from cart?',
-    returns: 'Returns',
+    // returns: 'Returns', // Duplicate
     processReturns: 'Process returns',
     posTabs: 'POS Tabs',
     holdUpToCustomers: 'Hold up to {count} customers',
@@ -155,7 +182,7 @@ const translations = {
     removeItem: 'Remove item',
     customer: 'Customer',
     walkIn: 'Walk-in',
-    discount: 'Discount',
+    // discount: 'Discount', // Duplicate
     discountByAmount: 'Discount by fixed amount',
     discountByPercent: 'Discount by percentage',
     discountByFinalPrice: 'Enter final price customer will pay',
@@ -164,13 +191,13 @@ const translations = {
     amount: 'Amount',
     percent: 'Percent',
     clearDiscount: 'Clear discount',
-    paymentMethod: 'Payment Method',
-    card: 'Card',
+    // paymentMethod: 'Payment Method', // Duplicate
+    // card: 'Card', // Duplicate
     mixed: 'Mixed',
     subtotal: 'Subtotal',
     total: 'Total',
     estimatedProfit: 'Estimated Profit',
-    completeSale: 'Complete Sale',
+    // completeSale: 'Complete Sale', // Duplicate
     processing: 'Processing…',
     addItemsFirst: 'Add items to cart first',
     completeSaleEnter: 'Complete sale (Enter)',
@@ -183,9 +210,19 @@ const translations = {
     failedToCompleteSale: 'Failed to complete sale.',
     pleaseEnterBarcode: 'Please enter a barcode or SKU (at least 5 characters)',
     inCart: 'in cart',
-    
+    added: 'Added',
+    noMatchFor: 'No match for',
+    loadMoreProducts: 'Load More Products',
+    productsLoadedTitle: '{count} products loaded. Click to load more.',
+    loadMoreCount: 'Load More Products ({count} loaded)',
+    loaded: 'loaded',
+    tab: 'Tab',
+
     // Settings
     configureSystem: 'Configure your system settings',
+    selectLanguage: 'Select your preferred language',
+    englishLanguage: 'English',
+    arabicLanguage: 'Arabic',
     exchangeRate: 'Exchange Rate (USD → IQD)',
     setExchangeRate: 'Set the current exchange rate for currency conversion',
     currentRate: 'Current Rate',
@@ -213,15 +250,15 @@ const translations = {
     largeLabel: '4" × 2" (Large)',
     fontSize: 'Font Size (px)',
     textAlignment: 'Text Alignment',
-    left: 'Left',
+    leftAlignment: 'Left',
     center: 'Center',
     right: 'Right',
     labelPadding: 'Label Padding (px)',
     showHideElements: 'Show/Hide Elements',
-    productName: 'Product Name',
+    // productName: 'Product Name', // Duplicate
     variantColorSize: 'Variant (Color/Size)',
     sku: 'SKU',
-    price: 'Price',
+    // price: 'Price', // Duplicate
     barcodeSettings: 'Barcode Settings',
     barcodeHeight: 'Barcode Height',
     barcodeWidth: 'Barcode Width',
@@ -235,11 +272,11 @@ const translations = {
     saveLabelSettings: 'Save Label Settings',
     saving: 'Saving...',
     labelSettingsSaved: 'Label settings saved successfully!',
-    
+
     // Barcode Label Modal
     printBarcodeLabel: 'Print Barcode Label',
     quantity: 'Quantity',
-    printer: 'Printer',
+    // printer: 'Printer', // Duplicate
     systemDefault: 'System Default',
     preview: 'Preview',
     size: 'Size',
@@ -247,28 +284,40 @@ const translations = {
     loadingLabelSettings: 'Loading label settings...',
     thisProductNoBarcode: 'This product does not have a barcode assigned. Please add a barcode first.',
     barcodeNotReady: 'Barcode is not ready. Please wait a moment and try again.',
-    
+
     // Common errors and messages
     pleaseEnterValidRate: 'Please enter a valid rate',
     failedToUpdateRate: 'Failed to update rate',
-    
+    desktopBridgeUnavailable: 'Desktop bridge is unavailable.',
+    generatingPDF: 'Generating PDF - save dialog will appear',
+    pdfGenerated: 'PDF generated successfully',
+    failedToPrintLabel: 'Failed to print label {index}: {error}',
+    failedToGenerateLabel: 'Failed to generate label: {error}',
+    failedToLoadData: 'Failed to load data.',
+    exampleVIP: 'e.g., VIP',
+    exampleStoreName: 'e.g., EVA CLOTHING',
+
     // Products Page
     manageCatalog: 'Manage catalog, pricing, and variants.',
     importExcel: 'Import Excel',
-    addProduct: 'Add Product',
+    // addProduct: 'Add Product', // Duplicate
     loadingProducts: 'Loading products…',
     adjustStock: 'Adjust Stock',
     actions: 'ACTIONS',
-    stock: 'STOCK',
+    // stock: 'STOCK', // Duplicate
     avgCostUSD: 'AVG COST (USD)',
     priceIQD: 'PRICE (IQD)',
-    size: 'SIZE',
+    // size: 'SIZE', // Duplicate
     color: 'COLOR',
-    barcode: 'BARCODE',
-    sku: 'SKU',
+    // barcode: 'BARCODE', // Duplicate
+    // sku: 'SKU', // Duplicate
     name: 'NAME',
     areYouSureDelete: 'Are you sure you want to delete "{name}" ({sku})? This action cannot be undone.',
-    
+    failedToLoadProducts: 'Failed to load products.',
+    failedToCreateProduct: 'Failed to create product.',
+    failedToDeleteVariant: 'Failed to delete product variant.',
+    failedToAdjustStock: 'Failed to adjust stock.',
+
     // Suppliers Page
     newSupplier: 'New Supplier',
     createSupplier: 'Create Supplier',
@@ -279,7 +328,7 @@ const translations = {
     address: 'Address',
     notes: 'Notes',
     saveSupplier: 'Save Supplier',
-    saving: 'Saving…',
+    // saving: 'Saving…', // Duplicate
     loadingSuppliers: 'Loading suppliers…',
     noSuppliersYet: 'No suppliers yet. Add your first vendor.',
     supplierNameRequired: 'Supplier name is required.',
@@ -287,7 +336,7 @@ const translations = {
     failedToLoadSuppliers: 'Failed to load suppliers.',
     active: 'Active',
     inactive: 'Inactive',
-    
+
     // Purchase Orders Page
     purchaseOrders: 'Purchase Orders',
     trackInboundStock: 'Track inbound stock and supplier invoices.',
@@ -305,7 +354,7 @@ const translations = {
     selectSupplierAndAddItems: 'Select a supplier and add at least one item.',
     failedToLoadPurchaseOrders: 'Failed to load purchase orders.',
     failedToCreatePO: 'Failed to create PO.',
-    
+
     // Customers Page
     customersLoyalty: 'Customers & Loyalty',
     trackLoyalty: 'Track loyalty, visits, and purchase history.',
@@ -324,8 +373,19 @@ const translations = {
     noRecordedPurchases: 'No recorded purchases.',
     customerNameRequired: 'Customer name is required.',
     failedToLoadCustomers: 'Failed to load customers.',
+
     failedToCreateCustomer: 'Failed to create customer.',
-    
+    failedToLoadHistory: 'Failed to load history.',
+    platinum: 'Platinum',
+    gold: 'Gold',
+    silver: 'Silver',
+    bronze: 'Bronze',
+    new: 'New',
+    loyaltyPoints: 'Loyalty Points',
+    purchaseHistory: 'Purchase History',
+    unknownMethod: 'Unknown method',
+    any: 'Any',
+
     // Returns Page
     returnsExchanges: 'Returns & Exchanges',
     processRefunds: 'Process refunds, returns, and exchanges quickly.',
@@ -343,44 +403,86 @@ const translations = {
     recentReturns: 'Recent Returns',
     loadingReturns: 'Loading returns…',
     noReturnsRecorded: 'No returns recorded.',
-    processing: 'Processing…',
-    failedToLoadReturns: 'Failed to load returns.',
+    // processing: 'Processing…', // Duplicate
+    failedToLoadReports: 'Failed to load reports.',
+    failedToPrintReport: 'Failed to print report',
+    unknownError: 'Unknown error',
+    startDate: 'Start Date',
+    runReportToSeeData: 'Run the report to see data.',
+    dailySalesSummary: 'Daily Sales Summary',
+    noSalesInRange: 'No sales in this range.',
+    ordersReport: 'Orders',
+    totalReport: 'Total',
+    bestSellingItems: 'Best Selling Items',
+    salesIQD: 'Sales (IQD)',
+    salesBySize: 'Sales by Size',
+    salesReport: 'Sales',
+    salesByColor: 'Sales by Color',
+    colorReport: 'Color',
+    topCustomers: 'Top Customers',
+    spend: 'Spend',
+    lowStockAlerts: 'Low Stock Alerts',
+    stockLevelsHealthy: 'Stock levels look healthy.',
+    skuReport: 'SKU',
+    expensesVsSales: 'Expenses vs Sales',
+    expensesReport: 'Expenses',
+    activityLogs: 'Activity Logs',
+    time: 'Time',
+    user: 'User',
+    action: 'Action',
+    invalidBarcodeFormat: 'Invalid barcode format. Expected format: SALE[number] or [number]',
+    failedToFindSale: 'Failed to find sale.',
+    invalidBarcodeScanReceipt: 'Invalid barcode. Please scan a receipt barcode (format: SALE[number]).',
+    addAtLeastOneItemReturn: 'Add at least one item to process a return.',
+    apiUnavailable: 'API unavailable or not authenticated.',
+    missingVariantInfo: 'Some items are missing variant information. Please remove and re-add them.',
+    itemMissingVariantId: 'Item "{name}" is missing variant ID',
+    failedToProcessReturn: 'Failed to process return.',
+    orScanReceiptBarcode: 'or scan receipt barcode',
+    reasonReturn: 'Reason',
+    id: 'ID',
+    date: 'Date',
+    selectVariant: 'Select Variant',
+    addToReturn: 'Add to Return',
+    anyVariant: 'Any',
     failedToCompleteReturn: 'Failed to complete return.',
     returnWithReceipt: 'Return with receipt',
     returnWithoutReceipt: 'Return without receipt',
     exchange: 'Exchange',
-    
+
     // Expenses Page
-    expenses: 'Expenses',
+    // expenses: 'Expenses', // Duplicate
     trackOperatingCosts: 'Track operating costs and profitability.',
     exportToCSV: 'Export to CSV',
-    total: 'Total',
-    startDate: 'Start Date',
+    // total: 'Total', // Duplicate
+    startDateExpense: 'Start Date',
     endDate: 'End Date',
-    category: 'Category',
+    // category: 'Category', // Duplicate
     all: 'All',
     addExpense: 'Add Expense',
     amountIQD: 'Amount (IQD)',
-    date: 'Date',
+    dateExpense: 'Date',
     saveExpense: 'Save Expense',
     selectOrTypeCategory: 'Select or type a category',
     loadingExpenses: 'Loading expenses…',
     noExpensesInRange: 'No expenses in this range.',
     failedToLoadExpenses: 'Failed to load expenses.',
     failedToSaveExpense: 'Failed to save expense.',
-    
+    failedToDeleteExpense: 'Failed to delete expense.',
+
+
+
     // Reports Page
     advancedReports: 'Advanced Reports',
     endToEndInsight: 'End-to-end insight into your clothing store performance.',
-    print: 'Print',
+    // print: 'Print', // Duplicate
     exportToExcel: 'Export to Excel',
     runReport: 'Run Report',
-    loading: 'Loading…',
+    // loading: 'Loading…', // Duplicate
     revenueIQD: 'Revenue (IQD)',
     costOfGoods: 'Cost of Goods',
-    netProfit: 'Net Profit',
+    // netProfit: 'Net Profit', // Duplicate
     inventoryValue: 'Inventory Value',
-    failedToPrintReport: 'Failed to print report',
     viewDetails: 'View Details',
     noProductsFound: 'No products found. Add your first item.',
     uncategorized: 'Uncategorized',
@@ -388,11 +490,11 @@ const translations = {
     manageVendorRelationships: 'Manage vendor relationships and contact details.',
     status: 'Status',
   },
-  
+
   ar: {
     // App
     appName: 'إيفا نقاط البيع',
-    
+
     // Navigation
     dashboard: 'لوحة التحكم',
     pointOfSale: 'نقطة البيع',
@@ -407,7 +509,25 @@ const translations = {
     branches: 'الفروع',
     backup: 'النسخ الاحتياطي',
     logout: 'تسجيل الخروج',
-    
+    suppliers: 'الموردين',
+    offlineMode: 'غير متصل',
+    lockPOS: 'قفل نقطة البيع',
+    unlockPOS: 'فتح نقطة البيع',
+    locked: 'مقفلة',
+    unlocked: 'مفتوحة',
+
+    // Date Presets
+    today: 'اليوم',
+    yesterday: 'أمس',
+    last2days: 'آخر يومين',
+    last7days: 'آخر 7 أيام',
+    last30days: 'آخر 30 يوم',
+    last90days: 'آخر 90 يوم',
+    thisMonth: 'هذا الشهر',
+    lastMonth: 'الشهر الماضي',
+    customRange: 'فترة مخصصة',
+    to: 'إلى',
+
     // Common
     save: 'حفظ',
     cancel: 'إلغاء',
@@ -427,7 +547,7 @@ const translations = {
     confirm: 'تأكيد',
     yes: 'نعم',
     no: 'لا',
-    
+
     // Dashboard
     welcomeBack: 'مرحباً بعودتك',
     todaySales: 'مبيعات اليوم',
@@ -454,7 +574,7 @@ const translations = {
     viewReports: 'عرض التقارير',
     backupData: 'نسخ احتياطي للبيانات',
     left: 'متبقي',
-    
+
     // Products
     products: 'المنتجات',
     productName: 'اسم المنتج',
@@ -464,7 +584,7 @@ const translations = {
     barcode: 'الباركود',
     addProduct: 'إضافة منتج',
     editProduct: 'تعديل منتج',
-    
+
     // Sales
     sale: 'بيع',
     sales: 'المبيعات',
@@ -474,7 +594,7 @@ const translations = {
     cash: 'نقدي',
     card: 'بطاقة',
     completeSale: 'إتمام البيع',
-    
+
     // Settings
     language: 'اللغة',
     english: 'الإنجليزية',
@@ -487,23 +607,32 @@ const translations = {
     darkModeDesc: 'مريح للعين',
     lightMode: 'الوضع الفاتح',
     lightModeDesc: 'ناعم ومريح',
-    
+
     // Printing
     printReceipt: 'طباعة إيصال',
     printLabel: 'طباعة ملصق',
     printReport: 'طباعة تقرير',
     printer: 'الطابعة',
-    
+
     // Auth
     login: 'تسجيل الدخول',
     username: 'اسم المستخدم',
     password: 'كلمة المرور',
-    
+    enterUsernameAndPassword: 'يرجى إدخال اسم المستخدم وكلمة المرور',
+    invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة',
+    loginFailed: 'فشل تسجيل الدخول',
+    posSystem: 'نظام نقاط البيع',
+    enterUsername: 'أدخل اسم المستخدم',
+    enterPassword: 'أدخل كلمة المرور',
+    signingIn: 'جاري تسجيل الدخول...',
+    signIn: 'تسجيل الدخول',
+    copyright: '© 2024 EVA POS. جميع الحقوق محفوظة.',
+
     // Backup
     createBackup: 'إنشاء نسخة احتياطية',
     restoreBackup: 'استعادة نسخة احتياطية',
     selectBackupFile: 'اختيار ملف النسخة',
-    
+
     // POS Page
     scanBarcode: 'امسح الباركود...',
     scanReceiptBarcode: 'امسح الباركود من الإيصال لتحميل معلومات البيع تلقائياً',
@@ -517,7 +646,7 @@ const translations = {
     clear: 'مسح',
     clearCart: 'مسح السلة',
     clearAllItems: 'مسح جميع العناصر من السلة؟',
-    returns: 'المرتجعات',
+    // returns: 'المرتجعات', // Duplicate
     processReturns: 'معالجة المرتجعات',
     posTabs: 'تبويبات نقطة البيع',
     holdUpToCustomers: 'يمكن الاحتفاظ بما يصل إلى {count} عملاء',
@@ -531,7 +660,7 @@ const translations = {
     removeItem: 'إزالة العنصر',
     customer: 'العميل',
     walkIn: 'مشاة',
-    discount: 'الخصم',
+    // discount: 'الخصم', // Duplicate
     discountByAmount: 'خصم بمبلغ ثابت',
     discountByPercent: 'خصم بنسبة مئوية',
     discountByFinalPrice: 'أدخل السعر النهائي الذي سيدفعه العميل',
@@ -540,13 +669,13 @@ const translations = {
     amount: 'المبلغ',
     percent: 'النسبة',
     clearDiscount: 'مسح الخصم',
-    paymentMethod: 'طريقة الدفع',
-    card: 'بطاقة',
+    // paymentMethod: 'طريقة الدفع', // Duplicate
+    // card: 'بطاقة', // Duplicate
     mixed: 'مختلط',
     subtotal: 'المجموع الفرعي',
     total: 'الإجمالي',
     estimatedProfit: 'الربح المقدر',
-    completeSale: 'إتمام البيع',
+    // completeSale: 'إتمام البيع', // Duplicate
     processing: 'جاري المعالجة…',
     addItemsFirst: 'أضف عناصر إلى السلة أولاً',
     completeSaleEnter: 'إتمام البيع (Enter)',
@@ -559,9 +688,19 @@ const translations = {
     failedToCompleteSale: 'فشل إتمام البيع.',
     pleaseEnterBarcode: 'يرجى إدخال باركود أو رمز SKU (5 أحرف على الأقل)',
     inCart: 'في السلة',
-    
+    added: 'تمت إضافة',
+    noMatchFor: 'لا يوجد تطابق لـ',
+    loadMoreProducts: 'تحميل المزيد من المنتجات',
+    productsLoadedTitle: 'تم تحميل {count} منتج. انقر لتحميل المزيد.',
+    loadMoreCount: 'تحميل المزيد من المنتجات ({count} تم تحميلها)',
+    loaded: 'تم تحميلها',
+    tab: 'تبويب',
+
     // Settings
     configureSystem: 'تكوين إعدادات النظام',
+    selectLanguage: 'اختر لغتك المفضلة',
+    englishLanguage: 'الإنجليزية',
+    arabicLanguage: 'العربية',
     exchangeRate: 'سعر الصرف (USD → IQD)',
     setExchangeRate: 'تعيين سعر الصرف الحالي لتحويل العملة',
     currentRate: 'السعر الحالي',
@@ -589,15 +728,15 @@ const translations = {
     largeLabel: '4" × 2" (كبير)',
     fontSize: 'حجم الخط (بكسل)',
     textAlignment: 'محاذاة النص',
-    left: 'يسار',
+    leftAlignment: 'يسار',
     center: 'وسط',
     right: 'يمين',
     labelPadding: 'الحشو (بكسل)',
     showHideElements: 'إظهار/إخفاء العناصر',
-    productName: 'اسم المنتج',
+    // productName: 'اسم المنتج', // Duplicate
     variantColorSize: 'المتغير (اللون/المقاس)',
     sku: 'رمز SKU',
-    price: 'السعر',
+    // price: 'السعر', // Duplicate
     barcodeSettings: 'إعدادات الباركود',
     barcodeHeight: 'ارتفاع الباركود',
     barcodeWidth: 'عرض الباركود',
@@ -611,11 +750,11 @@ const translations = {
     saveLabelSettings: 'حفظ إعدادات الملصقات',
     saving: 'جاري الحفظ...',
     labelSettingsSaved: 'تم حفظ إعدادات الملصقات بنجاح!',
-    
+
     // Barcode Label Modal
     printBarcodeLabel: 'طباعة ملصق الباركود',
     quantity: 'الكمية',
-    printer: 'الطابعة',
+    // printer: 'الطابعة', // Duplicate
     systemDefault: 'الافتراضي للنظام',
     preview: 'معاينة',
     size: 'الحجم',
@@ -623,28 +762,40 @@ const translations = {
     loadingLabelSettings: 'جاري تحميل إعدادات الملصقات...',
     thisProductNoBarcode: 'هذا المنتج لا يحتوي على باركود. يرجى إضافة باركود أولاً.',
     barcodeNotReady: 'الباركود غير جاهز. يرجى الانتظار قليلاً والمحاولة مرة أخرى.',
-    
+
     // Common errors and messages
     pleaseEnterValidRate: 'يرجى إدخال سعر صحيح',
     failedToUpdateRate: 'فشل تحديث السعر',
-    
+    desktopBridgeUnavailable: 'جسر سطح المكتب غير متاح.',
+    generatingPDF: 'جاري إنشاء ملف PDF - سيظهر مربع حوار الحفظ',
+    pdfGenerated: 'تم إنشاء ملف PDF بنجاح',
+    failedToPrintLabel: 'فشل طباعة الملصق {index}: {error}',
+    failedToGenerateLabel: 'فشل إنشاء الملصق: {error}',
+    failedToLoadData: 'فشل تحميل البيانات.',
+    exampleVIP: 'مثال: VIP',
+    exampleStoreName: 'مثال: إيفا للملابس',
+
     // Products Page
     manageCatalog: 'إدارة الكتالوج والأسعار والمتغيرات.',
     importExcel: 'استيراد Excel',
-    addProduct: 'إضافة منتج',
+    // addProduct: 'إضافة منتج', // Duplicate
     loadingProducts: 'جاري تحميل المنتجات…',
     adjustStock: 'تعديل المخزون',
     actions: 'الإجراءات',
-    stock: 'المخزون',
+    // stock: 'المخزون', // Duplicate
     avgCostUSD: 'متوسط التكلفة (USD)',
     priceIQD: 'السعر (IQD)',
-    size: 'المقاس',
+    // size: 'المقاس', // Duplicate
     color: 'اللون',
-    barcode: 'الباركود',
-    sku: 'رمز SKU',
+    // barcode: 'الباركود', // Duplicate
+    // sku: 'رمز SKU', // Duplicate
     name: 'الاسم',
     areYouSureDelete: 'هل أنت متأكد أنك تريد حذف "{name}" ({sku})؟ لا يمكن التراجع عن هذا الإجراء.',
-    
+    failedToLoadProducts: 'فشل تحميل المنتجات.',
+    failedToCreateProduct: 'فشل إنشاء المنتج.',
+    failedToDeleteVariant: 'فشل حذف متغير المنتج.',
+    failedToAdjustStock: 'فشل تعديل المخزون.',
+
     // Suppliers Page
     newSupplier: 'مورد جديد',
     createSupplier: 'إنشاء مورد',
@@ -655,7 +806,7 @@ const translations = {
     address: 'العنوان',
     notes: 'ملاحظات',
     saveSupplier: 'حفظ المورد',
-    saving: 'جاري الحفظ…',
+    // saving: 'جاري الحفظ…', // Duplicate
     loadingSuppliers: 'جاري تحميل الموردين…',
     noSuppliersYet: 'لا يوجد موردون بعد. أضف أول مورد.',
     supplierNameRequired: 'اسم المورد مطلوب.',
@@ -663,7 +814,7 @@ const translations = {
     failedToLoadSuppliers: 'فشل تحميل الموردين.',
     active: 'نشط',
     inactive: 'غير نشط',
-    
+
     // Purchase Orders Page
     purchaseOrders: 'أوامر الشراء',
     trackInboundStock: 'تتبع المخزون الوارد وفواتير الموردين.',
@@ -681,7 +832,7 @@ const translations = {
     selectSupplierAndAddItems: 'اختر مورداً وأضف عنصراً واحداً على الأقل.',
     failedToLoadPurchaseOrders: 'فشل تحميل أوامر الشراء.',
     failedToCreatePO: 'فشل إنشاء أمر الشراء.',
-    
+
     // Customers Page
     customersLoyalty: 'العملاء والولاء',
     trackLoyalty: 'تتبع الولاء والزيارات وسجل المشتريات.',
@@ -700,8 +851,19 @@ const translations = {
     noRecordedPurchases: 'لا توجد مشتريات مسجلة.',
     customerNameRequired: 'اسم العميل مطلوب.',
     failedToLoadCustomers: 'فشل تحميل العملاء.',
+
     failedToCreateCustomer: 'فشل إنشاء العميل.',
-    
+    failedToLoadHistory: 'فشل تحميل السجل.',
+    platinum: 'بلاتيني',
+    gold: 'ذهبي',
+    silver: 'فضي',
+    bronze: 'برونزي',
+    new: 'جديد',
+    loyaltyPoints: 'نقاط الولاء',
+    purchaseHistory: 'سجل المشتريات',
+    unknownMethod: 'طريقة غير معروفة',
+    any: 'أي',
+
     // Returns Page
     returnsExchanges: 'المرتجعات والتبديلات',
     processRefunds: 'معالجة الاسترداد والمرتجعات والتبديلات بسرعة.',
@@ -719,44 +881,89 @@ const translations = {
     recentReturns: 'المرتجعات الأخيرة',
     loadingReturns: 'جاري تحميل المرتجعات…',
     noReturnsRecorded: 'لا توجد مرتجعات مسجلة.',
-    processing: 'جاري المعالجة…',
-    failedToLoadReturns: 'فشل تحميل المرتجعات.',
+    // processing: 'جاري المعالجة…', // Duplicate
+    failedToLoadReports: 'فشل تحميل التقارير.',
+    failedToPrintReport: 'فشل طباعة التقرير',
+    unknownError: 'خطأ غير معروف',
+    startDateExpense: 'تاريخ البدء',
+    runReportToSeeData: 'قم بتشغيل التقرير لرؤية البيانات.',
+    dailySalesSummary: 'ملخص المبيعات اليومية',
+    noSalesInRange: 'لا توجد مبيعات في هذا النطاق.',
+    ordersReport: 'الطلبات',
+    totalReport: 'الإجمالي',
+    bestSellingItems: 'العناصر الأكثر مبيعاً',
+    salesIQD: 'المبيعات (IQD)',
+    salesBySize: 'المبيعات حسب الحجم',
+    salesReport: 'المبيعات',
+    salesByColor: 'المبيعات حسب اللون',
+    colorReport: 'اللون',
+
+    topCustomers: 'أفضل العملاء',
+    spend: 'الإنفاق',
+    lowStockAlerts: 'تنبيهات المخزون المنخفض',
+    stockLevelsHealthy: 'مستويات المخزون تبدو جيدة.',
+    skuReport: 'SKU',
+    expensesVsSales: 'المصاريف مقابل المبيعات',
+    expensesReport: 'المصاريف',
+    activityLogs: 'سجلات النشاط',
+    time: 'الوقت',
+    user: 'المستخدم',
+    action: 'الإجراء',
+    invalidBarcodeFormat: 'تنسيق الباركود غير صالح. التنسيق المتوقع: SALE[number] أو [number]',
+    failedToFindSale: 'فشل العثور على البيع.',
+    invalidBarcodeScanReceipt: 'باركود غير صالح. يرجى مسح باركود الإيصال (التنسيق: SALE[number]).',
+    addAtLeastOneItemReturn: 'أضف عنصراً واحداً على الأقل لمعالجة الإرجاع.',
+    apiUnavailable: 'API غير متاح أو غير مصادق عليه.',
+    missingVariantInfo: 'بعض العناصر تفتقد معلومات المتغير. يرجى إزالتها وإعادة إضافتها.',
+    itemMissingVariantId: 'العنصر "{name}" يفتقد معرف المتغير',
+    failedToProcessReturn: 'فشل معالجة الإرجاع.',
+    orScanReceiptBarcode: 'أو امسح باركود الإيصال',
+
+    reasonReturn: 'السبب',
+    id: 'المعرف',
+    date: 'التاريخ',
+    selectVariant: 'اختر متغير',
+    addToReturn: 'إضافة إلى الإرجاع',
+
+    anyVariant: 'أي',
     failedToCompleteReturn: 'فشل إتمام الإرجاع.',
     returnWithReceipt: 'إرجاع مع إيصال',
     returnWithoutReceipt: 'إرجاع بدون إيصال',
     exchange: 'تبديل',
-    
+
     // Expenses Page
-    expenses: 'المصروفات',
+    // expenses: 'المصروفات', // Duplicate
     trackOperatingCosts: 'تتبع تكاليف التشغيل والربحية.',
     exportToCSV: 'تصدير إلى CSV',
-    total: 'الإجمالي',
+    // total: 'الإجمالي', // Duplicate
     startDate: 'تاريخ البداية',
     endDate: 'تاريخ النهاية',
-    category: 'الفئة',
+    // category: 'الفئة', // Duplicate
     all: 'الكل',
     addExpense: 'إضافة مصروف',
     amountIQD: 'المبلغ (IQD)',
-    date: 'التاريخ',
+    dateExpense: 'التاريخ',
     saveExpense: 'حفظ المصروف',
     selectOrTypeCategory: 'اختر أو اكتب فئة',
     loadingExpenses: 'جاري تحميل المصروفات…',
     noExpensesInRange: 'لا توجد مصروفات في هذا النطاق.',
-    failedToLoadExpenses: 'فشل تحميل المصروفات.',
+    failedToLoadExpenses: 'فشل تحميل المصاريف.',
     failedToSaveExpense: 'فشل حفظ المصروف.',
-    
+
+    failedToDeleteExpense: 'فشل حذف المصروف.',
+
+
     // Reports Page
     advancedReports: 'التقارير المتقدمة',
     endToEndInsight: 'رؤية شاملة لأداء متجر الملابس الخاص بك.',
-    print: 'طباعة',
+    // print: 'طباعة', // Duplicate
     exportToExcel: 'تصدير إلى Excel',
     runReport: 'تشغيل التقرير',
-    loading: 'جاري التحميل…',
+    // loading: 'جاري التحميل…', // Duplicate
     revenueIQD: 'الإيرادات (IQD)',
     costOfGoods: 'تكلفة البضائع',
-    netProfit: 'صافي الربح',
+    // netProfit: 'صافي الربح', // Duplicate
     inventoryValue: 'قيمة المخزون',
-    failedToPrintReport: 'فشل طباعة التقرير',
     viewDetails: 'عرض التفاصيل',
     noProductsFound: 'لم يتم العثور على منتجات. أضف أول عنصر.',
     uncategorized: 'غير مصنف',
@@ -815,9 +1022,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
 export const useLanguage = (): LanguageContextType => {
   const context = useContext(LanguageContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
 };
-

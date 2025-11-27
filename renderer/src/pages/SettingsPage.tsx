@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,7 +12,7 @@ const SettingsPage = (): JSX.Element => {
   const { token, hasRole } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
-  
+
   // Exchange Rate
   const [currentRate, setCurrentRate] = useState<number>(1500);
   const [newRate, setNewRate] = useState<string>('');
@@ -79,7 +79,7 @@ const SettingsPage = (): JSX.Element => {
     const costInIQD = cost * currentRate;
     const profit = sale - costInIQD;
     const margin = ((profit / costInIQD) * 100).toFixed(2);
-    
+
     setCalculatedMargin(`${margin}%`);
     setCalculatedProfit(`${profit.toLocaleString('en-IQ')} IQD`);
   };
@@ -102,7 +102,7 @@ const SettingsPage = (): JSX.Element => {
         <div className="SettingsPage-section">
           <h2>🎨 {t('theme')}</h2>
           <p>{t('selectTheme')}</p>
-          
+
           <div className="SettingsPage-themeOptions">
             <button
               className={`SettingsPage-themeButton ${theme === 'dark' ? 'active' : ''}`}
@@ -133,8 +133,8 @@ const SettingsPage = (): JSX.Element => {
         {/* Language Settings */}
         <div className="SettingsPage-section">
           <h2>🌐 {t('language')}</h2>
-          <p>Select your preferred language / اختر لغتك المفضلة</p>
-          
+          <p>{t('selectLanguage')}</p>
+
           <div className="SettingsPage-languageOptions">
             <button
               className={`SettingsPage-langButton ${language === 'en' ? 'active' : ''}`}
@@ -143,7 +143,7 @@ const SettingsPage = (): JSX.Element => {
               <span className="flag">🇬🇧</span>
               <div>
                 <div className="label">{t('english')}</div>
-                <div className="sublabel">English</div>
+                <div className="sublabel">{t('englishLanguage')}</div>
               </div>
               {language === 'en' && <span className="check">✓</span>}
             </button>
@@ -155,7 +155,7 @@ const SettingsPage = (): JSX.Element => {
               <span className="flag">🇸🇦</span>
               <div>
                 <div className="label">{t('arabic')}</div>
-                <div className="sublabel">العربية</div>
+                <div className="sublabel">{t('arabicLanguage')}</div>
               </div>
               {language === 'ar' && <span className="check">✓</span>}
             </button>
@@ -186,7 +186,7 @@ const SettingsPage = (): JSX.Element => {
                     step="0.01"
                     disabled={rateUpdating}
                   />
-                  <button 
+                  <button
                     onClick={handleUpdateRate}
                     disabled={rateUpdating || !newRate}
                     className="SettingsPage-updateButton"

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import ProductForm from '../components/ProductForm';
@@ -38,7 +38,7 @@ const ProductsPage = (): JSX.Element => {
       const response = await window.evaApi.products.list(token);
       setProducts(response.products);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load products.');
+      setError(err instanceof Error ? err.message : t('failedToLoadProducts'));
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ const ProductsPage = (): JSX.Element => {
       setIsModalOpen(false);
       await fetchProducts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create product.');
+      setError(err instanceof Error ? err.message : t('failedToCreateProduct'));
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +77,7 @@ const ProductsPage = (): JSX.Element => {
       await window.evaApi.products.deleteVariant(token, variant.id);
       await fetchProducts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete product variant.');
+      setError(err instanceof Error ? err.message : t('failedToDeleteVariant'));
     }
   };
 
@@ -85,7 +85,7 @@ const ProductsPage = (): JSX.Element => {
     <div className="Page Page--transparent">
       <div className="ProductsPage-header">
         <div>
-          <h1>Products</h1>
+          <h1>{t('products')}</h1>
           <p>{t('manageCatalog')}</p>
         </div>
         <div className="ProductsPage-actions">
@@ -144,7 +144,7 @@ const ProductsPage = (): JSX.Element => {
           onClose={() => setAdjustVariant(null)}
           onSubmit={async ({ variantId, deltaQuantity, reason, note }) => {
             if (!window.evaApi || !token) {
-              setError('Desktop bridge unavailable.');
+              setError(t('desktopBridgeUnavailable'));
               return;
             }
             try {
@@ -157,7 +157,7 @@ const ProductsPage = (): JSX.Element => {
               });
               await fetchProducts();
             } catch (err) {
-              setError(err instanceof Error ? err.message : 'Failed to adjust stock.');
+              setError(err instanceof Error ? err.message : t('failedToAdjustStock'));
             }
           }}
         />

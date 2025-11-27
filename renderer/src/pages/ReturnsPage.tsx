@@ -59,7 +59,7 @@ const ReturnsPage = (): JSX.Element => {
       setProducts(productsResponse.products);
       setCustomers(customersResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load returns.');
+      setError(err instanceof Error ? err.message : t('failedToLoadReturns'));
     } finally {
       setLoading(false);
     }
@@ -115,18 +115,18 @@ const ReturnsPage = (): JSX.Element => {
   };
 
   const handleLoadSale = async (saleIdValue?: string | number) => {
-    const idToUse = saleIdValue !== undefined 
+    const idToUse = saleIdValue !== undefined
       ? (typeof saleIdValue === 'string' ? parseBarcodeValue(saleIdValue) : saleIdValue)
       : parseBarcodeValue(saleLookupId);
-    
+
     if (!idToUse || !window.evaApi) {
       if (saleIdValue !== undefined) {
-        setError('Invalid barcode format. Expected format: SALE[number] or [number]');
+        setError(t('invalidBarcodeFormat'));
       }
       setSaleInfo(null);
       return;
     }
-    
+
     try {
       setError(null);
       const response = await window.evaApi.returns.saleInfo(token!, idToUse);
@@ -140,7 +140,7 @@ const ReturnsPage = (): JSX.Element => {
         setSaleLookupId('');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to find sale.');
+      setError(err instanceof Error ? err.message : t('failedToFindSale'));
       setSaleInfo(null);
     }
   };
@@ -151,7 +151,7 @@ const ReturnsPage = (): JSX.Element => {
     if (saleId) {
       handleLoadSale(saleId);
     } else {
-      setError('Invalid barcode. Please scan a receipt barcode (format: SALE[number]).');
+      setError(t('invalidBarcodeScanReceipt'));
     }
   };
 
@@ -178,25 +178,25 @@ const ReturnsPage = (): JSX.Element => {
 
   const handleSubmit = async () => {
     if (!items.length) {
-      setError('Add at least one item to process a return.');
+      setError(t('addAtLeastOneItemReturn'));
       return;
     }
     if (!window.evaApi || !token) {
-      setError('API unavailable or not authenticated.');
+      setError(t('apiUnavailable'));
       return;
     }
-    
+
     // Validate all items have valid variantId
     const invalidItems = items.filter((item) => {
       const variantId = item.variantId ?? item.variant?.id;
       return !variantId || variantId === 0;
     });
-    
+
     if (invalidItems.length > 0) {
-      setError('Some items are missing variant information. Please remove and re-add them.');
+      setError(t('missingVariantInfo'));
       return;
     }
-    
+
     try {
       setSubmitting(true);
       setError(null);
@@ -208,7 +208,7 @@ const ReturnsPage = (): JSX.Element => {
         items: items.map((item) => {
           const variantId = item.variantId ?? item.variant?.id;
           if (!variantId) {
-            throw new Error(`Item "${item.productName ?? 'Unknown'}" is missing variant ID`);
+            throw new Error(t('itemMissingVariantId', { name: item.productName ?? 'Unknown' }));
           }
           return {
             saleItemId: item.saleItemId ?? null,
@@ -235,7 +235,7 @@ const ReturnsPage = (): JSX.Element => {
       setForm((prev) => ({ ...prev, saleId: undefined, customerId: undefined, reason: '' }));
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process return.');
+      setError(err instanceof Error ? err.message : t('failedToProcessReturn'));
     } finally {
       setSubmitting(false);
     }
@@ -283,14 +283,14 @@ const ReturnsPage = (): JSX.Element => {
                   handleLoadSale();
                 }
               }}
-              placeholder={t('enterSaleID') + ' or scan receipt barcode'}
+              placeholder={t('enterSaleID') + ' ' + t('orScanReceiptBarcode')}
             />
             <button type="button" onClick={() => handleLoadSale()}>
               {t('lookup')}
             </button>
           </div>
           <p style={{ fontSize: '0.85rem', color: 'rgba(148, 163, 184, 0.7)', marginTop: '0.25rem' }}>
-            {t('scanReceiptBarcode') || 'Scan the barcode from the receipt to automatically load sale information'}
+            {t('scanReceiptBarcode')}
           </p>
         </label>
         <label>
@@ -299,7 +299,7 @@ const ReturnsPage = (): JSX.Element => {
             value={form.customerId ?? ''}
             onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value ? Number(event.target.value) : undefined }))}
           >
-            <option value="">Walk-in</option>
+            <option value="">{t('walkIn')}</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.name}
@@ -308,7 +308,7 @@ const ReturnsPage = (): JSX.Element => {
           </select>
         </label>
         <label className="ReturnsPage-span">
-          <span>Reason</span>
+          <span>{t('reasonReturn')}</span>
           <textarea
             rows={2}
             value={form.reason ?? ''}
@@ -322,19 +322,19 @@ const ReturnsPage = (): JSX.Element => {
         <section className="ReturnsPage-saleInfo">
           <header>
             <div>
-              <h3>Sale #{saleInfo.id}</h3>
+              <h3>{t('sale')} #{saleInfo.id}</h3>
               <p>{new Date(saleInfo.saleDate).toLocaleString()}</p>
             </div>
             <div>
-              <span>Total: {saleInfo.totalIQD.toLocaleString('en-IQ')} IQD</span>
+              <span>{t('total')}: {saleInfo.totalIQD.toLocaleString('en-IQ')} IQD</span>
             </div>
           </header>
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Line (IQD)</th>
+                <th>{t('item')}</th>
+                <th>{t('qty')}</th>
+                <th>{t('lineTotal')} (IQD)</th>
                 <th />
               </tr>
             </thead>
@@ -347,7 +347,7 @@ const ReturnsPage = (): JSX.Element => {
                   <td>{entry.quantity}</td>
                   <td>{entry.lineTotalIQD.toLocaleString('en-IQ')}</td>
                   <td>
-                    <button onClick={() => handleAddSaleItem(entry)}>Add</button>
+                    <button onClick={() => handleAddSaleItem(entry)}>{t('add')}</button>
                   </td>
                 </tr>
               ))}
@@ -366,10 +366,10 @@ const ReturnsPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Amount (IQD)</th>
-                <th>Direction</th>
+                <th>{t('product')}</th>
+                <th>{t('qty')}</th>
+                <th>{t('amount')} (IQD)</th>
+                <th>{t('direction')}</th>
                 <th />
               </tr>
             </thead>
@@ -377,9 +377,9 @@ const ReturnsPage = (): JSX.Element => {
               {items.map((item, index) => (
                 <tr key={`${item.variantId}-${index}`}>
                   <td>
-                    <strong>{item.variant?.productName ?? item.productName ?? 'Item'}</strong>
+                    <strong>{item.variant?.productName ?? item.productName ?? t('item')}</strong>
                     <small>
-                      {item.variant?.color ?? item.color ?? 'Any'} / {item.variant?.size ?? item.size ?? 'Any'}
+                      {item.variant?.color ?? item.color ?? t('anyVariant')} / {item.variant?.size ?? item.size ?? t('anyVariant')}
                     </small>
                   </td>
                   <td>
@@ -417,9 +417,9 @@ const ReturnsPage = (): JSX.Element => {
                         )
                       }
                     >
-                      <option value="return">{t('returnToStock') || 'Return to stock'}</option>
-                      <option value="exchange_out">{t('exchangeReturningItem') || 'Exchange - returning item'}</option>
-                      <option value="exchange_in">{t('exchangeNewItem') || 'Exchange - new item'}</option>
+                      <option value="return">{t('returnToStock')}</option>
+                      <option value="exchange_out">{t('exchangeReturningItem')}</option>
+                      <option value="exchange_in">{t('exchangeNewItem')}</option>
                     </select>
                   </td>
                   <td>
@@ -446,16 +446,16 @@ const ReturnsPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>ID</th>
+                <th>{t('id')}</th>
                 <th>{t('type')}</th>
                 <th>{t('customer')}</th>
-                <th>Refund (IQD)</th>
-                <th>Date</th>
+                <th>{t('refund')} (IQD)</th>
+                <th>{t('date')}</th>
               </tr>
             </thead>
             <tbody>
               {returns.map((record) => {
-                const customerName = customers.find((c) => c.id === record.customerId)?.name ?? 'Walk-in';
+                const customerName = customers.find((c) => c.id === record.customerId)?.name ?? t('walkIn');
                 return (
                   <tr key={record.id}>
                     <td>{record.id}</td>
@@ -475,12 +475,12 @@ const ReturnsPage = (): JSX.Element => {
         <div className="ReturnsPage-variantsOverlay">
           <div className="ReturnsPage-variantsCard">
             <header>
-              <h3>Select Variant</h3>
+              <h3>{t('selectVariant')}</h3>
               <button onClick={() => setShowVariantPicker(false)}>✕</button>
             </header>
             <ProductVariantTable
               products={products}
-              actionLabel="Add to Return"
+              actionLabel={t('addToReturn')}
               onAction={(variantId) => {
                 const variant = products.find((p) => p.id === variantId);
                 if (variant) {
@@ -504,4 +504,3 @@ const ReturnsPage = (): JSX.Element => {
 };
 
 export default ReturnsPage;
-

@@ -12,12 +12,12 @@
 }
 
 .BackupPage-header h1 {
-  color: #f8fafc;
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .BackupPage-header p {
-  color: rgba(148, 163, 184, 0.8);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -90,8 +90,8 @@
 .BackupPage-empty {
   text-align: center;
   padding: 3rem;
-  color: rgba(148, 163, 184, 0.85);
-  background: rgba(13, 20, 38, 0.85);
+  color: var(--text-secondary);
+  background: var(--bg-input);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1rem;
 }
@@ -99,7 +99,7 @@
 .BackupPage-tableWrapper {
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(13, 20, 38, 0.85);
+  background: var(--bg-input);
   overflow: hidden;
 }
 
@@ -117,14 +117,14 @@
 
 .BackupPage-table th {
   font-size: 0.85rem;
-  color: rgba(148, 163, 184, 0.9);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
 }
 
 .BackupPage-table td {
-  color: #f8fafc;
+  color: var(--text-primary);
   font-size: 0.9rem;
 }
 
@@ -133,11 +133,11 @@
 }
 
 .BackupPage-filename {
-  background: rgba(30, 41, 59, 0.8);
+  background: var(--bg-input);
   padding: 0.25rem 0.5rem;
   border-radius: 0.4rem;
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-family: 'Courier New', monospace;
 }
 
@@ -176,4 +176,3 @@
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
 }
-

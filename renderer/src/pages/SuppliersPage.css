@@ -91,7 +91,7 @@
 
 .SuppliersPage-modal {
   width: min(520px, 90vw);
-  background: rgba(13, 20, 38, 0.96);
+  background: var(--bg-input);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
   padding: 1.5rem;
@@ -110,7 +110,7 @@
   background: transparent;
   border: none;
   font-size: 1.2rem;
-  color: rgba(248, 250, 252, 0.6);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -130,8 +130,8 @@
 .SuppliersPage-form textarea {
   border-radius: 0.85rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(10, 14, 27, 0.85);
-  color: #f8fafc;
+  background: var(--bg-input);
+  color: var(--text-primary);
   padding: 0.6rem 0.85rem;
 }
 
@@ -157,11 +157,10 @@
 .SuppliersPage-actions .ghost {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.4);
-  color: rgba(248, 250, 252, 0.85);
+  color: var(--text-secondary);
 }
 
 .SuppliersPage-actions button:not(.ghost) {
   background: linear-gradient(120deg, #2563eb, #7c3aed);
   color: #fff;
 }
-

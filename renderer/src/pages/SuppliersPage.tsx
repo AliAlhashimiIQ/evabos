@@ -29,7 +29,7 @@ const SuppliersPage = (): JSX.Element => {
 
   const loadSuppliers = async () => {
     if (!window.evaApi || !token) {
-      setError('Desktop bridge unavailable.');
+      setError(t('desktopBridgeUnavailable'));
       return;
     }
     try {
@@ -38,7 +38,7 @@ const SuppliersPage = (): JSX.Element => {
       const response = await window.evaApi.suppliers.list(token);
       setSuppliers(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load suppliers.');
+      setError(err instanceof Error ? err.message : t('failedToLoadSuppliers'));
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,7 @@ const SuppliersPage = (): JSX.Element => {
       return;
     }
     if (!window.evaApi) {
-      setError('Desktop bridge unavailable.');
+      setError(t('desktopBridgeUnavailable'));
       return;
     }
     try {
@@ -79,7 +79,7 @@ const SuppliersPage = (): JSX.Element => {
       <div className="SuppliersPage-header">
         <div>
           <h1>{t('suppliers')}</h1>
-          <p>{t('manageVendorRelationships') || 'Manage vendor relationships and contact details.'}</p>
+          <p>{t('manageVendorRelationships')}</p>
         </div>
         <button className="SuppliersPage-addButton" onClick={() => setIsModalOpen(true)}>
           + {t('newSupplier')}
@@ -101,7 +101,7 @@ const SuppliersPage = (): JSX.Element => {
                 <th>{t('contactName')}</th>
                 <th>{t('phone')}</th>
                 <th>{t('email')}</th>
-                <th>{t('status') || 'Status'}</th>
+                <th>{t('status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +185,7 @@ const SuppliersPage = (): JSX.Element => {
               </label>
               <div className="SuppliersPage-actions">
                 <button type="button" className="ghost" onClick={() => setIsModalOpen(false)}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" disabled={submitting}>
                   {submitting ? t('saving') : t('saveSupplier')}

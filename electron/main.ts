@@ -34,7 +34,7 @@ let ipcRegistered = false;
 async function loadWindowContent(targetWindow: BrowserWindow): Promise<void> {
   if (isDev) {
     // Dev: Use Vite dev server
-      await targetWindow.loadURL(DEV_SERVER_URL);
+    await targetWindow.loadURL(DEV_SERVER_URL);
     return;
   }
 
@@ -65,7 +65,7 @@ async function createWindow(): Promise<void> {
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     if (!isDev && mainWindow) {
       const parsedUrl = new URL(navigationUrl);
-      
+
       // Only allow app:// protocol in production
       if (parsedUrl.protocol !== 'app:') {
         event.preventDefault();
@@ -111,24 +111,53 @@ const registerIpcHandlers = (): void => {
 };
 
 // Daily backup scheduler
+let dailyBackupTimeout: NodeJS.Timeout | null = null;
 let dailyBackupInterval: NodeJS.Timeout | null = null;
 
-const scheduleDailyBackup = (): void => {
-  if (dailyBackupInterval) {
-    clearInterval(dailyBackupInterval);
-  }
+const performBackup = async (): Promise<void> => {
+  console.log('[backup] Starting scheduled backup...');
 
-  const runBackup = async () => {
-    try {
-      await createBackup();
-      console.log('[backup] Daily backup completed successfully');
-    } catch (err) {
-      console.error('[backup] Daily backup failed:', err);
+  try {
+    const startTime = Date.now();
+    await createBackup();
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    console.log(`[backup] ✅ Completed successfully in ${duration}s`);
+
+    // Notify renderer (optional - show toast notification)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('backup:completed', {
+        success: true,
+        duration
+      });
     }
-  };
+  } catch (err) {
+    console.error('[backup] ❌ Failed:', err);
 
-  runBackup();
-  dailyBackupInterval = setInterval(runBackup, 24 * 60 * 60 * 1000);
+    // Notify renderer of failure
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('backup:completed', {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+    }
+  }
+};
+
+const scheduleDailyBackup = (): void => {
+  // Clear any existing timers
+  if (dailyBackupTimeout) clearTimeout(dailyBackupTimeout);
+  if (dailyBackupInterval) clearInterval(dailyBackupInterval);
+
+  console.log('[backup] Scheduling daily backup (deferred 10s to avoid blocking startup)...');
+
+  // Defer first backup by 10 seconds (app fully loaded)
+  dailyBackupTimeout = setTimeout(async () => {
+    await performBackup();
+
+    // Schedule subsequent backups every 24 hours
+    dailyBackupInterval = setInterval(performBackup, 24 * 60 * 60 * 1000);
+  }, 10000); // 10 seconds delay
 };
 
 // Register custom protocol for production to handle ES modules
@@ -153,12 +182,12 @@ app.whenReady().then(async () => {
     protocol.registerBufferProtocol('app', (request, callback) => {
       const url = request.url.replace('app://', '');
       const filePath = path.join(app.getAppPath(), url);
-      
+
       try {
         const data = readFileSync(filePath);
         const ext = path.extname(filePath).toLowerCase();
         let mimeType = 'text/plain';
-        
+
         if (ext === '.html') mimeType = 'text/html';
         else if (ext === '.js') mimeType = 'application/javascript';
         else if (ext === '.css') mimeType = 'text/css';
@@ -166,7 +195,7 @@ app.whenReady().then(async () => {
         else if (ext === '.png') mimeType = 'image/png';
         else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
         else if (ext === '.svg') mimeType = 'image/svg+xml';
-        
+
         callback({ mimeType, data });
       } catch (error) {
         console.error('[protocol] Failed to load:', filePath, error);
@@ -208,6 +237,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
+  if (dailyBackupTimeout) {
+    clearTimeout(dailyBackupTimeout);
+    dailyBackupTimeout = null;
+  }
   if (dailyBackupInterval) {
     clearInterval(dailyBackupInterval);
     dailyBackupInterval = null;

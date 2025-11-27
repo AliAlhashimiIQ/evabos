@@ -52,7 +52,7 @@ const ExpensesPage = (): JSX.Element => {
       setExpenses(listResponse);
       setSummary(summaryResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load expenses.');
+      setError(err instanceof Error ? err.message : t('failedToLoadExpenses'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ const ExpensesPage = (): JSX.Element => {
       setForm(defaultForm);
       await loadExpenses();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save expense.');
+      setError(err instanceof Error ? err.message : t('failedToSaveExpense'));
     } finally {
       setSubmitting(false);
     }
@@ -98,7 +98,7 @@ const ExpensesPage = (): JSX.Element => {
       await window.evaApi.expenses.delete(token, expenseId);
       await loadExpenses();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete expense.');
+      setError(err instanceof Error ? err.message : t('failedToDeleteExpense'));
     }
   };
 
@@ -147,7 +147,7 @@ const ExpensesPage = (): JSX.Element => {
 
       <section className="ExpensesPage-filters">
         <label>
-          {t('startDate')}
+          {t('startDateExpense')}
           <input
             type="date"
             value={range.startDate}
@@ -181,7 +181,7 @@ const ExpensesPage = (): JSX.Element => {
         </header>
         <form onSubmit={handleSubmit}>
           <label>
-            {t('date')}
+            {t('dateExpense')}
             <input
               type="date"
               value={form.expenseDate?.slice(0, 10) ?? ''}
@@ -246,9 +246,9 @@ const ExpensesPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Amount (IQD)</th>
+                <th>{t('dateExpense')}</th>
+                <th>{t('category')}</th>
+                <th>{t('amountIQD')}</th>
                 <th>{t('notes')}</th>
                 <th />
               </tr>
@@ -261,7 +261,7 @@ const ExpensesPage = (): JSX.Element => {
                   <td>{expense.amountIQD.toLocaleString('en-IQ')}</td>
                   <td>{expense.note ?? '—'}</td>
                   <td>
-                    <button onClick={() => handleDelete(expense.id)}>Delete</button>
+                    <button onClick={() => handleDelete(expense.id)}>{t('delete')}</button>
                   </td>
                 </tr>
               ))}

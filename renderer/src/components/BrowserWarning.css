@@ -29,7 +29,7 @@
 }
 
 .BrowserWarning-content h2 {
-  color: #f8fafc;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   font-size: 1.75rem;
 }
@@ -53,7 +53,7 @@
 }
 
 .BrowserWarning-steps h3 {
-  color: #f8fafc;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
 }

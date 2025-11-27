@@ -121,7 +121,7 @@ export interface PurchaseOrderWithItems extends PurchaseOrder {
   items: PurchaseOrderItem[];
 }
 
-export interface PurchaseOrderItemInput extends Omit<PurchaseOrderItem, 'id' | 'purchaseOrderId'> {}
+export interface PurchaseOrderItemInput extends Omit<PurchaseOrderItem, 'id' | 'purchaseOrderId'> { }
 
 export interface PurchaseOrderInput extends Omit<PurchaseOrder, 'id' | 'orderedAt' | 'receivedAt'> {
   status?: PurchaseOrder['status'];
@@ -292,8 +292,31 @@ export type ExchangeRateInput = {
   note?: string;
 };
 
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
+// Pagination types
+export interface PaginationParams {
+  limit?: number;
+  cursor?: number;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  nextCursor: number | null;
+  hasMore: boolean;
+  total?: number;
+}
+
 export interface ProductsListResponse {
   products: Product[];
+  // For paginated responses
+  items?: Product[];
+  nextCursor?: number | null;
+  hasMore?: boolean;
 }
 
 export interface SalesListResponse {
@@ -304,18 +327,13 @@ export interface ExchangeRateResponse {
   currentRate: ExchangeRate | null;
 }
 
-export interface DateRange {
-  startDate: string;
-  endDate: string;
-}
-
 export interface EvaApi {
   auth: {
     login: (username: string, password: string) => Promise<LoginResponse | null>;
     logout: (token: string) => Promise<boolean>;
   };
   products: {
-    list: (token: string) => Promise<ProductsListResponse>;
+    list: (token: string, params?: PaginationParams) => Promise<ProductsListResponse>;
     create: (token: string, data: ProductInput) => Promise<Product>;
     update: (token: string, data: ProductUpdateInput) => Promise<Product>;
     updateVariant: (token: string, data: VariantUpdateInput) => Promise<boolean>;
@@ -337,7 +355,7 @@ export interface EvaApi {
   };
   exchangeRates: {
     getCurrent: () => Promise<ExchangeRateResponse>;
-    update: (data: ExchangeRateInput) => Promise<ExchangeRateResponse>;
+    update: (token: string, data: ExchangeRateInput) => Promise<ExchangeRateResponse>;
   };
   suppliers: {
     list: (token: string) => Promise<Supplier[]>;
@@ -356,22 +374,22 @@ export interface EvaApi {
     attachSale: (token: string, payload: { saleId: number; customerId: number }) => Promise<boolean>;
   };
   returns: {
-    list: () => Promise<ReturnResponse[]>;
-    create: (data: ReturnInput) => Promise<ReturnResponse>;
-    saleInfo: (saleId: number) => Promise<SaleDetail | null>;
+    list: (token: string) => Promise<ReturnResponse[]>;
+    create: (token: string, data: ReturnInput) => Promise<ReturnResponse>;
+    saleInfo: (token: string, saleId: number) => Promise<SaleDetail | null>;
   };
   expenses: {
-    list: () => Promise<Expense[]>;
-    create: (data: ExpenseInput) => Promise<Expense>;
-    delete: (expenseId: number) => Promise<boolean>;
-    summary: (range: DateRange) => Promise<ExpenseSummary>;
+    list: (token: string) => Promise<Expense[]>;
+    create: (token: string, data: ExpenseInput) => Promise<Expense>;
+    delete: (token: string, expenseId: number) => Promise<boolean>;
+    summary: (token: string, range: DateRange) => Promise<ExpenseSummary>;
   };
   reports: {
-    advanced: (range: DateRange) => Promise<AdvancedReports>;
+    advanced: (token: string, range: DateRange) => Promise<AdvancedReports>;
   };
   printing: {
     getPrinters: () => Promise<Array<{ name: string; description: string; status: number; isDefault: boolean }>>;
-    print: (payload: { html: string; printerName?: string | null }) => Promise<boolean>;
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean }) => Promise<boolean>;
   };
   auth: {
     login: (username: string, password: string) => Promise<LoginResponse | null>;

@@ -10,7 +10,7 @@
 }
 
 .LabelSettings-group {
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--bg-tertiary);
   border-radius: 0.75rem;
   padding: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -44,7 +44,7 @@
 .LabelSettings-group input[type="number"],
 .LabelSettings-group select {
   padding: 0.65rem 0.85rem;
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--bg-input);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 0.65rem;
   color: #f8fafc;
@@ -145,4 +145,3 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-
