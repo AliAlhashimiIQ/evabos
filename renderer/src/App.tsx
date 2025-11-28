@@ -1,5 +1,4 @@
-import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PosLockOverlay } from './components/PosLockOverlay';
 import { BrowserWarning } from './components/BrowserWarning';

@@ -256,6 +256,36 @@ const SettingsPage = (): JSX.Element => {
 
         {/* Label Settings */}
         <LabelSettingsSection />
+
+        {/* System Reset */}
+        {hasRole(['admin']) && (
+          <div className="SettingsPage-section">
+            <h2>⚠️ {t('dangerZone') || 'Danger Zone'}</h2>
+            <p>{t('systemResetDesc') || 'Reset the system to factory defaults. This will delete all data.'}</p>
+
+            <div className="SettingsPage-dangerZone">
+              <button
+                className="SettingsPage-resetButton"
+                onClick={async () => {
+                  if (window.confirm('WARNING: This will delete ALL sales, products, customers, and expenses. This action CANNOT be undone.\n\nAre you sure you want to proceed?')) {
+                    if (window.confirm('Double Check: Are you absolutely sure? All data will be lost forever.')) {
+                      if (!window.evaApi || !token) return;
+                      try {
+                        await window.evaApi.settings.reset(token);
+                        alert('System reset successful. The application will now reload.');
+                        window.location.reload();
+                      } catch (err) {
+                        alert('Failed to reset system: ' + (err instanceof Error ? err.message : String(err)));
+                      }
+                    }
+                  }
+                }}
+              >
+                🗑️ {t('formatSystem') || 'Format System / Reset Everything'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

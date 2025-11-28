@@ -1,5 +1,11 @@
 import { ipcMain } from 'electron';
-import { createSale, listSalesByDateRange, getSaleDetail } from '../db/database';
+import {
+  createSale,
+  listSalesByDateRange,
+  getSaleDetail,
+  deleteSale,
+  attachSaleToCustomer,
+} from '../db/database';
 import type { SaleInput, DateRange } from '../db/types';
 import { requireRole } from './auth';
 
@@ -15,14 +21,14 @@ export function registerSalesIpc(): void {
     requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
       if (!session) throw new Error('Unauthorized');
       const sale = args[0] as SaleInput;
-      
+
       // Use branchId from sale input if provided, otherwise use session branchId, or default to 1
       const branchId = sale.branchId ?? session.branchId ?? 1;
-      
+
       if (!branchId || branchId <= 0) {
         throw new Error('Invalid branch ID. User must be assigned to a branch.');
       }
-      
+
       return createSale({
         ...sale,
         cashierId: session.userId,
@@ -47,6 +53,24 @@ export function registerSalesIpc(): void {
     }),
   );
 
+  ipcMain.handle(
+    'sales:attachCustomer',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const { saleId, customerId } = args[0] as { saleId: number; customerId: number };
+      return attachSaleToCustomer({ saleId, customerId });
+    }),
+  );
+
+  ipcMain.handle(
+    'sales:delete',
+    requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const saleId = args[0] as number;
+      await deleteSale(saleId);
+      await (await import('../db/database')).logActivity(session.userId, 'delete', 'sale', saleId);
+      return true;
+    }),
+  );
+
   handlersRegistered = true;
 }
-

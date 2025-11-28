@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import PrintingModal from '../components/PrintingModal';
 import './Pages.css';
@@ -11,6 +12,7 @@ type DateRange = import('../types/electron').DateRange;
 
 const SalesHistoryPage = (): JSX.Element => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { saleId } = useParams<{ saleId: string }>();
   const [sales, setSales] = useState<Sale[]>([]);
@@ -34,7 +36,7 @@ const SalesHistoryPage = (): JSX.Element => {
 
   const loadSales = async () => {
     if (!window.evaApi || !token) {
-      setError('Desktop bridge unavailable.');
+      setError(t('desktopBridgeUnavailable'));
       return;
     }
 
@@ -47,7 +49,7 @@ const SalesHistoryPage = (): JSX.Element => {
       const response = await window.evaApi.sales.listByDateRange(token, range);
       setSales(response.sales);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sales.');
+      setError(err instanceof Error ? err.message : t('failedToLoadData'));
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ const SalesHistoryPage = (): JSX.Element => {
       const detail = await window.evaApi.sales.getDetail(token, id);
       setSelectedSale(detail);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sale details.');
+      setError(err instanceof Error ? err.message : t('failedToLoadData'));
     } finally {
       setLoading(false);
     }
@@ -93,57 +95,81 @@ const SalesHistoryPage = (): JSX.Element => {
     setPrintSummary(summaryData);
   };
 
+  const handleDeleteSale = async (id: number) => {
+    if (!window.evaApi || !token) return;
+    if (!window.confirm(t('confirmDeleteSale', { id: id }))) {
+      return;
+    }
+    try {
+      await window.evaApi.sales.delete(token, id);
+      if (selectedSale?.id === id) {
+        navigate('/sales');
+      } else {
+        loadSales();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('failedToLoadData'));
+    }
+  };
+
   if (saleId && selectedSale) {
     // Show sale detail view
     return (
       <div className="Page SalesHistory">
         <div className="Page-header">
           <button className="SalesHistory-back" onClick={() => navigate('/sales')}>
-            ← Back to Sales List
+            ← {t('backToSalesList')}
           </button>
-          <h1>Sale #{selectedSale.id}</h1>
+          <h1>{t('sale')} #{selectedSale.id}</h1>
           <button
             className="SalesHistory-print"
             onClick={() => handlePrintSale(selectedSale)}
           >
-            🖨️ Print Receipt
+            🖨️ {t('printReceipt')}
+          </button>
+          <button
+            className="SalesHistory-delete"
+            onClick={() => handleDeleteSale(selectedSale.id)}
+            style={{ marginLeft: '10px', backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            🗑️ {t('delete')}
           </button>
         </div>
 
         <div className="Page-content">
           <div className="SalesHistory-detail">
             <div className="SalesHistory-detailSection">
-              <h3>Sale Information</h3>
+              <h3>{t('saleInformation')}</h3>
               <div className="SalesHistory-detailGrid">
                 <div>
-                  <label>Sale ID:</label>
+                  <label>{t('saleId')}:</label>
                   <span>#{selectedSale.id}</span>
                 </div>
                 <div>
-                  <label>Date:</label>
+                  <label>{t('date')}:</label>
                   <span>{new Date(selectedSale.saleDate).toLocaleString()}</span>
                 </div>
                 <div>
-                  <label>Payment Method:</label>
+                  <label>{t('paymentMethod')}:</label>
                   <span>{selectedSale.paymentMethod || 'N/A'}</span>
                 </div>
                 <div>
-                  <label>Subtotal:</label>
+                  <label>{t('subtotal')}:</label>
                   <span>{selectedSale.subtotalIQD.toLocaleString('en-IQ')} IQD</span>
                 </div>
                 <div>
-                  <label>Discount:</label>
+                  <label>{t('discount')}:</label>
                   <span>{selectedSale.discountIQD.toLocaleString('en-IQ')} IQD</span>
                 </div>
                 <div>
-                  <label>Total:</label>
+                  <label>{t('total')}:</label>
                   <span className="SalesHistory-total">
                     {selectedSale.totalIQD.toLocaleString('en-IQ')} IQD
                   </span>
                 </div>
                 {selectedSale.profitIQD && (
                   <div>
-                    <label>Profit:</label>
+                    <label>{t('profitAmount')}:</label>
                     <span className="SalesHistory-profit">
                       {selectedSale.profitIQD.toLocaleString('en-IQ')} IQD
                     </span>
@@ -153,16 +179,16 @@ const SalesHistoryPage = (): JSX.Element => {
             </div>
 
             <div className="SalesHistory-detailSection">
-              <h3>Items</h3>
+              <h3>{t('items')}</h3>
               <div className="SalesHistory-itemsTable">
                 <table>
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th>Variant</th>
-                      <th>Qty</th>
-                      <th>Unit Price</th>
-                      <th>Total</th>
+                      <th>{t('product')}</th>
+                      <th>{t('variantColorSize')}</th>
+                      <th>{t('qty')}</th>
+                      <th>{t('unitPrice')}</th>
+                      <th>{t('total')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -199,13 +225,13 @@ const SalesHistoryPage = (): JSX.Element => {
   return (
     <div className="Page SalesHistory">
       <div className="Page-header">
-        <h1>Sales History</h1>
+        <h1>{t('sales')}</h1>
       </div>
 
       <div className="Page-content">
         <div className="SalesHistory-filters">
           <div className="SalesHistory-filterGroup">
-            <label>Start Date</label>
+            <label>{t('startDate')}</label>
             <input
               type="date"
               value={startDate}
@@ -213,7 +239,7 @@ const SalesHistoryPage = (): JSX.Element => {
             />
           </div>
           <div className="SalesHistory-filterGroup">
-            <label>End Date</label>
+            <label>{t('endDate')}</label>
             <input
               type="date"
               value={endDate}
@@ -221,7 +247,7 @@ const SalesHistoryPage = (): JSX.Element => {
             />
           </div>
           <button className="SalesHistory-search" onClick={loadSales}>
-            Search
+            {t('search')}
           </button>
           <button
             className="SalesHistory-print-report"
@@ -229,38 +255,45 @@ const SalesHistoryPage = (): JSX.Element => {
             disabled={sales.length === 0}
             style={{ marginLeft: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
           >
-            🖨️ Print Report
+            🖨️ {t('printReport')}
           </button>
         </div>
 
         {error && <div className="SalesHistory-error">{error}</div>}
 
         {loading ? (
-          <div className="SalesHistory-loading">Loading sales...</div>
+          <div className="SalesHistory-loading">{t('loading')}</div>
         ) : (
           <div className="SalesHistory-table">
             <table>
               <thead>
                 <tr>
-                  <th>Sale ID</th>
-                  <th>Date</th>
-                  <th>Total</th>
-                  <th>Payment</th>
-                  <th>Profit</th>
-                  <th>Actions</th>
+                  <th>{t('saleId')}</th>
+                  <th>{t('date')}</th>
+                  <th>{t('total')}</th>
+                  <th>{t('paymentMethod')}</th>
+                  <th>{t('profitAmount')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {sales.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="SalesHistory-empty">
-                      No sales found for the selected date range
+                      {t('noSalesFound')}
                     </td>
                   </tr>
                 ) : (
                   sales.map((sale) => (
                     <tr key={sale.id}>
-                      <td>#{sale.id}</td>
+                      <td>
+                        #{sale.id}
+                        {sale.isReturned && (
+                          <span className="SalesHistory-badge SalesHistory-badge--returned">
+                            {t('returned')}
+                          </span>
+                        )}
+                      </td>
                       <td>{new Date(sale.saleDate).toLocaleString()}</td>
                       <td>{sale.totalIQD.toLocaleString('en-IQ')} IQD</td>
                       <td>{sale.paymentMethod || 'N/A'}</td>
@@ -274,7 +307,17 @@ const SalesHistoryPage = (): JSX.Element => {
                           className="SalesHistory-view"
                           onClick={() => handleViewSale(sale.id)}
                         >
-                          View Details
+                          {t('viewDetails')}
+                        </button>
+                        <button
+                          className="SalesHistory-delete-row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSale(sale.id);
+                          }}
+                          style={{ marginLeft: '5px', backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                        >
+                          {t('delete')}
                         </button>
                       </td>
                     </tr>

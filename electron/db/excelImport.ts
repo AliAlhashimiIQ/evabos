@@ -37,7 +37,7 @@ export function parseExcelFile(buffer: Buffer): ExcelImportRow[] {
 /**
  * Normalize and validate Excel row data
  */
-function normalizeRow(row: ExcelImportRow, rowIndex: number): { product: ProductInput; stock: number; errors: string[] } {
+function normalizeRow(row: ExcelImportRow): { product: ProductInput; stock: number; errors: string[] } {
   const errors: string[] = [];
 
   // Required fields
@@ -113,7 +113,7 @@ export async function importProductsFromExcel(
     const row = rows[i];
 
     try {
-      const { product, stock, errors } = normalizeRow(row, rowIndex);
+      const { product, stock, errors } = normalizeRow(row);
 
       if (errors.length > 0) {
         result.failed++;

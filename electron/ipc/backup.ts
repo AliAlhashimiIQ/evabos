@@ -1,5 +1,5 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
-import { createBackup, listBackups, restoreBackup, deleteBackup, getBackupDirPath, type BackupInfo } from '../db/backup';
+import { createBackup, listBackups, restoreBackup, deleteBackup, getBackupDirPath } from '../db/backup';
 import { closeDatabase, initDatabase } from '../db/database';
 import { getSession } from '../db/database';
 

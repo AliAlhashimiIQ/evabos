@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 type Supplier = import('../types/electron').Supplier;
+type ProductInput = import('../types/electron').ProductInput;
 import './ProductForm.css';
 
 interface ProductFormProps {
@@ -24,6 +26,7 @@ const initialState: ProductInput = {
 
 const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Element => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [formState, setFormState] = useState<ProductInput>(initialState);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
@@ -31,12 +34,12 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
 
   const handleChange =
     (field: keyof ProductInput) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const value = event.target.value;
-    setFormState((prev) => ({
-      ...prev,
-      [field]: field === 'salePriceIQD' || field === 'purchaseCostUSD' ? Number(value) || 0 : value,
-    }));
-  };
+      const value = event.target.value;
+      setFormState((prev) => ({
+        ...prev,
+        [field]: field === 'salePriceIQD' || field === 'purchaseCostUSD' ? Number(value) || 0 : value,
+      }));
+    };
 
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -48,7 +51,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         console.error('Failed to load suppliers', err);
       }
     };
-    
+
     const loadExchangeRate = async () => {
       if (!window.evaApi || !token) return;
       try {
@@ -60,7 +63,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         console.error('Failed to load exchange rate', err);
       }
     };
-    
+
     if (token) {
       loadSuppliers();
       loadExchangeRate();
@@ -70,21 +73,21 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
   // Calculate profit margin in real-time
   const calculateProfitMargin = (): { margin: number; profitIQD: number; profitUSD: number; multiplier: number } | null => {
     const { purchaseCostUSD, salePriceIQD } = formState;
-    
+
     if (!purchaseCostUSD || purchaseCostUSD <= 0 || !salePriceIQD || salePriceIQD <= 0) {
       return null;
     }
-    
+
     const costIQD = purchaseCostUSD * exchangeRate;
     const profitIQD = salePriceIQD - costIQD;
     const profitUSD = profitIQD / exchangeRate;
-    
+
     // Markup on cost (e.g., if cost=$5 and sell=$10, profit=$5, markup=100%)
     const margin = (profitIQD / costIQD) * 100;
-    
+
     // Multiplier (e.g., if cost=$5 and sell=$10, multiplier=2x)
     const multiplier = salePriceIQD / costIQD;
-    
+
     return { margin, profitIQD, profitUSD, multiplier };
   };
 
@@ -94,12 +97,12 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
     event.preventDefault();
 
     if (!formState.name.trim()) {
-      setFormError('Name is required.');
+      setFormError(t('nameRequired'));
       return;
     }
 
     if (!Number.isFinite(formState.salePriceIQD) || formState.salePriceIQD <= 0) {
-      setFormError('Sale price must be a positive number.');
+      setFormError(t('pricePositive'));
       return;
     }
 
@@ -108,7 +111,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
       await onSubmit(formState);
       setFormState(initialState);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to create product.');
+      setFormError(error instanceof Error ? error.message : t('failedToCreateProduct'));
     }
   };
 
@@ -117,11 +120,11 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
       {formError && <div className="ProductForm-alert">{formError}</div>}
       <div className="ProductForm-grid">
         <label>
-          <span>Name</span>
+          <span>{t('name')}</span>
           <input type="text" value={formState.name} onChange={handleChange('name')} required />
         </label>
         <label>
-          <span>Supplier</span>
+          <span>{t('supplier')}</span>
           <select
             value={formState.supplierId ?? ''}
             onChange={(event) =>
@@ -131,7 +134,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
               }))
             }
           >
-            <option value="">Select supplier</option>
+            <option value="">{t('selectSupplier')}</option>
             {suppliers.map((supplier) => (
               <option key={supplier.id} value={supplier.id}>
                 {supplier.name}
@@ -140,31 +143,31 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
           </select>
         </label>
         <label>
-          <span>Code</span>
+          <span>{t('code')}</span>
           <input type="text" value={formState.code ?? ''} onChange={handleChange('code')} />
         </label>
         <label>
-          <span>Barcode</span>
+          <span>{t('barcode')}</span>
           <input type="text" value={formState.barcode ?? ''} onChange={handleChange('barcode')} />
         </label>
         <label>
-          <span>Category</span>
+          <span>{t('category')}</span>
           <input type="text" value={formState.category ?? ''} onChange={handleChange('category')} />
         </label>
         <label className="ProductForm-span">
-          <span>Description</span>
+          <span>{t('description')}</span>
           <textarea value={formState.description ?? ''} onChange={handleChange('description')} rows={3} />
         </label>
         <label>
-          <span>Color</span>
+          <span>{t('color')}</span>
           <input type="text" value={formState.color ?? ''} onChange={handleChange('color')} />
         </label>
         <label>
-          <span>Size</span>
+          <span>{t('size')}</span>
           <input type="text" value={formState.size ?? ''} onChange={handleChange('size')} />
         </label>
         <label>
-          <span>Sale Price (IQD)</span>
+          <span>{t('salePriceIQD')}</span>
           <input
             type="number"
             min="0"
@@ -175,7 +178,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
           />
         </label>
         <label>
-          <span>Purchase Cost (USD)</span>
+          <span>{t('costUSD')}</span>
           <input
             type="number"
             min="0"
@@ -191,29 +194,29 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         <div className="ProductForm-profitMargin">
           <div className="ProductForm-profitMargin-header">
             <span className="ProductForm-profitMargin-icon">📊</span>
-            <span className="ProductForm-profitMargin-title">Profit Calculator</span>
+            <span className="ProductForm-profitMargin-title">{t('profitMarginCalculator')}</span>
           </div>
           <div className="ProductForm-profitMargin-content">
             <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">Markup:</span>
+              <span className="ProductForm-profitMargin-label">{t('markup')}:</span>
               <span className={`ProductForm-profitMargin-value ${profitInfo.margin >= 100 ? 'positive' : profitInfo.margin >= 50 ? 'neutral' : 'negative'}`}>
                 {profitInfo.margin.toFixed(1)}%
               </span>
             </div>
             <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">Multiplier:</span>
+              <span className="ProductForm-profitMargin-label">{t('multiplier')}:</span>
               <span className="ProductForm-profitMargin-value">
                 {profitInfo.multiplier.toFixed(2)}x
               </span>
             </div>
             <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">Profit:</span>
+              <span className="ProductForm-profitMargin-label">{t('profitAmount')}:</span>
               <span className="ProductForm-profitMargin-value">
                 {profitInfo.profitIQD.toLocaleString('en-IQ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} IQD
               </span>
             </div>
             <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">Profit (USD):</span>
+              <span className="ProductForm-profitMargin-label">{t('profitUSD')}:</span>
               <span className="ProductForm-profitMargin-value">
                 ${profitInfo.profitUSD.toFixed(2)}
               </span>
@@ -226,10 +229,10 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
       </div>
       <div className="ProductForm-actions">
         <button type="button" onClick={onCancel} className="ProductForm-button ProductForm-button--ghost" disabled={loading}>
-          Cancel
+          {t('cancel')}
         </button>
         <button type="submit" className="ProductForm-button" disabled={loading}>
-          {loading ? 'Saving…' : 'Save Product'}
+          {loading ? t('saving') : t('saveProduct')}
         </button>
       </div>
     </form>

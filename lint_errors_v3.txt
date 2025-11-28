@@ -1,0 +1,29 @@
+﻿
+> eva-pos-desktop@1.0.0 lint
+> eslint . --ext .ts,.tsx --quiet
+
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\database.ts
+   699:2   error  Unnecessary semicolon                          no-extra-semi
+  1119:9   error  'products' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  2106:27  error  '_userId' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\excelImport.ts
+  40:44  error  'rowIndex' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\LabelSettingsSection.tsx
+  45:10  error  'success' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\PosLockOverlay.tsx
+  7:10  error  '_password' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\ProductDetailsModal.tsx
+  14:10  error  '_exchangeRate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\pages\PosPage.tsx
+   60:10  error  '_loading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  511:15  error  '_e' is defined but never used                 @typescript-eslint/no-unused-vars
+
+Γ£û 9 problems (9 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

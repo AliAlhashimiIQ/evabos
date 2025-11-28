@@ -22,7 +22,7 @@
   font-weight: 600;
   cursor: pointer;
   background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
+  color: var(--text-primary);
   border: 1px solid rgba(148, 163, 184, 0.3);
   transition: all 0.2s;
 }
@@ -40,7 +40,7 @@
   font-weight: 600;
   cursor: pointer;
   background: linear-gradient(120deg, #22d3ee, #3b82f6);
-  color: #0f172a;
+  color: white;
 }
 
 .ProductsPage-tableWrapper {
@@ -88,7 +88,7 @@
   background: rgba(248, 113, 113, 0.12);
   border: 1px solid rgba(248, 113, 113, 0.6);
   border-radius: 0.75rem;
-  color: #fecaca;
+  color: #dc2626;
 }
 
 .ProductsPage-modalOverlay {

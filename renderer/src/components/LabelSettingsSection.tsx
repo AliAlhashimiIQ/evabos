@@ -36,12 +36,13 @@ const defaultSettings: LabelSettings = {
   fieldOrder: ['productName', 'variant', 'barcode', 'sku', 'price'],
 };
 
+
 const LabelSettingsSection = (): JSX.Element => {
   const { t } = useLanguage();
   const [settings, setSettings] = useState<LabelSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();

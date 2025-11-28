@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
@@ -45,6 +45,15 @@ const ReturnsPage = (): JSX.Element => {
   const [submitting, setSubmitting] = useState(false);
   const [printData, setPrintData] = useState<ReturnPrintData | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
+
+  const getReturnTypeLabel = (type: string) => {
+    switch (type) {
+      case 'with_receipt': return t('returnWithReceipt');
+      case 'without_receipt': return t('returnWithoutReceipt');
+      case 'exchange': return t('exchange');
+      default: return type;
+    }
+  };
 
   const loadData = async () => {
     if (!window.evaApi || !token) return;
@@ -97,17 +106,20 @@ const ReturnsPage = (): JSX.Element => {
   };
 
   const parseBarcodeValue = (value: string): number | null => {
+    // Trim whitespace/newlines that scanners often add
+    const cleanValue = value.trim();
+
     // Parse barcode formats: "SALE24" -> 24, "RETURN5" -> 5, or just "24" -> 24
-    const saleMatch = value.match(/^SALE(\d+)$/i);
+    const saleMatch = cleanValue.match(/^SALE(\d+)$/i);
     if (saleMatch) {
       return Number(saleMatch[1]);
     }
-    const returnMatch = value.match(/^RETURN(\d+)$/i);
+    const returnMatch = cleanValue.match(/^RETURN(\d+)$/i);
     if (returnMatch) {
       return Number(returnMatch[1]);
     }
     // Try parsing as plain number
-    const num = Number(value);
+    const num = Number(cleanValue);
     if (!isNaN(num) && num > 0) {
       return num;
     }
@@ -226,7 +238,7 @@ const ReturnsPage = (): JSX.Element => {
         customerName: customers.find((c) => c.id === form.customerId)?.name,
         items: items.map((item) => ({
           name: item.productName ?? item.variant?.productName ?? `Variant #${item.variantId}`,
-          variant: `${item.variant?.color ?? item.color ?? 'Any'} / ${item.variant?.size ?? item.size ?? 'Any'}`,
+          variant: `${item.variant?.color ?? item.color ?? t('anyVariant')} / ${item.variant?.size ?? item.size ?? t('anyVariant')}`,
           quantity: item.quantity,
           amountIQD: item.amountIQD,
         })),
@@ -272,7 +284,7 @@ const ReturnsPage = (): JSX.Element => {
           </select>
         </label>
         <label>
-          <span>{t('saleIDOptional')} / {t('scanBarcode') || 'Scan Barcode'}</span>
+          <span>{t('saleIDOptional')} / {t('scanBarcode')}</span>
           <div className="ReturnsPage-saleLookup">
             <input
               type="text"
@@ -342,7 +354,7 @@ const ReturnsPage = (): JSX.Element => {
               {saleInfo.items.map((entry) => (
                 <tr key={entry.id}>
                   <td>
-                    {entry.productName} – {entry.color ?? 'Any'} / {entry.size ?? 'Any'}
+                    {entry.productName} – {entry.color ?? t('anyVariant')} / {entry.size ?? t('anyVariant')}
                   </td>
                   <td>{entry.quantity}</td>
                   <td>{entry.lineTotalIQD.toLocaleString('en-IQ')}</td>
@@ -459,7 +471,7 @@ const ReturnsPage = (): JSX.Element => {
                 return (
                   <tr key={record.id}>
                     <td>{record.id}</td>
-                    <td>{record.type}</td>
+                    <td>{getReturnTypeLabel(record.type)}</td>
                     <td>{customerName}</td>
                     <td>{record.refundAmountIQD.toLocaleString('en-IQ')}</td>
                     <td>{new Date(record.createdAt).toLocaleString()}</td>

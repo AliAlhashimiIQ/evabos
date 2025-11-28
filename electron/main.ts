@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { autoUpdater } from 'electron-updater';
+import log from 'electron-log';
 import * as path from 'path';
 import { readFileSync } from 'fs';
 import {
@@ -23,10 +25,50 @@ import { registerUsersIpc } from './ipc/users';
 import { registerBranchesIpc } from './ipc/branches';
 import { registerDashboardIpc } from './ipc/dashboard';
 import { registerLicensingIpc } from './ipc/licensing';
+import { registerSettingsIpc } from './ipc/settings';
 import { createBackup } from './db/backup';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5174';
+
+// Configure logging
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
+
+function setupAutoUpdater() {
+  autoUpdater.on('checking-for-update', () => {
+    log.info('Checking for update...');
+  });
+  autoUpdater.on('update-available', (info) => {
+    log.info('Update available.', info);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-available', info);
+    }
+  });
+  autoUpdater.on('update-not-available', (info) => {
+    log.info('Update not available.', info);
+  });
+  autoUpdater.on('error', (err) => {
+    log.error('Error in auto-updater. ' + err);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-error', err.message);
+    }
+  });
+  autoUpdater.on('download-progress', (progressObj) => {
+    log.info(`Download progress: ${progressObj.percent}%`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-progress', progressObj);
+    }
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('Update downloaded');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-downloaded', info);
+      // Ask user to restart? Or auto restart?
+      // For now just notify.
+    }
+  });
+}
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
@@ -220,8 +262,14 @@ app.whenReady().then(async () => {
   registerBranchesIpc();
   registerDashboardIpc();
   registerLicensingIpc();
+  registerSettingsIpc();
   scheduleDailyBackup();
   await createWindow();
+
+  if (!isDev) {
+    setupAutoUpdater();
+    autoUpdater.checkForUpdatesAndNotify();
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

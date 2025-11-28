@@ -13,10 +13,12 @@ import {
   ProductInput,
   ProductsListResponse,
   Sale,
-  SaleInput,
   SaleItem,
-  SaleItemInput,
+  SaleInput,
+  // SaleItemInput removed (unused)
   SalesListResponse,
+  // SaleItemInput removed (unused)
+
   Supplier,
   SupplierInput,
   PurchaseOrderInput,
@@ -67,6 +69,12 @@ const resolveDbPath = (): string => {
     throw new Error('Attempted to resolve DB path before Electron app was ready');
   }
 
+  // For portable/USB mode: Store DB next to the executable
+  if (app.isPackaged) {
+    return path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
+  }
+
+  // Development mode: Use standard UserData
   return path.join(app.getPath('userData'), 'eva-pos.db');
 };
 
@@ -92,6 +100,43 @@ const getDb = (): sqlite3.Database => {
 
   if (!dbInstance) {
     dbInstance = connect();
+
+    // AUTO-BACKUP: If running from USB (packaged), backup to PC Documents
+    if (app.isPackaged) {
+      try {
+        const dbPath = resolveDbPath();
+        const documentsPath = app.getPath('documents');
+        const backupDir = path.join(documentsPath, 'EVA_POS', 'Backups');
+        const fs = require('fs');
+
+        // Create backup dir if not exists
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir, { recursive: true });
+        }
+
+        // Create backup with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const backupPath = path.join(backupDir, `eva-pos-autobackup-${timestamp}.db`);
+
+        // Copy file (async to not block startup too much, but simple copy is fast)
+        fs.copyFile(dbPath, backupPath, (err: any) => {
+          if (err) console.error('[AutoBackup] Failed:', err);
+          else console.log('[AutoBackup] Success:', backupPath);
+        });
+
+        // Cleanup old backups (keep last 5)
+        fs.readdir(backupDir, (err: any, files: string[]) => {
+          if (err) return;
+          const backups = files.filter(f => f.startsWith('eva-pos-autobackup-')).sort();
+          if (backups.length > 5) {
+            const toDelete = backups.slice(0, backups.length - 5);
+            toDelete.forEach(f => fs.unlink(path.join(backupDir, f), () => { }));
+          }
+        });
+      } catch (err) {
+        console.error('[AutoBackup] Error:', err);
+      }
+    }
   }
 
   return dbInstance;
@@ -392,6 +437,7 @@ const createTables = async (): Promise<void> => {
       customerId INTEGER,
       reason TEXT,
       refundAmountIQD REAL NOT NULL,
+      totalCostIQD REAL DEFAULT 0,
       type TEXT NOT NULL,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (saleId) REFERENCES sales(id),
@@ -508,6 +554,19 @@ const seedInitialData = async (): Promise<void> => {
 
 export async function initDatabase(): Promise<void> {
   await createTables();
+
+  // Migration: Add totalCostIQD to returns if missing
+  try {
+    const columns = await all<{ name: string }>('PRAGMA table_info(returns)');
+    const hasTotalCost = columns.some((c) => c.name === 'totalCostIQD');
+    if (!hasTotalCost) {
+      await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0');
+      console.log('[db] Added totalCostIQD column to returns table');
+    }
+  } catch (err) {
+    console.error('[db] Migration failed:', err);
+  }
+
   await seedInitialData();
 }
 
@@ -564,6 +623,7 @@ interface ProductVariantRow {
   productName: string;
   category?: string | null;
   baseCode?: string | null;
+  supplierName?: string | null;
   size?: string | null;
   color?: string | null;
   sku: string;
@@ -579,21 +639,22 @@ interface ProductVariantRow {
 const mapVariantRow = (row: ProductVariantRow): Product => ({
   id: row.variantId,
   productId: row.productId,
-  name: row.productName,
+  name: row.productName, // Legacy support
   productName: row.productName,
-  baseCode: row.baseCode ?? null,
-  category: row.category ?? null,
-  size: row.size ?? null,
-  color: row.color ?? null,
+  baseCode: row.baseCode,
+  category: row.category,
+  supplierName: row.supplierName,
+  size: row.size,
+  color: row.color,
   sku: row.sku,
-  barcode: row.barcode ?? null,
-  defaultPriceIQD: row.defaultPriceIQD ?? 0,
-  salePriceIQD: row.defaultPriceIQD ?? 0,
-  purchaseCostUSD: row.purchaseCostUSD ?? 0,
-  avgCostUSD: row.avgCostUSD ?? 0,
-  lastPurchaseCostUSD: row.lastPurchaseCostUSD ?? 0,
-  isActive: Boolean(row.variantActive),
-  stockOnHand: row.stockOnHand ?? 0,
+  barcode: row.barcode,
+  defaultPriceIQD: row.defaultPriceIQD,
+  salePriceIQD: row.defaultPriceIQD, // Alias
+  purchaseCostUSD: row.purchaseCostUSD,
+  avgCostUSD: row.avgCostUSD,
+  lastPurchaseCostUSD: row.lastPurchaseCostUSD,
+  isActive: row.variantActive === 1,
+  stockOnHand: row.stockOnHand,
 });
 
 const mapSaleRow = (row: any): Sale => ({
@@ -632,34 +693,7 @@ const fetchCustomerById = async (id: number): Promise<Customer | null> => {
   return result ?? null;
 };
 
-const fetchReturnById = async (id: number): Promise<ReturnResponse | null> => {
-  const record = await get<ReturnResponse>(
-    `
-    SELECT *
-    FROM returns
-    WHERE id = ?
-  `,
-    [id],
-  );
 
-  if (!record) {
-    return null;
-  }
-
-  const items = await all<ReturnItem>(
-    `
-    SELECT *
-    FROM return_items
-    WHERE returnId = ?
-  `,
-    [id],
-  );
-
-  return {
-    ...record,
-    items,
-  };
-};
 
 
 export async function getSaleDetail(saleId: number): Promise<SaleDetail | null> {
@@ -695,7 +729,8 @@ export async function getSaleDetail(saleId: number): Promise<SaleDetail | null> 
     ...sale,
     items,
   };
-};
+}
+
 
 export const ensureVariantStockRow = async (variantId: number, branchId: number): Promise<void> => {
   await run(
@@ -816,6 +851,7 @@ export async function listProducts(
       p.name AS productName,
       p.category,
       p.baseCode,
+      s.name AS supplierName,
       pv.size,
       pv.color,
       pv.sku,
@@ -828,6 +864,7 @@ export async function listProducts(
       IFNULL(SUM(vs.quantity), 0) AS stockOnHand
     FROM product_variants pv
     JOIN products p ON p.id = pv.productId
+    LEFT JOIN suppliers s ON s.id = p.defaultSupplierId
     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
     WHERE pv.id > ? ${whereClause}
     GROUP BY pv.id
@@ -944,178 +981,9 @@ export async function updateCustomer(input: CustomerUpdateInput): Promise<Custom
   return updated;
 }
 
-export async function listReturns(): Promise<ReturnResponse[]> {
-  const records = await all<ReturnRecord>(
-    `
-    SELECT *
-    FROM returns
-    ORDER BY datetime(createdAt) DESC
-    LIMIT 200
-  `,
-  );
 
-  const results: ReturnResponse[] = [];
-  for (const record of records) {
-    const full = await fetchReturnById(record.id);
-    if (full) {
-      results.push(full);
-    }
-  }
-  return results;
-}
-
-export async function createReturn(input: ReturnInput): Promise<ReturnResponse> {
-  if (!input.items?.length) {
-    throw new Error('Return must include at least one item.');
-  }
-
-  await run('BEGIN TRANSACTION');
-  try {
-    const refundAmount =
-      input.refundAmountIQD ??
-      input.items
-        .filter((item) => item.direction !== 'exchange_in')
-        .reduce((acc, item) => acc + (item.amountIQD ?? 0), 0);
-
-    const insert = await runWithResult(
-      `
-      INSERT INTO returns (
-        saleId,
-        branchId,
-        processedBy,
-        customerId,
-        reason,
-        refundAmountIQD,
-        type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
-      [
-        input.saleId ?? null,
-        input.branchId,
-        input.processedBy,
-        input.customerId ?? null,
-        input.reason ?? null,
-        refundAmount,
-        input.type,
-      ],
-    );
-
-    const returnId = insert.lastID as number;
-
-    for (const item of input.items) {
-      const direction = item.direction ?? 'return';
-      await run(
-        `
-        INSERT INTO return_items (
-          returnId,
-          saleItemId,
-          variantId,
-          quantity,
-          amountIQD
-        ) VALUES (?, ?, ?, ?, ?)
-      `,
-        [returnId, item.saleItemId ?? null, item.variantId, item.quantity, item.amountIQD ?? 0],
-      );
-
-      // Stock adjustment logic:
-      // - 'return' or 'exchange_out': customer returns item, ADD to stock (positive delta)
-      // - 'exchange_in': customer takes new item, REMOVE from stock (negative delta)
-      const delta = direction === 'exchange_in' ? -Math.abs(item.quantity) : Math.abs(item.quantity);
-      const reason = direction === 'exchange_in' ? 'exchange_in' : direction === 'exchange_out' ? 'exchange_out' : 'return';
-      await adjustVariantStockInternal(
-        item.variantId,
-        input.branchId,
-        delta,
-        reason,
-        input.reason ?? 'Return',
-        input.processedBy,
-      );
-    }
-
-    await run('COMMIT');
-
-    const created = await fetchReturnById(returnId);
-    if (!created) {
-      throw new Error('Failed to load created return');
-    }
-
-    return created;
-  } catch (error) {
-    await run('ROLLBACK');
-    throw error;
-  }
-}
-
-export async function getSaleForReturn(saleId: number) {
-  return getSaleDetail(saleId);
-}
-
-export async function listExpenses(): Promise<Expense[]> {
-  return all<Expense>(
-    `
-    SELECT *
-    FROM expenses
-    ORDER BY datetime(expenseDate) DESC
-    LIMIT 500
-  `,
-  );
-}
-
-export async function createExpense(input: ExpenseInput): Promise<Expense> {
-  const result = await runWithResult(
-    `
-    INSERT INTO expenses (branchId, expenseDate, amountIQD, category, note, enteredBy)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    [
-      input.branchId,
-      input.expenseDate ?? new Date().toISOString(),
-      input.amountIQD,
-      input.category,
-      input.note ?? null,
-      input.enteredBy ?? null,
-    ],
-  );
-
-  const created = await get<Expense>('SELECT * FROM expenses WHERE id = ?', [result.lastID]);
-  if (!created) {
-    throw new Error('Failed to load created expense');
-  }
-  return created;
-}
-
-export async function deleteExpense(id: number): Promise<void> {
-  await run('DELETE FROM expenses WHERE id = ?', [id]);
-}
-
-export async function getExpenseSummary(range: DateRange): Promise<ExpenseSummary> {
-  const totalRow = await get<{ total: number }>(
-    `
-    SELECT IFNULL(SUM(amountIQD), 0) as total
-    FROM expenses
-    WHERE date(expenseDate) BETWEEN date(?) AND date(?)
-  `,
-    [range.startDate, range.endDate],
-  );
-
-  const categories = await all<{ category: string; amountIQD: number }>(
-    `
-    SELECT category, IFNULL(SUM(amountIQD), 0) as amountIQD
-    FROM expenses
-    WHERE date(expenseDate) BETWEEN date(?) AND date(?)
-    GROUP BY category
-  `,
-    [range.startDate, range.endDate],
-  );
-
-  return {
-    totalIQD: totalRow?.total ?? 0,
-    categories,
-  };
-}
 
 export async function getAdvancedReports(range: DateRange): Promise<AdvancedReports> {
-  const products = (await listProductsLegacy()).products;
   const dailySales = await all<DailySalesEntry>(
     `
     SELECT
@@ -1352,6 +1220,74 @@ interface CustomerSaleItemRow {
   productName: string;
   color?: string | null;
   size?: string | null;
+}
+
+export async function deleteCustomer(customerId: number): Promise<boolean> {
+  try {
+    await run('DELETE FROM customers WHERE id = ?', [customerId]);
+    return true;
+  } catch (err) {
+    console.error('Failed to delete customer:', err);
+    throw err;
+  }
+}
+
+export async function deleteSupplier(supplierId: number): Promise<boolean> {
+  await run('BEGIN TRANSACTION');
+  try {
+    // 1. Check for Purchase Orders (Cannot delete if POs exist due to NOT NULL constraint and history)
+    const poCount = await get<{ count: number }>('SELECT COUNT(*) as count FROM purchase_orders WHERE supplierId = ?', [supplierId]);
+    if (poCount && poCount.count > 0) {
+      throw new Error('Cannot delete supplier with existing purchase orders.');
+    }
+
+    // 2. Nullify references in Products (defaultSupplierId is nullable)
+    await run('UPDATE products SET defaultSupplierId = NULL WHERE defaultSupplierId = ?', [supplierId]);
+
+    // 3. Delete the supplier
+    await run('DELETE FROM suppliers WHERE id = ?', [supplierId]);
+
+    await run('COMMIT');
+    return true;
+  } catch (err) {
+    await run('ROLLBACK');
+    console.error('Failed to delete supplier:', err);
+    throw err;
+  }
+}
+
+export async function updateSupplier(id: number, data: SupplierInput): Promise<Supplier> {
+  const { name, contactName, phone, email, address, notes, isActive } = data;
+  try {
+    await run(
+      `UPDATE suppliers 
+       SET name = ?, contactName = ?, phone = ?, email = ?, address = ?, notes = ?, isActive = ?
+       WHERE id = ?`,
+      [
+        name,
+        contactName ?? null,
+        phone ?? null,
+        email ?? null,
+        address ?? null,
+        notes ?? null,
+        isActive ? 1 : 0,
+        id
+      ]
+    );
+    return {
+      id,
+      name,
+      contactName: contactName ?? null,
+      phone: phone ?? null,
+      email: email ?? null,
+      address: address ?? null,
+      notes: notes ?? null,
+      isActive: isActive ?? true,
+    };
+  } catch (err) {
+    console.error('Failed to update supplier:', err);
+    throw err;
+  }
 }
 
 export async function getCustomerHistory(customerId: number): Promise<CustomerHistoryEntry[]> {
@@ -1756,8 +1692,9 @@ export async function createSale(input: SaleInput): Promise<Sale> {
         input.discountIQD ?? 0,
         input.totalIQD,
         input.paymentMethod ?? null,
-        input.items.reduce(
-          (acc, item) => acc + (item.unitPriceIQD - (item.unitCostIQDAtSale ?? 0)) * item.quantity,
+        // Profit = Revenue (after discount) - Total Cost
+        input.totalIQD - input.items.reduce(
+          (acc, item) => acc + (item.unitCostIQDAtSale ?? 0) * item.quantity,
           0,
         ),
       ],
@@ -1837,12 +1774,14 @@ interface SaleRow {
 }
 
 export async function listSalesByDateRange(range: DateRange): Promise<SalesListResponse> {
-  const salesRows = await all<SaleRow>(
+  const salesRows = await all<SaleRow & { isReturned: number }>(
     `
-    SELECT *
-    FROM sales
-    WHERE date(saleDate) BETWEEN date(?) AND date(?)
-    ORDER BY saleDate ASC
+    SELECT 
+      s.*,
+      (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
+    FROM sales s
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ORDER BY s.saleDate ASC
   `,
     [range.startDate, range.endDate],
   );
@@ -1872,6 +1811,7 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
 
   const sales: Sale[] = salesRows.map((row) => ({
     ...mapSaleRow(row),
+    isReturned: Boolean(row.isReturned),
     items: itemsBySale.get(row.id) ?? [],
   }));
 
@@ -1978,19 +1918,7 @@ export async function ensureAdminUser(): Promise<void> {
     `,
       ['admin', passwordHash, 'admin', branchId],
     );
-    console.log('[db] Admin user created: admin / admin123');
-  } else {
-    // Reset admin password to ensure it's correct
-    const passwordHash = await hashPassword('admin123');
-    await run(
-      `
-      UPDATE users
-      SET passwordHash = ?, role = 'admin'
-      WHERE username = 'admin'
-    `,
-      [passwordHash],
-    );
-    console.log('[db] Admin user password reset: admin / admin123');
+    console.log('[db] Admin user created');
   }
 }
 
@@ -2102,7 +2030,8 @@ export function lockPos(userId: number): void {
   posLockedBy = userId;
 }
 
-export function unlockPos(userId: number): void {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function unlockPos(_userId: number): void {
   posLocked = false;
   posLockedBy = null;
 }
@@ -2583,6 +2512,225 @@ export async function deleteVariant(variantId: number): Promise<void> {
   await run('DELETE FROM product_variants WHERE id = ?', [variantId]);
 }
 
+// ==================== RETURN MANAGEMENT ====================
+
+export async function createReturn(input: ReturnInput): Promise<ReturnResponse> {
+  await run('BEGIN TRANSACTION');
+  try {
+    const refundAmount =
+      input.refundAmountIQD ??
+      input.items
+        .filter((item) => item.direction !== 'exchange_in')
+        .reduce((acc, item) => acc + (item.amountIQD ?? 0), 0);
+
+    const insert = await runWithResult(
+      `
+      INSERT INTO returns (
+        saleId,
+        branchId,
+        customerId,
+        refundAmountIQD,
+        reason,
+        processedBy,
+        type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        input.saleId ?? null,
+        input.branchId,
+        input.customerId ?? null,
+        refundAmount,
+        input.reason ?? null,
+        input.processedBy ?? null,
+        input.type,
+      ],
+    );
+
+    const returnId = insert.lastID as number;
+
+    let totalReturnCost = 0;
+
+    for (const item of input.items) {
+      const direction = item.direction ?? 'return';
+
+      // Calculate cost for this item
+      let itemCost = 0;
+      if (item.saleItemId) {
+        // Try to get original cost from sale
+        const saleItem = await get<{ unitCostIQDAtSale?: number }>('SELECT unitCostIQDAtSale FROM sale_items WHERE id = ?', [item.saleItemId]);
+        if (saleItem && saleItem.unitCostIQDAtSale) {
+          itemCost = saleItem.unitCostIQDAtSale * item.quantity;
+        }
+      }
+
+      if (itemCost === 0) {
+        // Fallback to current average cost
+        const variant = await get<{ avgCostUSD: number }>('SELECT avgCostUSD FROM product_variants WHERE id = ?', [item.variantId]);
+        const exchangeRate = await get<{ rate: number }>('SELECT rate FROM exchange_rates ORDER BY id DESC LIMIT 1');
+        const rate = exchangeRate?.rate ?? 1500; // Default fallback
+        itemCost = (variant?.avgCostUSD ?? 0) * rate * item.quantity;
+      }
+
+      if (direction !== 'exchange_in') {
+        totalReturnCost += itemCost;
+      }
+
+      await run(
+        `
+        INSERT INTO return_items (
+          returnId,
+          saleItemId,
+          variantId,
+          quantity,
+          amountIQD
+        ) VALUES (?, ?, ?, ?, ?)
+      `,
+        [returnId, item.saleItemId ?? null, item.variantId, item.quantity, item.amountIQD ?? 0],
+      );
+
+      // Stock adjustment logic:
+      // - 'return' or 'exchange_out': customer returns item, ADD to stock (positive delta)
+      // - 'exchange_in': customer takes new item, REMOVE from stock (negative delta)
+      const delta = direction === 'exchange_in' ? -Math.abs(item.quantity) : Math.abs(item.quantity);
+      const reason = direction === 'exchange_in' ? 'exchange_in' : direction === 'exchange_out' ? 'exchange_out' : 'return';
+      await adjustVariantStockInternal(
+        item.variantId,
+        input.branchId,
+        delta,
+        reason,
+        input.reason ?? 'Return',
+        input.processedBy,
+      );
+    }
+
+    // Update the return with the calculated cost
+    await run('UPDATE returns SET totalCostIQD = ? WHERE id = ?', [totalReturnCost, returnId]);
+
+    await run('COMMIT');
+
+    const created = await fetchReturnById(returnId);
+    if (!created) {
+      throw new Error('Failed to load created return');
+    }
+
+    return created;
+  } catch (error) {
+    await run('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function getSaleForReturn(saleId: number) {
+  return getSaleDetail(saleId);
+}
+
+export async function fetchReturnById(id: number): Promise<ReturnResponse | null> {
+  const row = await get<ReturnRecord>(
+    `
+    SELECT *
+    FROM returns
+    WHERE id = ?
+  `,
+    [id],
+  );
+
+  if (!row) return null;
+
+  const items = await all<ReturnItem>(
+    `
+    SELECT *
+    FROM return_items
+    WHERE returnId = ?
+  `,
+    [id],
+  );
+
+  return {
+    ...row,
+    items,
+  };
+}
+
+export async function listReturns(branchId?: number): Promise<ReturnResponse[]> {
+  const query = branchId
+    ? 'SELECT * FROM returns WHERE branchId = ? ORDER BY createdAt DESC'
+    : 'SELECT * FROM returns ORDER BY createdAt DESC';
+  const params = branchId ? [branchId] : [];
+
+  const rows = await all<ReturnRecord>(query, params);
+
+  const returns: ReturnResponse[] = [];
+  for (const row of rows) {
+    const items = await all<ReturnItem>(
+      `
+      SELECT *
+      FROM return_items
+      WHERE returnId = ?
+    `,
+      [row.id],
+    );
+    returns.push({ ...row, items });
+  }
+
+  return returns;
+}
+
+// --- Expenses ---
+
+export async function createExpense(input: ExpenseInput): Promise<Expense> {
+  const result = await runWithResult(
+    `
+    INSERT INTO expenses (branchId, category, amountIQD, expenseDate, note, enteredBy)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `,
+    [input.branchId, input.category, input.amountIQD, input.expenseDate, input.note ?? null, input.enteredBy ?? null],
+  );
+
+  return {
+    id: result.lastID as number,
+    ...input,
+  };
+}
+
+export async function listExpenses(branchId?: number): Promise<Expense[]> {
+  const query = branchId
+    ? 'SELECT * FROM expenses WHERE branchId = ? ORDER BY expenseDate DESC'
+    : 'SELECT * FROM expenses ORDER BY expenseDate DESC';
+  const params = branchId ? [branchId] : [];
+  return all<Expense>(query, params);
+}
+
+export async function deleteExpense(expenseId: number): Promise<boolean> {
+  await run('DELETE FROM expenses WHERE id = ?', [expenseId]);
+  return true;
+}
+
+export async function getExpenseSummary(range: DateRange): Promise<ExpenseSummary> {
+  const totalRow = await get<{ total: number }>(
+    `
+    SELECT IFNULL(SUM(amountIQD), 0) as total
+    FROM expenses
+    WHERE date(expenseDate) >= date(?) AND date(expenseDate) <= date(?)
+  `,
+    [range.startDate, range.endDate],
+  );
+
+  const categoryRows = await all<{ category: string; total: number }>(
+    `
+    SELECT category, IFNULL(SUM(amountIQD), 0) as total
+    FROM expenses
+    WHERE date(expenseDate) >= date(?) AND date(expenseDate) <= date(?)
+    GROUP BY category
+  `,
+    [range.startDate, range.endDate],
+  );
+
+  return {
+    totalIQD: totalRow?.total ?? 0,
+    categories: categoryRows.map((r) => ({ category: r.category, amountIQD: r.total })),
+  };
+}
+
 // ==================== DASHBOARD KPIs ====================
 
 export async function getDashboardKPIs(branchId?: number, dateRange?: { startDate: string; endDate: string }): Promise<DashboardKPIs> {
@@ -2593,7 +2741,7 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Sales for date range
   const todaySalesQuery = branchId
     ? `
-      SELECT 
+      SELECT
         COUNT(*) as count,
         IFNULL(SUM(totalIQD), 0) as totalIQD,
         IFNULL(SUM(profitIQD), 0) as profitIQD
@@ -2601,7 +2749,7 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
       WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?) AND branchId = ?
     `
     : `
-      SELECT 
+      SELECT
         COUNT(*) as count,
         IFNULL(SUM(totalIQD), 0) as totalIQD,
         IFNULL(SUM(profitIQD), 0) as profitIQD
@@ -2618,29 +2766,34 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Returns for date range (to subtract from sales for NET revenue)
   const todayReturnsQuery = branchId
     ? `
-      SELECT IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD
+      SELECT
+        IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
+        IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
       WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?) AND branchId = ?
     `
     : `
-      SELECT IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD
+      SELECT
+        IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
+        IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
       WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?)
     `;
 
   const todayReturnsParams = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
-  const todayReturnsRow = await get<{ totalReturnsIQD: number }>(
+  const todayReturnsRow = await get<{ totalReturnsIQD: number; totalReturnsCostIQD: number }>(
     todayReturnsQuery,
     todayReturnsParams,
   );
 
   const totalReturnsIQD = todayReturnsRow?.totalReturnsIQD ?? 0;
+  const totalReturnsCostIQD = todayReturnsRow?.totalReturnsCostIQD ?? 0;
 
   // Calculate NET sales (sales minus returns)
   const grossSalesIQD = todaySalesRow?.totalIQD ?? 0;
   const grossProfitIQD = todaySalesRow?.profitIQD ?? 0;
   const netSalesIQD = grossSalesIQD - totalReturnsIQD;
-  const netProfitIQD = grossProfitIQD - totalReturnsIQD; // Returns reduce profit
+  const netProfitIQD = grossProfitIQD - (totalReturnsIQD - totalReturnsCostIQD); // Returns reduce profit by (Refund - Cost)
 
   const todaySales = {
     count: todaySalesRow?.count ?? 0,
@@ -2759,3 +2912,117 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   };
 }
 
+
+export async function deleteSale(saleId: number): Promise<void> {
+  await run('BEGIN TRANSACTION');
+  try {
+    // 1. Get sale details
+    const sale = await getSaleDetail(saleId);
+    if (!sale) {
+      throw new Error('Sale not found');
+    }
+
+    // 2. Handle associated returns (Fix for FOREIGN KEY constraint)
+    const returns = await all<{ id: number; branchId: number }>(
+      'SELECT id, branchId FROM returns WHERE saleId = ?',
+      [saleId]
+    );
+
+    for (const ret of returns) {
+      // Get return items to reverse stock adjustments
+      const returnItems = await all<{
+        saleItemId: number | null;
+        variantId: number;
+        quantity: number;
+      }>('SELECT saleItemId, variantId, quantity FROM return_items WHERE returnId = ?', [ret.id]);
+
+      for (const item of returnItems) {
+        if (item.saleItemId) {
+          // Was a RETURN (Stock added) -> Reverse by SUBTRACTING
+          await run(
+            'UPDATE variant_stock SET quantity = quantity - ? WHERE variantId = ? AND branchId = ?',
+            [item.quantity, item.variantId, ret.branchId]
+          );
+        } else {
+          // Was an EXCHANGE_IN (Stock removed) -> Reverse by ADDING
+          await run(
+            'UPDATE variant_stock SET quantity = quantity + ? WHERE variantId = ? AND branchId = ?',
+            [item.quantity, item.variantId, ret.branchId]
+          );
+        }
+      }
+
+      // Delete return records
+      await run('DELETE FROM return_items WHERE returnId = ?', [ret.id]);
+      await run('DELETE FROM returns WHERE id = ?', [ret.id]);
+    }
+
+    // 3. Restore stock for sale items (Sale removed stock -> Add it back)
+    for (const item of sale.items) {
+      await run(
+        'UPDATE variant_stock SET quantity = quantity + ? WHERE variantId = ? AND branchId = ?',
+        [item.quantity, item.variantId, sale.branchId]
+      );
+    }
+
+    // 4. Revert customer stats if attached
+    if (sale.customerId) {
+      await run(
+        `
+        UPDATE customers
+        SET totalVisits = MAX(0, totalVisits - 1),
+            totalSpentIQD = MAX(0, totalSpentIQD - ?),
+            loyaltyPoints = MAX(0, loyaltyPoints - (? / 1000.0))
+        WHERE id = ?
+        `,
+        [sale.totalIQD, sale.totalIQD, sale.customerId]
+      );
+    }
+
+    // 5. Delete items and sale
+    await run('DELETE FROM sale_items WHERE saleId = ?', [saleId]);
+    await run('DELETE FROM sales WHERE id = ?', [saleId]);
+
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK');
+    throw err;
+  }
+}
+
+export async function resetDatabase(): Promise<void> {
+  await run('BEGIN TRANSACTION');
+  try {
+    // Delete all business data in correct order (child tables first)
+
+    // 1. Transactional items (referencing products, sales, etc.)
+    await run('DELETE FROM return_items');
+    await run('DELETE FROM returns'); // References sales, customers
+    await run('DELETE FROM sale_items');
+    await run('DELETE FROM sales'); // References customers, users
+
+    await run('DELETE FROM purchase_order_items');
+    await run('DELETE FROM purchase_orders'); // References suppliers
+
+    await run('DELETE FROM inventory_adjustments'); // References variants
+    await run('DELETE FROM variant_stock'); // References variants
+
+    // 2. Catalog items
+    await run('DELETE FROM product_variants'); // References products
+    await run('DELETE FROM products'); // References suppliers
+
+    // 3. Entities
+    await run('DELETE FROM expenses');
+    await run('DELETE FROM suppliers');
+    await run('DELETE FROM customers');
+    await run('DELETE FROM activity_logs');
+
+    // Reset sequences
+    await run("DELETE FROM sqlite_sequence WHERE name IN ('sale_items', 'sales', 'return_items', 'returns', 'purchase_order_items', 'purchase_orders', 'expenses', 'inventory_adjustments', 'variant_stock', 'product_variants', 'products', 'suppliers', 'customers', 'activity_logs')");
+
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK');
+    throw err;
+  }
+}

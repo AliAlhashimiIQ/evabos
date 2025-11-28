@@ -13,7 +13,7 @@ import type {
   CustomerUpdateInput,
   ReturnInput,
   ExpenseInput,
-  AdvancedReports,
+  // AdvancedReports removed (unused)
   UserInput,
   UserUpdateInput,
   BranchInput,
@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     create: (token: string, data: SaleInput) => ipcRenderer.invoke('sales:create', token, data),
     listByDateRange: (token: string, range: DateRange) => ipcRenderer.invoke('sales:listByDateRange', token, range),
     getDetail: (token: string, saleId: number) => ipcRenderer.invoke('sales:getDetail', token, saleId),
+    delete: (token: string, saleId: number) => ipcRenderer.invoke('sales:delete', token, saleId),
   },
   exchangeRates: {
     getCurrent: () => ipcRenderer.invoke('exchangeRates:getCurrent'),
@@ -60,6 +61,8 @@ contextBridge.exposeInMainWorld('evaApi', {
   suppliers: {
     list: (token: string) => ipcRenderer.invoke('suppliers:list', token),
     create: (token: string, data: SupplierInput) => ipcRenderer.invoke('suppliers:create', token, data),
+    update: (token: string, id: number, data: SupplierInput) => ipcRenderer.invoke('suppliers:update', token, id, data),
+    delete: (token: string, id: number) => ipcRenderer.invoke('suppliers:delete', token, id),
   },
   purchaseOrders: {
     list: (token: string) => ipcRenderer.invoke('purchasing:purchase-orders:list', token),
@@ -70,9 +73,9 @@ contextBridge.exposeInMainWorld('evaApi', {
     list: (token: string) => ipcRenderer.invoke('customers:list', token),
     create: (token: string, data: CustomerInput) => ipcRenderer.invoke('customers:create', token, data),
     update: (token: string, data: CustomerUpdateInput) => ipcRenderer.invoke('customers:update', token, data),
+    delete: (token: string, customerId: number) => ipcRenderer.invoke('customers:delete', token, customerId),
     history: (token: string, customerId: number) => ipcRenderer.invoke('customers:history', token, customerId),
-    attachSale: (token: string, payload: { saleId: number; customerId: number }) =>
-      ipcRenderer.invoke('customers:attach-sale', token, payload),
+    attachSale: (token: string, payload: { saleId: number; customerId: number }) => ipcRenderer.invoke('customers:attach-sale', token, payload),
   },
   returns: {
     list: (token: string) => ipcRenderer.invoke('returns:list', token),
@@ -84,6 +87,9 @@ contextBridge.exposeInMainWorld('evaApi', {
     create: (token: string, data: ExpenseInput) => ipcRenderer.invoke('expenses:create', token, data),
     delete: (token: string, expenseId: number) => ipcRenderer.invoke('expenses:delete', token, expenseId),
     summary: (token: string, range: DateRange) => ipcRenderer.invoke('expenses:summary', token, range),
+  },
+  settings: {
+    reset: (token: string) => ipcRenderer.invoke('settings:reset', token),
   },
   reports: {
     advanced: (token: string, range: DateRange) => ipcRenderer.invoke('reports:advanced', token, range),
@@ -105,7 +111,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     update: (token: string, payload: BranchUpdateInput) => ipcRenderer.invoke('branches:update', token, payload),
   },
   dashboard: {
-    getKPIs: (token: string, branchId?: number, dateRange?: { startDate: string; endDate: string }) => 
+    getKPIs: (token: string, branchId?: number, dateRange?: { startDate: string; endDate: string }) =>
       ipcRenderer.invoke('dashboard:getKPIs', token, branchId ?? undefined, dateRange),
   },
   auth: {

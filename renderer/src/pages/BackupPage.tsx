@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './BackupPage.css';
 
@@ -7,6 +8,7 @@ type BackupInfo = import('../types/electron').BackupInfo;
 
 const BackupPage = (): JSX.Element => {
   const { token, hasRole } = useAuth();
+  const { t } = useLanguage();
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [backupDir, setBackupDir] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const BackupPage = (): JSX.Element => {
 
   const loadBackups = async () => {
     if (!token || !window.evaApi) {
-      setError('Desktop bridge unavailable.');
+      setError(t('desktopBridgeUnavailable'));
       setLoading(false);
       return;
     }
@@ -33,7 +35,7 @@ const BackupPage = (): JSX.Element => {
       setBackups(backupsList);
       setBackupDir(dir);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load backups.');
+      setError(err instanceof Error ? err.message : t('failedToLoadData'));
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,7 @@ const BackupPage = (): JSX.Element => {
     if (hasRole(['admin', 'manager'])) {
       loadBackups();
     } else {
-      setError('Access denied. Only admin or manager can manage backups.');
+      setError(t('accessDeniedBackup'));
       setLoading(false);
     }
   }, [token, hasRole]);
@@ -56,10 +58,10 @@ const BackupPage = (): JSX.Element => {
       setError(null);
       setSuccess(null);
       const backup = await window.evaApi.backup.create(token);
-      setSuccess(`Backup created successfully: ${backup.filename}`);
+      setSuccess(t('backupCreatedSuccess', { filename: backup.filename }));
       await loadBackups();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create backup.');
+      setError(err instanceof Error ? err.message : t('failedToCreateBackup'));
     } finally {
       setCreating(false);
     }
@@ -76,7 +78,7 @@ const BackupPage = (): JSX.Element => {
 
       const filename = selectedPath.split(/[/\\]/).pop() || 'selected file';
       const confirmed = window.confirm(
-        `Are you sure you want to restore from "${filename}"?\n\nThis will replace your current database. The app will restart after restoration.`,
+        t('confirmRestore', { filename })
       );
 
       if (!confirmed) return;
@@ -85,12 +87,12 @@ const BackupPage = (): JSX.Element => {
       setError(null);
       setSuccess(null);
       await window.evaApi.backup.restore(token, selectedPath);
-      setSuccess('Backup restored successfully. The app will restart...');
+      setSuccess(t('backupRestoredSuccess'));
       setTimeout(() => {
         window.location.reload();
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore backup.');
+      setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
     }
   };
@@ -99,7 +101,7 @@ const BackupPage = (): JSX.Element => {
     if (!token || !window.evaApi) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to restore from "${filename}"?\n\nThis will replace your current database. The app will restart after restoration.`,
+      t('confirmRestore', { filename })
     );
 
     if (!confirmed) return;
@@ -109,12 +111,12 @@ const BackupPage = (): JSX.Element => {
       setError(null);
       setSuccess(null);
       await window.evaApi.backup.restore(token, backupPath);
-      setSuccess('Backup restored successfully. The app will restart...');
+      setSuccess(t('backupRestoredSuccess'));
       setTimeout(() => {
         window.location.reload();
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore backup.');
+      setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
     }
   };
@@ -122,7 +124,7 @@ const BackupPage = (): JSX.Element => {
   const handleDelete = async (backupPath: string, filename: string) => {
     if (!token || !window.evaApi) return;
 
-    const confirmed = window.confirm(`Are you sure you want to delete "${filename}"?`);
+    const confirmed = window.confirm(t('confirmDeleteBackup', { filename }));
 
     if (!confirmed) return;
 
@@ -130,10 +132,10 @@ const BackupPage = (): JSX.Element => {
       setDeleting(backupPath);
       setError(null);
       await window.evaApi.backup.delete(token, backupPath);
-      setSuccess('Backup deleted successfully.');
+      setSuccess(t('backupDeletedSuccess'));
       await loadBackups();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete backup.');
+      setError(err instanceof Error ? err.message : t('failedToDeleteBackup'));
     } finally {
       setDeleting(null);
     }
@@ -148,7 +150,7 @@ const BackupPage = (): JSX.Element => {
   if (!hasRole(['admin', 'manager'])) {
     return (
       <div className="Page Page--transparent BackupPage">
-        <div className="BackupPage-error">Access denied. Only admin or manager can manage backups.</div>
+        <div className="BackupPage-error">{t('accessDeniedBackup')}</div>
       </div>
     );
   }
@@ -157,29 +159,29 @@ const BackupPage = (): JSX.Element => {
     <div className="Page Page--transparent BackupPage">
       <div className="BackupPage-header">
         <div>
-          <h1>Backup & Restore</h1>
-          <p>Manage database backups and restore from previous versions.</p>
+          <h1>{t('backupAndRestore')}</h1>
+          <p>{t('manageBackups')}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           {hasRole(['admin']) && (
-            <button 
-              onClick={handleSelectAndRestore} 
-              disabled={restoring || loading} 
+            <button
+              onClick={handleSelectAndRestore}
+              disabled={!!restoring || loading}
               className="BackupPage-createButton"
               style={{ backgroundColor: '#27ae60' }}
             >
-              {restoring ? 'Restoring...' : '📁 Select Backup File'}
+              {restoring ? t('restoring') : `📁 ${t('selectBackupFile')}`}
             </button>
           )}
           <button onClick={handleCreateBackup} disabled={creating || loading} className="BackupPage-createButton">
-            {creating ? 'Creating...' : 'Create Backup Now'}
+            {creating ? t('processing') : t('createBackupNow')}
           </button>
         </div>
       </div>
 
       {backupDir && (
         <div className="BackupPage-info">
-          <strong>Backup Directory:</strong> {backupDir}
+          <strong>{t('backupDirectory')}:</strong> {backupDir}
         </div>
       )}
 
@@ -187,23 +189,22 @@ const BackupPage = (): JSX.Element => {
       {success && <div className="BackupPage-alert BackupPage-alert--success">{success}</div>}
 
       <div className="BackupPage-note">
-        <strong>Note:</strong> Daily automatic backups run every 24 hours. Manual backups can be created at any time.
-        Only admins can restore backups.
+        <strong>{t('dailyBackupNote')}</strong>
       </div>
 
       {loading ? (
-        <div className="BackupPage-empty">Loading backups...</div>
+        <div className="BackupPage-empty">{t('loading')}</div>
       ) : backups.length === 0 ? (
-        <div className="BackupPage-empty">No backups found. Create your first backup above.</div>
+        <div className="BackupPage-empty">{t('noBackupsFound')}</div>
       ) : (
         <div className="BackupPage-tableWrapper">
           <table className="BackupPage-table">
             <thead>
               <tr>
-                <th>Filename</th>
-                <th>Size</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>{t('filename')}</th>
+                <th>{t('size')}</th>
+                <th>{t('created')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,7 +223,7 @@ const BackupPage = (): JSX.Element => {
                           disabled={restoring === backup.filepath || deleting === backup.filepath}
                           className="BackupPage-actionButton BackupPage-actionButton--restore"
                         >
-                          {restoring === backup.filepath ? 'Restoring...' : 'Restore'}
+                          {restoring === backup.filepath ? t('restoring') : t('restore')}
                         </button>
                       )}
                       <button
@@ -230,7 +231,7 @@ const BackupPage = (): JSX.Element => {
                         disabled={restoring === backup.filepath || deleting === backup.filepath}
                         className="BackupPage-actionButton BackupPage-actionButton--delete"
                       >
-                        {deleting === backup.filepath ? 'Deleting...' : 'Delete'}
+                        {deleting === backup.filepath ? t('deleting') : t('delete')}
                       </button>
                     </div>
                   </td>
@@ -238,6 +239,15 @@ const BackupPage = (): JSX.Element => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {restoring && (
+        <div className="BackupPage-overlay">
+          <div className="BackupPage-overlayContent">
+            <div className="BackupPage-spinner"></div>
+            <h2>{t('restoringDatabase')}</h2>
+            <p>{t('pleaseWaitRestart')}</p>
+          </div>
         </div>
       )}
     </div>

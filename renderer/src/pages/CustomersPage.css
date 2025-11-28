@@ -14,8 +14,8 @@
    border-radius: 0.9rem;
    border: 1px solid rgba(148, 163, 184, 0.2);
    padding: 0.65rem 0.9rem;
-   background: rgba(10, 15, 30, 0.85);
-   color: #f8fafc;
+   background: var(--bg-input);
+   color: var(--text-primary);
  }
 
  .CustomersPage-actions button {
@@ -23,7 +23,7 @@
    border-radius: 0.9rem;
    padding: 0.65rem 1.25rem;
    background: linear-gradient(120deg, #38bdf8, #6366f1);
-   color: #0f172a;
+   color: white;
    font-weight: 600;
    cursor: pointer;
  }
@@ -33,7 +33,7 @@
    border-radius: 0.9rem;
    border: 1px solid rgba(248, 113, 113, 0.5);
    background: rgba(248, 113, 113, 0.12);
-   color: #fecaca;
+   color: #dc2626;
    padding: 0.8rem 1rem;
  }
 
@@ -44,7 +44,7 @@
  }
 
  .CustomersPage-list {
-   background: rgba(11, 16, 31, 0.9);
+   background: var(--bg-card);
    border: 1px solid rgba(148, 163, 184, 0.2);
    border-radius: 1.25rem;
    overflow: hidden;
@@ -73,12 +73,12 @@
  }
 
  .CustomersPage-list small {
-   color: rgba(148, 163, 184, 0.8);
+   color: var(--text-secondary);
    font-size: 0.8rem;
  }
 
  .CustomersPage-details {
-   background: rgba(10, 15, 30, 0.85);
+   background: var(--bg-card);
    border: 1px solid rgba(148, 163, 184, 0.2);
    border-radius: 1.25rem;
    padding: 1.5rem;
@@ -102,7 +102,7 @@
 
    .CustomersPage-tier.tier-platinum {
      background: rgba(248, 250, 252, 0.2);
-     color: #f8fafc;
+     color: #e2e8f0;
    }
 
    .CustomersPage-tier.tier-gold {
@@ -112,7 +112,7 @@
 
    .CustomersPage-tier.tier-silver {
      background: rgba(148, 163, 184, 0.2);
-     color: #cbd5f5;
+     color: #94a3b8;
    }
 
    .CustomersPage-tier.tier-bronze {
@@ -131,7 +131,7 @@
      border-radius: 0.85rem;
      border: 1px solid rgba(148, 163, 184, 0.2);
      background: var(--bg-input);
-     color: #f8fafc;
+     color: var(--text-primary);
      padding: 0.4rem 0.7rem;
    }
 
@@ -178,7 +178,7 @@
    justify-content: space-between;
    padding: 0.25rem 0;
    font-size: 0.9rem;
-   color: rgba(226, 232, 240, 0.9);
+   color: var(--text-secondary);
  }
 
  .CustomersPage-modalOverlay {
@@ -220,7 +220,7 @@
    border: 1px solid rgba(148, 163, 184, 0.2);
    padding: 0.6rem 0.85rem;
    background: var(--bg-input);
-   color: #f8fafc;
+   color: var(--text-primary);
  }
 
  .CustomersPage-span {
@@ -237,23 +237,23 @@
    background: transparent;
    border: none;
    font-size: 1.2rem;
-   color: rgba(248, 250, 252, 0.6);
+   color: var(--text-secondary);
    cursor: pointer;
  }
 
  .CustomersPage-actions button.ghost {
    background: transparent;
-   color: rgba(248, 250, 252, 0.85);
+   color: var(--text-primary);
    border: 1px solid rgba(148, 163, 184, 0.4);
  }
 
  .CustomersPage-actions button:not(.ghost) {
    background: linear-gradient(120deg, #34d399, #10b981);
-   color: #022c22;
+   color: white;
  }
 
  .CustomersPage-empty {
    text-align: center;
    padding: 2rem;
-   color: rgba(148, 163, 184, 0.85);
+   color: var(--text-secondary);
  }

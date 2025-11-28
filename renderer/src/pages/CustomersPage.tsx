@@ -168,6 +168,24 @@ const CustomersPage = (): JSX.Element => {
                     {loyaltyTier(selectedCustomer.loyaltyPoints)}
                   </span>
                 </div>
+                <div className="CustomersPage-actions-header">
+                  <button
+                    className="delete-btn"
+                    onClick={async () => {
+                      if (window.confirm(t('confirmDeleteCustomer'))) {
+                        try {
+                          await window.evaApi.customers.delete(token!, selectedCustomer.id);
+                          setSelectedCustomer(null);
+                          loadCustomers();
+                        } catch (err) {
+                          setError(t('failedToDeleteCustomer'));
+                        }
+                      }
+                    }}
+                  >
+                    {t('delete')}
+                  </button>
+                </div>
                 <div className="CustomersPage-metrics">
                   <div>
                     <span>{t('totalSpent')}</span>

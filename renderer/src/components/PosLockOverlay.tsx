@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './PosLockOverlay.css';
 
 export function PosLockOverlay(): JSX.Element | null {
   const { posLocked, unlockPos, user, hasRole } = useAuth();
-  const [password, setPassword] = useState('');
+  const [, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
 

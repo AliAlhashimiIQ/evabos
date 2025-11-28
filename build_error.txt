@@ -1,0 +1,5 @@
+﻿
+> eva-pos-desktop@1.0.0 build:electron
+> tsc -p electron/tsconfig.json
+
+electron/db/database.ts(2763,1): error TS1005: '}' expected.

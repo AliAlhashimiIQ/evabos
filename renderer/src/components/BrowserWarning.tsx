@@ -15,7 +15,7 @@ export function BrowserWarning(): JSX.Element | null {
         <div className="BrowserWarning-icon">⚠️</div>
         <h2>This App Must Run in Electron</h2>
         <p>
-          You're trying to open this app in a web browser, but <strong>EVA POS is a desktop application</strong> that
+          It looks like you&apos;re opening this app in a browser. This application is designed to run as a <strong>desktop application</strong> that
           must run in Electron.
         </p>
         <div className="BrowserWarning-steps">
@@ -33,7 +33,7 @@ export function BrowserWarning(): JSX.Element | null {
           not open http://localhost:5174 in your browser.
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

@@ -26,6 +26,13 @@
   "license": "MIT",
   "build": {
     "appId": "com.eva.pos",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AliAlhashimiIQ",
+        "repo": "evabos"
+      }
+    ],
     "productName": "EVA POS",
     "directories": {
       "output": "dist-package",
@@ -69,8 +76,12 @@
     "@types/bcrypt": "^6.0.0",
     "@types/jsbarcode": "^3.11.4",
     "bcrypt": "^6.0.0",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.6.2",
     "jsbarcode": "^3.12.1",
     "qrcode": "^1.5.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^6.28.0",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"
@@ -93,8 +104,6 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "playwright": "^1.56.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^4.0.13",

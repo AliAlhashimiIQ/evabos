@@ -47,17 +47,21 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
     return (
       <div className="LicenseValidator-error">
         <div className="LicenseValidator-errorContent">
-          <h1>⚠️ License Validation Failed</h1>
-          <p>{status?.reason || 'This application is not authorized to run on this device.'}</p>
+          <h1>🔒 USB Dongle Required</h1>
+          <div className="LicenseValidator-message">
+            {status?.reason?.split('\n').map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
           <div className="LicenseValidator-details">
-            <p><strong>Possible reasons:</strong></p>
+            <p><strong>This is a USB-locked application:</strong></p>
             <ul>
-              <li>Application has been copied to a different computer</li>
-              <li>Application has been moved to a different USB drive</li>
-              <li>System hardware has changed significantly</li>
+              <li>Must run from the authorized USB drive</li>
+              <li>Cannot be copied to hard drive</li>
+              <li>Cannot be used with a different USB drive</li>
             </ul>
             <p className="LicenseValidator-contact">
-              Please contact your administrator for assistance.
+              Contact your administrator if you need access.
             </p>
           </div>
         </div>

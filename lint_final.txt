@@ -1,0 +1,13 @@
+﻿
+> eva-pos-desktop@1.0.0 lint
+> eslint . --ext .ts,.tsx --quiet
+
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\database.ts
+  2107:27  error  '_userId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\excelImport.ts
+  40:44  error  '_rowIndex' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 2 problems (2 errors, 0 warnings)
+

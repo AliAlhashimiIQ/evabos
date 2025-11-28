@@ -10,6 +10,8 @@ import {
   deleteVariant,
   listSuppliers,
   createSupplier,
+  updateSupplier,
+  deleteSupplier,
 } from '../db/database';
 import { importProductsFromExcel } from '../db/excelImport';
 import type { ProductInput, ProductUpdateInput, VariantUpdateInput, SupplierInput, PaginationParams } from '../db/types';
@@ -115,6 +117,26 @@ export function registerInventoryIpc(): void {
         throw new Error('Invalid supplier data: name is required');
       }
       return createSupplier(payload);
+    }),
+  );
+
+  ipcMain.handle(
+    'suppliers:update',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const id = args[0] as number;
+      const payload = args[1] as SupplierInput;
+      if (!payload || !payload.name) {
+        throw new Error('Invalid supplier data: name is required');
+      }
+      return updateSupplier(id, payload);
+    }),
+  );
+
+  ipcMain.handle(
+    'suppliers:delete',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const supplierId = args[0] as number;
+      return deleteSupplier(supplierId);
     }),
   );
 

@@ -269,23 +269,21 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
       const isPdfPrinter = printerName?.toLowerCase().includes('pdf') ?? false;
       if (isPdfPrinter) {
         // Show info message for PDF
-        console.log(t('generatingPDF'));
+
       }
 
       // Print multiple labels
       for (let i = 0; i < quantity; i++) {
         try {
-          console.log(`Printing label ${i + 1} of ${quantity}...`);
-          console.log('HTML length:', labelHtml.length);
-          console.log('Printer:', printerName);
+
 
           await window.evaApi.printing.print({ html: labelHtml, printerName });
-          console.log(`Label ${i + 1} printed successfully`);
+
 
           // For PDF, show message after first print
           if (isPdfPrinter && i === 0) {
             // Message is handled by the save dialog in the main process
-            console.log(t('pdfGenerated'));
+
           }
 
           // Small delay between prints

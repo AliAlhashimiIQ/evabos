@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import type { LoginResponse, CurrentUser, PosLockStatus } from '../types/electron';
+import type { LoginResponse, CurrentUser } from '../types/electron';
 
 interface AuthContextType {
   user: CurrentUser | null;

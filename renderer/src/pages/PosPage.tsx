@@ -57,7 +57,7 @@ const PosPage = (): JSX.Element => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [printSale, setPrintSale] = useState<Sale | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [scannerMessage, setScannerMessage] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
@@ -222,12 +222,13 @@ const PosPage = (): JSX.Element => {
   const totalIQD = useMemo(() => Math.max(subtotalIQD - discountIQD, 0), [subtotalIQD, discountIQD]);
 
   const profitIQD = useMemo(() => {
-    return cart.reduce(
-      (acc, item) =>
-        acc + (item.product.salePriceIQD - item.product.purchaseCostUSD * exchangeRate) * item.quantity,
+    const totalCost = cart.reduce(
+      (acc, item) => acc + item.product.purchaseCostUSD * exchangeRate * item.quantity,
       0,
     );
-  }, [cart, exchangeRate]);
+    // Profit = Total Sale Price After Discount - Total Cost
+    return Math.max(totalIQD - totalCost, 0);
+  }, [cart, exchangeRate, totalIQD]);
 
   const addToCart = useCallback(
     (product: Product) => {
@@ -508,7 +509,7 @@ const PosPage = (): JSX.Element => {
       F2: () => navigate('/products'),
       F3: () => navigate('/customers'),
       F4: () => navigate('/reports'),
-      Enter: (e?: KeyboardEvent) => {
+      Enter: () => {
         // Don't trigger complete sale if user is typing in an input field
         const activeElement = document.activeElement;
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {

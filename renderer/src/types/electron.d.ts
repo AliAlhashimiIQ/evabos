@@ -16,6 +16,7 @@ export interface Product {
   category?: string | null;
   color?: string | null;
   size?: string | null;
+  supplierName?: string | null;
   sku: string;
   salePriceIQD: number;
   purchaseCostUSD: number;
@@ -61,6 +62,7 @@ export interface Sale {
   totalIQD: number;
   paymentMethod?: string | null;
   profitIQD?: number | null;
+  isReturned?: boolean;
   items: SaleItem[];
 }
 
@@ -328,10 +330,6 @@ export interface ExchangeRateResponse {
 }
 
 export interface EvaApi {
-  auth: {
-    login: (username: string, password: string) => Promise<LoginResponse | null>;
-    logout: (token: string) => Promise<boolean>;
-  };
   products: {
     list: (token: string, params?: PaginationParams) => Promise<ProductsListResponse>;
     create: (token: string, data: ProductInput) => Promise<Product>;
@@ -352,6 +350,7 @@ export interface EvaApi {
     create: (token: string, data: SaleInput) => Promise<Sale>;
     listByDateRange: (token: string, range: DateRange) => Promise<SalesListResponse>;
     getDetail: (token: string, saleId: number) => Promise<SaleDetail | null>;
+    delete: (token: string, saleId: number) => Promise<boolean>;
   };
   exchangeRates: {
     getCurrent: () => Promise<ExchangeRateResponse>;
@@ -360,6 +359,8 @@ export interface EvaApi {
   suppliers: {
     list: (token: string) => Promise<Supplier[]>;
     create: (token: string, data: SupplierInput) => Promise<Supplier>;
+    update: (token: string, id: number, data: SupplierInput) => Promise<Supplier>;
+    delete: (token: string, supplierId: number) => Promise<boolean>;
   };
   purchaseOrders: {
     list: () => Promise<PurchaseOrderWithItems[]>;
@@ -370,6 +371,7 @@ export interface EvaApi {
     list: (token: string) => Promise<Customer[]>;
     create: (token: string, data: CustomerInput) => Promise<Customer>;
     update: (token: string, data: CustomerUpdateInput) => Promise<Customer>;
+    delete: (token: string, customerId: number) => Promise<boolean>;
     history: (token: string, customerId: number) => Promise<CustomerHistoryEntry[]>;
     attachSale: (token: string, payload: { saleId: number; customerId: number }) => Promise<boolean>;
   };
@@ -407,6 +409,10 @@ export interface EvaApi {
     delete: (token: string, backupPath: string) => Promise<boolean>;
     getDir: (token: string) => Promise<string>;
     selectFile: (token: string) => Promise<string | null>;
+  };
+
+  settings: {
+    reset: (token: string) => Promise<void>;
   };
   users: {
     list: (token: string) => Promise<User[]>;

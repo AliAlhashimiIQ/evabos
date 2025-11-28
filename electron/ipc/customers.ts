@@ -3,6 +3,7 @@ import {
   listCustomers,
   createCustomer,
   updateCustomer,
+  deleteCustomer,
   getCustomerHistory,
   attachSaleToCustomer,
 } from '../db/database';
@@ -34,6 +35,14 @@ export function registerCustomerIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
       const payload = args[0] as CustomerUpdateInput;
       return updateCustomer(payload);
+    }),
+  );
+
+  ipcMain.handle(
+    'customers:delete',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const customerId = args[0] as number;
+      return deleteCustomer(customerId);
     }),
   );
 

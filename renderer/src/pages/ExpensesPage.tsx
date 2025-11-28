@@ -22,7 +22,7 @@ const ExpensesPage = (): JSX.Element => {
   const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [form, setForm] = useState<ExpenseInput>(defaultForm);
-  const defaultCategories = ['Rent', 'Salaries', 'Electricity', 'Delivery', 'Packaging', 'Marketing', 'Other'];
+  const defaultCategories: string[] = [];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

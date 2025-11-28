@@ -34,6 +34,7 @@ export interface Product extends ProductVariant {
   productName: string;
   category?: string | null;
   baseCode?: string | null;
+  supplierName?: string | null;
   stockOnHand: number;
   salePriceIQD: number;
 }
@@ -90,6 +91,7 @@ export interface Sale {
   paymentMethod?: string | null;
   items: SaleItem[];
   profitIQD?: number | null;
+  isReturned?: boolean;
 }
 
 export type SaleInput = Omit<Sale, 'id' | 'items' | 'profitIQD'> & {

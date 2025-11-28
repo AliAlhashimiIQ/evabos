@@ -15,7 +15,7 @@ function getMachineFingerprint(): string {
     os.cpus()[0]?.model || '',
     os.totalmem().toString(),
   ].join('|');
-  
+
   return crypto.createHash('sha256').update(components).digest('hex').substring(0, 16);
 }
 
@@ -62,56 +62,19 @@ async function generateLicenseKey(usbSerial?: string): Promise<string> {
   return crypto.createHash('sha256').update(base).digest('hex').substring(0, 32).toUpperCase();
 }
 
-// Validate license
+// Validate license - PORTABLE MODE (Unlocked)
 async function validateLicense(): Promise<{ valid: boolean; reason?: string; isUsb?: boolean }> {
   try {
-    const storedLicense = await getSetting('app_license_key');
-    const storedMachineId = await getSetting('app_machine_id');
-    const currentMachineId = getMachineFingerprint();
     const usbSerial = await getUsbSerialNumber();
-    
-    // Check if running from USB
     const isUsb = usbSerial !== null || app.getAppPath().toLowerCase().includes('removable');
-    
-    if (!storedLicense) {
-      // First run - generate and store license
-      const licenseKey = await generateLicenseKey(usbSerial || undefined);
-      await setSetting('app_license_key', licenseKey);
-      await setSetting('app_machine_id', currentMachineId);
-      await setSetting('app_usb_serial', usbSerial || '');
-      return { valid: true, isUsb };
-    }
-    
-    // Validate stored license matches current machine/USB
-    const expectedLicense = await generateLicenseKey(
-      storedMachineId === currentMachineId ? usbSerial || undefined : undefined
-    );
-    
-    if (storedLicense === expectedLicense) {
-      // Update machine ID if changed (but license still valid)
-      if (storedMachineId !== currentMachineId) {
-        await setSetting('app_machine_id', currentMachineId);
-      }
-      return { valid: true, isUsb };
-    }
-    
-    // License mismatch - check if it's a different machine
-    if (storedMachineId && storedMachineId !== currentMachineId) {
-      return { valid: false, reason: 'Application has been moved to a different computer' };
-    }
-    
-    // USB serial changed
-    if (isUsb && usbSerial) {
-      const storedUsbSerial = await getSetting('app_usb_serial');
-      if (storedUsbSerial && storedUsbSerial !== usbSerial) {
-        return { valid: false, reason: 'Application has been moved to a different USB drive' };
-      }
-    }
-    
-    return { valid: false, reason: 'License validation failed' };
+
+    // Always return valid for portable mode
+    // We still detect if it's USB for information purposes, but we don't block.
+    return { valid: true, isUsb };
   } catch (err) {
-    console.error('License validation error:', err);
-    return { valid: false, reason: 'License validation error' };
+    console.error('[LICENSE] Validation error:', err);
+    // Even on error, allow access in portable mode
+    return { valid: true, reason: 'Portable mode active' };
   }
 }
 

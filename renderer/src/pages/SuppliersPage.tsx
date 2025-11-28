@@ -26,6 +26,7 @@ const SuppliersPage = (): JSX.Element => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<SupplierInput>(defaultForm);
   const [submitting, setSubmitting] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   const loadSuppliers = async () => {
     if (!window.evaApi || !token) {
@@ -50,6 +51,26 @@ const SuppliersPage = (): JSX.Element => {
     }
   }, [token]);
 
+  const handleEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setFormState({
+      name: supplier.name,
+      contactName: supplier.contactName ?? '',
+      phone: supplier.phone ?? '',
+      email: supplier.email ?? '',
+      address: supplier.address ?? '',
+      notes: supplier.notes ?? '',
+      isActive: supplier.isActive,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingSupplier(null);
+    setFormState(defaultForm);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!formState.name.trim()) {
@@ -63,9 +84,14 @@ const SuppliersPage = (): JSX.Element => {
     try {
       setSubmitting(true);
       setError(null);
-      await window.evaApi.suppliers.create(token!, formState);
-      setFormState(defaultForm);
-      setIsModalOpen(false);
+
+      if (editingSupplier) {
+        await window.evaApi.suppliers.update(token!, editingSupplier.id, formState);
+      } else {
+        await window.evaApi.suppliers.create(token!, formState);
+      }
+
+      handleCloseModal();
       await loadSuppliers();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToCreateSupplier'));
@@ -102,6 +128,7 @@ const SuppliersPage = (): JSX.Element => {
                 <th>{t('phone')}</th>
                 <th>{t('email')}</th>
                 <th>{t('status')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +146,33 @@ const SuppliersPage = (): JSX.Element => {
                       {supplier.isActive ? t('active') : t('inactive')}
                     </span>
                   </td>
+                  <td>
+                    <button
+                      className="icon-button edit-icon"
+                      onClick={() => handleEdit(supplier)}
+                      title={t('edit')}
+                      style={{ marginRight: '0.5rem' }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="icon-button delete-icon"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.confirm(t('confirmDeleteSupplier'))) {
+                          try {
+                            await window.evaApi.suppliers.delete(token!, supplier.id);
+                            loadSuppliers();
+                          } catch (err) {
+                            setError(t('failedToDeleteSupplier'));
+                          }
+                        }
+                      }}
+                      title={t('delete')}
+                    >
+                      🗑️
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -130,8 +184,8 @@ const SuppliersPage = (): JSX.Element => {
         <div className="SuppliersPage-modalOverlay">
           <div className="SuppliersPage-modal">
             <header>
-              <h3>{t('createSupplier')}</h3>
-              <button onClick={() => setIsModalOpen(false)}>✕</button>
+              <h3>{editingSupplier ? t('editSupplier') : t('createSupplier')}</h3>
+              <button onClick={handleCloseModal}>✕</button>
             </header>
             <form onSubmit={handleSubmit} className="SuppliersPage-form">
               <label>
@@ -184,11 +238,11 @@ const SuppliersPage = (): JSX.Element => {
                 />
               </label>
               <div className="SuppliersPage-actions">
-                <button type="button" className="ghost" onClick={() => setIsModalOpen(false)}>
+                <button type="button" className="ghost" onClick={handleCloseModal}>
                   {t('cancel')}
                 </button>
                 <button type="submit" disabled={submitting}>
-                  {submitting ? t('saving') : t('saveSupplier')}
+                  {submitting ? t('saving') : (editingSupplier ? t('updateSupplier') : t('saveSupplier'))}
                 </button>
               </div>
             </form>

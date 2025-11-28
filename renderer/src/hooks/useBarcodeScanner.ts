@@ -16,6 +16,12 @@ export function useBarcodeScanner({ onScan, threshold = 50, minLength = 5 }: Opt
         return;
       }
 
+      // Ignore if user is typing in an input
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+        return;
+      }
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

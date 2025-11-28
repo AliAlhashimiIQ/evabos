@@ -1,0 +1,42 @@
+﻿
+> eva-pos-desktop@1.0.0 lint
+> eslint . --ext .ts,.tsx --quiet
+
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\database.ts
+    18:3   error  'SaleItemInput' is defined but never used      @typescript-eslint/no-unused-vars
+   698:2   error  Unnecessary semicolon                          no-extra-semi
+  1118:9   error  'products' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  2105:27  error  'userId' is defined but never used             @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\db\excelImport.ts
+  40:44  error  'rowIndex' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\ipc\backup.ts
+  2:89  error  'BackupInfo' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\electron\preload.ts
+  16:3  error  'AdvancedReports' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\BrowserWarning.tsx
+  18:14  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\LabelSettingsSection.tsx
+  44:10  error  'success' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\PosLockOverlay.tsx
+  7:10  error  'password' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\components\ProductDetailsModal.tsx
+  14:10  error  'exchangeRate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\contexts\AuthContext.tsx
+  2:43  error  'PosLockStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\ali\Desktop\eva-pos-desktop\renderer\src\pages\PosPage.tsx
+   60:10  error  'loading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  511:15  error  'e' is defined but never used                 @typescript-eslint/no-unused-vars
+
+Γ£û 14 problems (14 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
