@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, app } from 'electron';
 import { createBackup, listBackups, restoreBackup, deleteBackup, getBackupDirPath } from '../db/backup';
 import { closeDatabase, initDatabase } from '../db/database';
 import { getSession } from '../db/database';
@@ -49,6 +49,10 @@ export function registerBackupIpc(): void {
 
     // Reinitialize database
     await initDatabase();
+
+    // Relaunch the application to ensure clean state
+    app.relaunch();
+    app.exit(0);
 
     return true;
   });

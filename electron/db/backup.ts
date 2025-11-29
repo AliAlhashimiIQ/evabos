@@ -25,6 +25,12 @@ const getDbPath = (): string => {
   if (!app.isReady()) {
     throw new Error('App not ready');
   }
+
+  // Fix: Use correct path in production (same as database.ts)
+  if (app.isPackaged) {
+    return path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
+  }
+
   return path.join(app.getPath('userData'), 'eva-pos.db');
 };
 

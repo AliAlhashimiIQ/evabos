@@ -12,26 +12,9 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const validateLicense = async () => {
-      try {
-        if (!window.evaApi?.licensing) {
-          // In development or if API not available, allow
-          setStatus({ valid: true });
-          setChecking(false);
-          return;
-        }
-
-        const result = await window.evaApi.licensing.validate();
-        setStatus(result);
-      } catch (err) {
-        console.error('License validation error:', err);
-        setStatus({ valid: false, reason: 'Failed to validate license' });
-      } finally {
-        setChecking(false);
-      }
-    };
-
-    validateLicense();
+    // BYPASS: License check disabled for "normal exe" build as requested
+    setStatus({ valid: true });
+    setChecking(false);
   }, []);
 
   if (checking) {

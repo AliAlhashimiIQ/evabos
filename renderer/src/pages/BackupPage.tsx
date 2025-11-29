@@ -88,9 +88,8 @@ const BackupPage = (): JSX.Element => {
       setSuccess(null);
       await window.evaApi.backup.restore(token, selectedPath);
       setSuccess(t('backupRestoredSuccess'));
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      setSuccess(t('backupRestoredSuccess'));
+      // App will restart automatically from main process
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
@@ -112,9 +111,8 @@ const BackupPage = (): JSX.Element => {
       setSuccess(null);
       await window.evaApi.backup.restore(token, backupPath);
       setSuccess(t('backupRestoredSuccess'));
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      setSuccess(t('backupRestoredSuccess'));
+      // App will restart automatically from main process
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
