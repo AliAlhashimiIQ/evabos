@@ -3,6 +3,8 @@ export interface ElectronAPI {
   getSetting: (key: string) => Promise<string | null>;
   setSetting: (key: string, value: string) => Promise<boolean>;
   getAllSettings: () => Promise<Array<{ key: string; value: string }>>;
+  relaunch: () => Promise<void>;
+  resetFocus: () => Promise<void>;
 }
 
 export interface Product {
@@ -322,7 +324,7 @@ export interface ProductsListResponse {
 }
 
 export interface SalesListResponse {
-  sales: Sale[];
+  sales: SaleDetail[];
 }
 
 export interface ExchangeRateResponse {
@@ -363,9 +365,9 @@ export interface EvaApi {
     delete: (token: string, supplierId: number) => Promise<boolean>;
   };
   purchaseOrders: {
-    list: () => Promise<PurchaseOrderWithItems[]>;
-    create: (data: PurchaseOrderInput) => Promise<PurchaseOrderWithItems>;
-    receive: (data: PurchaseOrderReceiveInput) => Promise<PurchaseOrderWithItems>;
+    list: (token: string) => Promise<PurchaseOrderWithItems[]>;
+    create: (token: string, data: PurchaseOrderInput) => Promise<PurchaseOrderWithItems>;
+    receive: (token: string, data: PurchaseOrderReceiveInput) => Promise<PurchaseOrderWithItems>;
   };
   customers: {
     list: (token: string) => Promise<Customer[]>;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -7,6 +7,7 @@ import './PosPage.css';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useShortcutKeys } from '../hooks/useShortcutKeys';
 import PrintingModal from '../components/PrintingModal';
+import NumberInput from '../components/NumberInput';
 
 type Product = import('../types/electron').Product;
 type Customer = import('../types/electron').Customer;
@@ -25,6 +26,7 @@ interface PosProfile {
   selectedCustomerId: number | '';
   discountMode: 'amount' | 'percent' | 'finalPrice';
   discountValue: number;
+  isManualDiscount: boolean; // New flag to track manual entry
   paymentMethod: 'cash' | 'card' | 'mixed';
   success: string | null;
   error: string | null;
@@ -36,6 +38,7 @@ const createProfile = (): PosProfile => ({
   selectedCustomerId: '',
   discountMode: 'finalPrice',
   discountValue: 0,
+  isManualDiscount: false, // Initialize as false
   paymentMethod: 'cash',
   success: null,
   error: null,
@@ -50,10 +53,53 @@ const PosPage = (): JSX.Element => {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [profiles, setProfiles] = useState<PosProfile[]>(() =>
-    Array.from({ length: PROFILE_COUNT }, createProfile),
-  );
-  const [activeProfileIndex, setActiveProfileIndex] = useState(0);
+  const [profiles, setProfiles] = useState<PosProfile[]>(() => {
+    try {
+      const saved = localStorage.getItem('pos_profiles');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Failed to load profiles from localStorage', e);
+    }
+    return Array.from({ length: PROFILE_COUNT }, createProfile);
+  });
+  const [activeProfileIndex, setActiveProfileIndex] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_active_profile_index');
+      if (saved) {
+        return parseInt(saved, 10);
+      }
+    } catch (e) {
+      console.error('Failed to load active profile index', e);
+    }
+    return 0;
+  });
+
+  // Persist profiles to localStorage whenever they change
+  useEffect(() => {
+    try {
+      // Don't persist transient states like success, error, or isSubmitting
+      const profilesToSave = profiles.map(p => ({
+        ...p,
+        success: null,
+        error: null,
+        isSubmitting: false
+      }));
+      localStorage.setItem('pos_profiles', JSON.stringify(profilesToSave));
+    } catch (e) {
+      console.error('Failed to save profiles to localStorage', e);
+    }
+  }, [profiles]);
+
+  // Persist active profile index
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_active_profile_index', activeProfileIndex.toString());
+    } catch (e) {
+      console.error('Failed to save active profile index', e);
+    }
+  }, [activeProfileIndex]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [printSale, setPrintSale] = useState<Sale | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
@@ -61,6 +107,7 @@ const PosPage = (): JSX.Element => {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [scannerMessage, setScannerMessage] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const updateProfileAtIndex = useCallback(
@@ -83,6 +130,7 @@ const PosPage = (): JSX.Element => {
     selectedCustomerId,
     discountMode,
     discountValue,
+    isManualDiscount,
     paymentMethod,
     success: profileSuccess,
     error: profileError,
@@ -182,11 +230,10 @@ const PosPage = (): JSX.Element => {
 
   // Auto-update discountValue to subtotal when in finalPrice mode and cart changes
   useEffect(() => {
-    if (discountMode === 'finalPrice' && subtotalIQD > 0) {
+    if (discountMode === 'finalPrice') {
       updateCurrentProfile((profile) => {
-        // Only auto-update if discountValue is 0 (initial state) or greater than subtotal (invalid state)
-        // This prevents overwriting user's manual entry while fixing the initial 0 issue
-        if (profile.discountValue === 0 || profile.discountValue > subtotalIQD) {
+        // If user hasn't manually set a price, keep it in sync with subtotal
+        if (!profile.isManualDiscount) {
           return {
             ...profile,
             discountValue: subtotalIQD,
@@ -194,12 +241,6 @@ const PosPage = (): JSX.Element => {
         }
         return profile;
       });
-    } else if (discountMode === 'finalPrice' && subtotalIQD === 0) {
-      // Reset to 0 when cart is empty
-      updateCurrentProfile((profile) => ({
-        ...profile,
-        discountValue: 0,
-      }));
     }
   }, [subtotalIQD, discountMode, updateCurrentProfile]);
 
@@ -448,9 +489,10 @@ const PosPage = (): JSX.Element => {
           ...profile,
           cart: [],
           discountValue: 0,
+          isManualDiscount: false, // Reset manual flag
           paymentMethod: 'cash',
           selectedCustomerId: '',
-          success: 'Sale completed successfully!',
+          success: t('saleCompleted'),
           error: null,
           isSubmitting: false,
         }));
@@ -468,10 +510,23 @@ const PosPage = (): JSX.Element => {
     [activeProfileIndex, exchangeRate, profiles, products, token, updateProfileAtIndex, user, loadProducts],
   );
 
+  const isScanningRef = useRef(false);
+
   const handleScan = useCallback(
     (value: string) => {
-      // Clear search when scanning
+      // ALWAYS clear search term and refocus immediately, even if we debounce the action.
+      // This ensures that "ghost" scans (double scans) don't leave text in the input.
       setSearchTerm('');
+      if (searchInputRef.current) {
+        searchInputRef.current.value = '';
+        searchInputRef.current.focus();
+      }
+
+      // Prevent double scanning (debounce)
+      if (isScanningRef.current) return;
+
+      // Lock scanning
+      isScanningRef.current = true;
 
       // Try exact match first (barcode or SKU)
       let variant = products.find((p) => p.barcode === value || p.sku === value);
@@ -485,6 +540,12 @@ const PosPage = (): JSX.Element => {
         );
       }
 
+      // If still no match, try prepending a '0' (fix for scanners stripping leading zero)
+      if (!variant) {
+        const valueWithZero = '0' + value;
+        variant = products.find((p) => p.barcode === valueWithZero || p.sku === valueWithZero);
+      }
+
       if (variant) {
         // Check stock before adding
         if (variant.stockOnHand <= 0) {
@@ -496,7 +557,19 @@ const PosPage = (): JSX.Element => {
       } else {
         setScannerMessage(`❌ ${t('noMatchFor')} ${value}`);
       }
-      setTimeout(() => setScannerMessage(null), 2500);
+
+      // Keep the timeout as a backup for React render cycles
+      setTimeout(() => {
+        setScannerMessage(null);
+        // Clear AGAIN just to be sure
+        setSearchTerm('');
+        if (searchInputRef.current) {
+          searchInputRef.current.value = '';
+          searchInputRef.current.focus();
+        }
+        // Release lock after 500ms (ignoring any secondary Enters)
+        isScanningRef.current = false;
+      }, 500);
     },
     [products, addToCart, isSubmitting, setSearchTerm],
   );
@@ -509,12 +582,7 @@ const PosPage = (): JSX.Element => {
       F2: () => navigate('/products'),
       F3: () => navigate('/customers'),
       F4: () => navigate('/reports'),
-      Enter: () => {
-        // Don't trigger complete sale if user is typing in an input field
-        const activeElement = document.activeElement;
-        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
-          return; // Let the input handle Enter key
-        }
+      'Control+Enter': () => {
         if (!isSubmitting && cart.length > 0) {
           handleCompleteSale();
         }
@@ -540,8 +608,22 @@ const PosPage = (): JSX.Element => {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent shortcut handler from firing
-                if (searchTerm.trim().length >= 5) {
-                  handleScan(searchTerm.trim());
+
+                // Use ref value to avoid React state update lag with fast scanners
+                const currentValue = searchInputRef.current?.value || searchTerm;
+                const trimmedValue = currentValue.trim();
+
+                if (trimmedValue.length === 0) {
+                  // Ignore empty Enter presses (fixes scanners that send a leading Enter)
+                  return;
+                }
+
+                if (trimmedValue.length >= 3) { // Reduced min length to 3 to allow shorter codes
+                  // AGGRESSIVELY clear input here too
+                  setSearchTerm('');
+                  if (searchInputRef.current) searchInputRef.current.value = '';
+
+                  handleScan(trimmedValue);
                 } else {
                   setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
                   setTimeout(() => setScannerMessage(null), 2000);
@@ -549,12 +631,15 @@ const PosPage = (): JSX.Element => {
               }
             }}
             autoFocus
+            ref={searchInputRef}
+            autoComplete="off"
           />
           <button
             className="Pos-searchButton"
             onClick={() => {
-              if (searchTerm.trim().length >= 5) {
-                handleScan(searchTerm.trim());
+              const currentValue = searchInputRef.current?.value || searchTerm;
+              if (currentValue.trim().length >= 3) {
+                handleScan(currentValue.trim());
               } else {
                 setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
                 setTimeout(() => setScannerMessage(null), 2000);
@@ -608,6 +693,7 @@ const PosPage = (): JSX.Element => {
                       ...profile,
                       cart: [],
                       discountValue: 0,
+                      isManualDiscount: false, // Reset manual flag
                       success: null,
                       error: null,
                     }));
@@ -738,6 +824,7 @@ const PosPage = (): JSX.Element => {
                       ...profile,
                       discountMode: 'finalPrice',
                       discountValue: subtotalIQD,
+                      isManualDiscount: false, // Reset manual flag when clicking mode
                     }))
                   }
                   title={t('discountByFinalPrice') || 'Enter final price customer will pay'}
@@ -752,6 +839,7 @@ const PosPage = (): JSX.Element => {
                       ...profile,
                       discountMode: 'percent',
                       discountValue: 0,
+                      isManualDiscount: false,
                     }))
                   }
                   title={t('discountByPercent')}
@@ -766,6 +854,7 @@ const PosPage = (): JSX.Element => {
                       ...profile,
                       discountMode: 'amount',
                       discountValue: 0,
+                      isManualDiscount: false,
                     }))
                   }
                   title={t('discountByAmount')}
@@ -774,8 +863,7 @@ const PosPage = (): JSX.Element => {
                 </button>
               </div>
               <div className="Pos-discountInput">
-                <input
-                  type="number"
+                <NumberInput
                   min="0"
                   max={discountMode === 'percent' ? 100 : discountMode === 'finalPrice' ? subtotalIQD : undefined}
                   value={discountValue}
@@ -783,6 +871,7 @@ const PosPage = (): JSX.Element => {
                     updateCurrentProfile((profile) => ({
                       ...profile,
                       discountValue: Number(event.target.value) || 0,
+                      isManualDiscount: true, // Mark as manually entered
                     }))
                   }
                   placeholder={
@@ -799,7 +888,8 @@ const PosPage = (): JSX.Element => {
                     onClick={() =>
                       updateCurrentProfile((profile) => ({
                         ...profile,
-                        discountValue: 0,
+                        discountValue: profile.discountMode === 'finalPrice' ? subtotalIQD : 0, // Reset to subtotal for finalPrice
+                        isManualDiscount: false, // Reset manual flag
                       }))
                     }
                     title={t('clearDiscount')}

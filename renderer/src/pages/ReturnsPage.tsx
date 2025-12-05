@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import ProductVariantTable from '../components/ProductVariantTable';
 import PrintingModal, { ReturnPrintData } from '../components/PrintingModal';
+import NumberInput from '../components/NumberInput';
 import './Pages.css';
 import './ReturnsPage.css';
 
@@ -395,8 +396,7 @@ const ReturnsPage = (): JSX.Element => {
                     </small>
                   </td>
                   <td>
-                    <input
-                      type="number"
+                    <NumberInput
                       min="1"
                       value={item.quantity}
                       onChange={(event) =>
@@ -407,8 +407,7 @@ const ReturnsPage = (): JSX.Element => {
                     />
                   </td>
                   <td>
-                    <input
-                      type="number"
+                    <NumberInput
                       min="0"
                       value={item.amountIQD}
                       onChange={(event) =>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import NumberInput from './NumberInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 type Supplier = import('../types/electron').Supplier;
@@ -11,7 +12,14 @@ interface ProductFormProps {
   loading?: boolean;
 }
 
-const initialState: ProductInput = {
+
+// Local state interface to allow empty strings for number inputs
+interface FormState extends Omit<ProductInput, 'salePriceIQD' | 'purchaseCostUSD'> {
+  salePriceIQD: number | string;
+  purchaseCostUSD: number | string;
+}
+
+const initialState: FormState = {
   name: '',
   code: '',
   barcode: '',
@@ -19,25 +27,28 @@ const initialState: ProductInput = {
   description: '',
   color: '',
   size: '',
-  salePriceIQD: 0,
-  purchaseCostUSD: 0,
+  salePriceIQD: '', // Start empty
+  purchaseCostUSD: '', // Start empty
   supplierId: undefined,
 };
 
 const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Element => {
   const { token } = useAuth();
   const { t } = useLanguage();
-  const [formState, setFormState] = useState<ProductInput>(initialState);
+  const [formState, setFormState] = useState<FormState>(initialState);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1470); // Default exchange rate
 
+  const [initialStockStr, setInitialStockStr] = useState('');
+
   const handleChange =
-    (field: keyof ProductInput) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    (field: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const value = event.target.value;
       setFormState((prev) => ({
         ...prev,
-        [field]: field === 'salePriceIQD' || field === 'purchaseCostUSD' ? Number(value) || 0 : value,
+        // Keep as string for inputs to allow empty state
+        [field]: field === 'supplierId' ? (value ? Number(value) : undefined) : value,
       }));
     };
 
@@ -72,7 +83,8 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
 
   // Calculate profit margin in real-time
   const calculateProfitMargin = (): { margin: number; profitIQD: number; profitUSD: number; multiplier: number } | null => {
-    const { purchaseCostUSD, salePriceIQD } = formState;
+    const purchaseCostUSD = Number(formState.purchaseCostUSD);
+    const salePriceIQD = Number(formState.salePriceIQD);
 
     if (!purchaseCostUSD || purchaseCostUSD <= 0 || !salePriceIQD || salePriceIQD <= 0) {
       return null;
@@ -101,15 +113,27 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
       return;
     }
 
-    if (!Number.isFinite(formState.salePriceIQD) || formState.salePriceIQD <= 0) {
+    const salePriceIQD = Number(formState.salePriceIQD);
+    const purchaseCostUSD = Number(formState.purchaseCostUSD);
+
+    if (!Number.isFinite(salePriceIQD) || salePriceIQD <= 0) {
       setFormError(t('pricePositive'));
       return;
     }
 
     try {
       setFormError(null);
-      await onSubmit(formState);
+
+      const payload: ProductInput = {
+        ...formState,
+        salePriceIQD,
+        purchaseCostUSD: Number.isFinite(purchaseCostUSD) ? purchaseCostUSD : 0,
+      };
+
+      // Pass initialStock as part of the payload (casting to any to avoid type error for now, or update interface)
+      await onSubmit({ ...payload, initialStock: Number(initialStockStr) || 0 } as any);
       setFormState(initialState);
+      setInitialStockStr('');
     } catch (error) {
       setFormError(error instanceof Error ? error.message : t('failedToCreateProduct'));
     }
@@ -168,8 +192,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         </label>
         <label>
           <span>{t('salePriceIQD')}</span>
-          <input
-            type="number"
+          <NumberInput
             min="0"
             step="100"
             value={formState.salePriceIQD}
@@ -179,12 +202,19 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         </label>
         <label>
           <span>{t('costUSD')}</span>
-          <input
-            type="number"
+          <NumberInput
             min="0"
             step="0.01"
             value={formState.purchaseCostUSD}
             onChange={handleChange('purchaseCostUSD')}
+          />
+        </label>
+        <label>
+          <span>{t('initialStock') || 'Initial Stock'}</span>
+          <NumberInput
+            value={initialStockStr}
+            onChange={(e) => setInitialStockStr(e.target.value)}
+            placeholder="0"
           />
         </label>
       </div>

@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSetting: (key: string) => ipcRenderer.invoke('db:get-setting', key),
   setSetting: (key: string, value: string) => ipcRenderer.invoke('db:set-setting', key, value),
   getAllSettings: () => ipcRenderer.invoke('db:get-all-settings'),
+  relaunch: () => ipcRenderer.invoke('app:relaunch'),
+  resetFocus: () => ipcRenderer.invoke('app:reset-focus'),
 });
 
 contextBridge.exposeInMainWorld('evaApi', {
@@ -93,6 +95,19 @@ contextBridge.exposeInMainWorld('evaApi', {
   },
   reports: {
     advanced: (token: string, range: DateRange) => ipcRenderer.invoke('reports:advanced', token, range),
+  },
+  email: {
+    getSettings: (token: string) => ipcRenderer.invoke('email:getSettings', token),
+    saveSettings: (token: string, settings: {
+      smtpHost: string;
+      smtpPort: number;
+      smtpSecure: boolean;
+      smtpUser: string;
+      smtpPassword: string;
+      emailRecipient: string;
+      emailEnabled: boolean;
+    }) => ipcRenderer.invoke('email:saveSettings', token, settings),
+    sendTest: (token: string) => ipcRenderer.invoke('email:sendTest', token),
   },
   printing: {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),

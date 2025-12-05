@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import ProductVariantTable from '../components/ProductVariantTable';
+import NumberInput from '../components/NumberInput';
 import './Pages.css';
 import './PurchaseOrdersPage.css';
 
@@ -85,7 +86,8 @@ const PurchaseOrdersPage = (): JSX.Element => {
       },
     ]);
     setShowVariants(false);
-  };
+    setSubmitting(false);
+  }
 
   const totals = useMemo(() => {
     const subtotalUSD = draftItems.reduce((acc, item) => acc + item.costUSD * item.quantity, 0);
@@ -98,13 +100,13 @@ const PurchaseOrdersPage = (): JSX.Element => {
       setError(t('selectSupplierAndAddItems'));
       return;
     }
-    if (!window.evaApi) {
-      setError('Desktop bridge unavailable.');
+    if (!window.evaApi || !token) {
+      setError('Desktop bridge unavailable or not authenticated.');
       return;
     }
     try {
       setSubmitting(true);
-      await window.evaApi.purchaseOrders.create(token!, {
+      await window.evaApi.purchaseOrders.create(token, {
         ...form,
         subtotalUSD: totals.subtotalUSD,
         items: draftItems.map((item) => ({
@@ -124,10 +126,11 @@ const PurchaseOrdersPage = (): JSX.Element => {
     }
   };
 
+
   const handleReceive = async (purchaseOrderId: number) => {
-    if (!window.evaApi) return;
+    if (!window.evaApi || !token) return;
     try {
-      await window.evaApi.purchaseOrders.receive(token!, { purchaseOrderId, receivedBy: 1 });
+      await window.evaApi.purchaseOrders.receive(token, { purchaseOrderId, receivedBy: 1 });
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to receive purchase order.');
@@ -218,8 +221,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
                       </small>
                     </td>
                     <td>
-                      <input
-                        type="number"
+                      <NumberInput
                         min="1"
                         value={item.quantity}
                         onChange={(event) =>
@@ -232,8 +234,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
                       />
                     </td>
                     <td>
-                      <input
-                        type="number"
+                      <NumberInput
                         min="0"
                         step="0.01"
                         value={item.costUSD}
@@ -242,10 +243,10 @@ const PurchaseOrdersPage = (): JSX.Element => {
                             prev.map((draft, idx) =>
                               idx === index
                                 ? {
-                                    ...draft,
-                                    costUSD: Number(event.target.value),
-                                    costIQD: Number(event.target.value) * exchangeRate,
-                                  }
+                                  ...draft,
+                                  costUSD: Number(event.target.value),
+                                  costIQD: Number(event.target.value) * exchangeRate,
+                                }
                                 : draft,
                             ),
                           )

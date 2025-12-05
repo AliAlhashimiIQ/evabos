@@ -21,66 +21,74 @@ const DashboardPage = (): JSX.Element => {
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
+  const formatDate = (date: Date): string => {
+    // Use UTC date to match SalesHistoryPage logic and database storage
+    return date.toISOString().split('T')[0];
+  };
+
   const getDateRange = (preset: DateRangePreset): { startDate: string; endDate: string } => {
+    // Initialize 'today' to Noon to avoid timezone shifts when converting to UTC.
+    // e.g. 00:00 Local -> Previous Day UTC. 12:00 Local -> Same Day UTC.
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endDate = new Date(today);
-    endDate.setHours(23, 59, 59, 999);
+    today.setHours(12, 0, 0, 0);
 
     switch (preset) {
       case 'today': {
         return {
-          startDate: today.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(today),
+          endDate: formatDate(today),
         };
       }
       case 'yesterday': {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayEnd = new Date(yesterday);
-        yesterdayEnd.setHours(23, 59, 59, 999);
         return {
-          startDate: yesterday.toISOString().split('T')[0],
-          endDate: yesterdayEnd.toISOString().split('T')[0],
+          startDate: formatDate(yesterday),
+          endDate: formatDate(yesterday),
         };
       }
       case 'last2days': {
         const twoDaysAgo = new Date(today);
         twoDaysAgo.setDate(twoDaysAgo.getDate() - 1);
         return {
-          startDate: twoDaysAgo.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(twoDaysAgo),
+          endDate: formatDate(today),
         };
       }
       case 'last7days': {
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
         return {
-          startDate: sevenDaysAgo.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(sevenDaysAgo),
+          endDate: formatDate(today),
         };
       }
       case 'last30days': {
         const thirtyDaysAgo = new Date(today);
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
         return {
-          startDate: thirtyDaysAgo.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(thirtyDaysAgo),
+          endDate: formatDate(today),
         };
       }
       case 'thisMonth': {
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        firstDay.setHours(12, 0, 0, 0); // Ensure Noon
         return {
-          startDate: firstDay.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(firstDay),
+          endDate: formatDate(today),
         };
       }
       case 'lastMonth': {
         const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        firstDayLastMonth.setHours(12, 0, 0, 0); // Ensure Noon
+
         const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        lastDayLastMonth.setHours(12, 0, 0, 0); // Ensure Noon
+
         return {
-          startDate: firstDayLastMonth.toISOString().split('T')[0],
-          endDate: lastDayLastMonth.toISOString().split('T')[0],
+          startDate: formatDate(firstDayLastMonth),
+          endDate: formatDate(lastDayLastMonth),
         };
       }
       case 'custom': {
@@ -92,14 +100,14 @@ const DashboardPage = (): JSX.Element => {
         }
         // Fallback to today if custom dates not set
         return {
-          startDate: today.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(today),
+          endDate: formatDate(today),
         };
       }
       default:
         return {
-          startDate: today.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: formatDate(today),
+          endDate: formatDate(today),
         };
     }
   };

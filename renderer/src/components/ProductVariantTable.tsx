@@ -11,6 +11,7 @@ interface ProductVariantTableProps {
   onViewDetails?: (variant: Product) => void;
   onPrintLabel?: (variant: Product) => void;
   onDelete?: (variant: Product) => void;
+  onEdit?: (variant: Product) => void;
 }
 
 const ProductVariantTable = ({
@@ -20,10 +21,11 @@ const ProductVariantTable = ({
   onViewDetails,
   onPrintLabel,
   onDelete,
+  onEdit,
 }: ProductVariantTableProps): JSX.Element => {
   const { t } = useLanguage();
   const defaultActionLabel = actionLabel || t('adjustStock');
-  
+
   if (!products.length) {
     return <div className="ProductsPage-empty">{t('noData')}</div>;
   }
@@ -93,6 +95,15 @@ const ProductVariantTable = ({
                   {onAction && (
                     <button className="ProductVariantTable-adjustButton" onClick={() => onAction(variant.id)}>
                       {defaultActionLabel}
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      className="ProductVariantTable-editButton"
+                      onClick={() => onEdit(variant)}
+                      title={t('edit')}
+                    >
+                      ✏️
                     </button>
                   )}
                   {onDelete && (

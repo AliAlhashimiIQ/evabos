@@ -26,6 +26,7 @@ import { registerBranchesIpc } from './ipc/branches';
 import { registerDashboardIpc } from './ipc/dashboard';
 import { registerLicensingIpc } from './ipc/licensing';
 import { registerSettingsIpc } from './ipc/settings';
+import { registerEmailIpc } from './ipc/email';
 import { createBackup } from './db/backup';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -149,6 +150,22 @@ const registerIpcHandlers = (): void => {
     return getAllSettings();
   });
 
+  ipcMain.handle('app:relaunch', () => {
+    app.relaunch();
+    app.exit(0);
+  });
+
+  ipcMain.handle('app:reset-focus', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.blur();
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.focus();
+        }
+      }, 100);
+    }
+  });
+
   ipcRegistered = true;
 };
 
@@ -200,6 +217,65 @@ const scheduleDailyBackup = (): void => {
     // Schedule subsequent backups every 24 hours
     dailyBackupInterval = setInterval(performBackup, 24 * 60 * 60 * 1000);
   }, 10000); // 10 seconds delay
+};
+
+// Daily email report scheduler
+let dailyEmailTimeout: NodeJS.Timeout | null = null;
+let dailyEmailInterval: NodeJS.Timeout | null = null;
+
+const scheduleDailyEmailReport = async (): Promise<void> => {
+  if (dailyEmailTimeout) clearTimeout(dailyEmailTimeout);
+  if (dailyEmailInterval) clearInterval(dailyEmailInterval);
+
+  console.log('[email] Scheduling daily email reports...');
+
+  // Get send time from settings (default 20:00)
+  let sendTime = '20:00';
+  try {
+    const { getEmailSettings } = await import('./db/emailReports');
+    const settings = await getEmailSettings();
+    sendTime = settings.sendTime || '20:00';
+  } catch (err) {
+    console.log('[email] Could not load settings, using default 20:00');
+  }
+
+  // Parse hour and minute from sendTime (format "HH:MM")
+  const [hours, minutes] = sendTime.split(':').map(Number);
+  const targetHour = hours || 20;
+  const targetMinute = minutes || 0;
+
+  // Calculate time until target time today or tomorrow
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMinute, 0, 0);
+
+  // If it's past the target time, schedule for tomorrow
+  if (now.getTime() >= target.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const msUntilTarget = target.getTime() - now.getTime();
+  console.log(`[email] Next email report scheduled for ${target.toLocaleString()} (${sendTime})`);
+
+  dailyEmailTimeout = setTimeout(async () => {
+    try {
+      const { sendDailyReport } = await import('./db/emailReports');
+      const result = await sendDailyReport();
+      console.log('[email] Daily report result:', result);
+    } catch (err) {
+      console.error('[email] Failed to send daily report:', err);
+    }
+
+    // Schedule subsequent emails every 24 hours
+    dailyEmailInterval = setInterval(async () => {
+      try {
+        const { sendDailyReport } = await import('./db/emailReports');
+        const result = await sendDailyReport();
+        console.log('[email] Daily report result:', result);
+      } catch (err) {
+        console.error('[email] Failed to send daily report:', err);
+      }
+    }, 24 * 60 * 60 * 1000);
+  }, msUntilTarget);
 };
 
 // Register custom protocol for production to handle ES modules
@@ -263,7 +339,9 @@ app.whenReady().then(async () => {
   registerDashboardIpc();
   registerLicensingIpc();
   registerSettingsIpc();
+  registerEmailIpc();
   scheduleDailyBackup();
+  scheduleDailyEmailReport();
   await createWindow();
 
   if (!isDev) {

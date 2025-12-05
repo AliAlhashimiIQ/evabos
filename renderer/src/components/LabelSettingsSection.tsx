@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import './LabelSettingsSection.css';
+import NumberInput from './NumberInput';
 
 interface LabelSettings {
   // labelSize removed, fixed to 50x25mm
@@ -103,8 +104,7 @@ const LabelSettingsSection = (): JSX.Element => {
 
             <label>
               {t('fontSize')}
-              <input
-                type="number"
+              <NumberInput
                 min="6"
                 max="24"
                 value={settings.fontSize}
@@ -121,8 +121,7 @@ const LabelSettingsSection = (): JSX.Element => {
             </label>
             <label>
               {t('labelPadding')}
-              <input
-                type="number"
+              <NumberInput
                 min="0"
                 max="20"
                 value={settings.labelPadding}
@@ -173,8 +172,7 @@ const LabelSettingsSection = (): JSX.Element => {
             <h3>{t('barcodeSettings')}</h3>
             <label>
               {t('barcodeHeight')}
-              <input
-                type="number"
+              <NumberInput
                 min="10"
                 max="200"
                 value={settings.barcodeHeight}
@@ -183,8 +181,7 @@ const LabelSettingsSection = (): JSX.Element => {
             </label>
             <label>
               {t('barcodeWidth')}
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 max="10"
                 step="0.5"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../types/electron';
 import './InventoryAdjustModal.css';
+import NumberInput from './NumberInput';
 
 interface InventoryAdjustModalProps {
   variant: Product;
@@ -9,7 +10,7 @@ interface InventoryAdjustModalProps {
 }
 
 const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustModalProps): JSX.Element => {
-  const [quantity, setQuantity] = useState(0);
+  const [quantityStr, setQuantityStr] = useState('');
   const [reason, setReason] = useState('manual_adjustment');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +18,9 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!quantity) {
+    const quantity = Number(quantityStr);
+
+    if (!quantityStr || isNaN(quantity) || quantity === 0) {
       setError('Enter a quantity adjustment (positive to add, negative to remove).');
       return;
     }
@@ -58,10 +61,9 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
         <form onSubmit={handleSubmit}>
           <label>
             <span>Quantity Change</span>
-            <input
-              type="number"
-              value={quantity}
-              onChange={(event) => setQuantity(Number(event.target.value))}
+            <NumberInput
+              value={quantityStr}
+              onChange={(event) => setQuantityStr(event.target.value)}
               placeholder="e.g. 5 or -2"
             />
           </label>

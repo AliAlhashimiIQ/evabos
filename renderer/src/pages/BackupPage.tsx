@@ -88,8 +88,14 @@ const BackupPage = (): JSX.Element => {
       setSuccess(null);
       await window.evaApi.backup.restore(token, selectedPath);
       setSuccess(t('backupRestoredSuccess'));
+<<<<<<< HEAD
       setSuccess(t('backupRestoredSuccess'));
       // App will restart automatically from main process
+=======
+      setTimeout(() => {
+        window.electronAPI.relaunch();
+      }, 2000);
+>>>>>>> d0605e3 (Add email reports feature with configurable send time and edit product functionality)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
@@ -111,8 +117,14 @@ const BackupPage = (): JSX.Element => {
       setSuccess(null);
       await window.evaApi.backup.restore(token, backupPath);
       setSuccess(t('backupRestoredSuccess'));
+<<<<<<< HEAD
       setSuccess(t('backupRestoredSuccess'));
       // App will restart automatically from main process
+=======
+      setTimeout(() => {
+        window.electronAPI.relaunch();
+      }, 2000);
+>>>>>>> d0605e3 (Add email reports feature with configurable send time and edit product functionality)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToRestoreBackup'));
       setRestoring(null);
@@ -244,7 +256,7 @@ const BackupPage = (): JSX.Element => {
           <div className="BackupPage-overlayContent">
             <div className="BackupPage-spinner"></div>
             <h2>{t('restoringDatabase')}</h2>
-            <p>{t('pleaseWaitRestart')}</p>
+            <p>{t('pleaseWaitRestart') || 'The application will restart automatically...'}</p>
           </div>
         </div>
       )}

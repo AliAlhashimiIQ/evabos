@@ -257,3 +257,57 @@
    padding: 2rem;
    color: var(--text-secondary);
  }
+.link-sale-btn {
+  background: linear-gradient(120deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.link-sale-btn:hover {
+  opacity: 0.9;
+}
+
+/* Link Sale Button */
+.link-sale-btn {
+  background: linear-gradient(120deg, #2563eb, #7c3aed);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
+}
+
+.link-sale-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Customer Actions Header */
+.CustomersPage-actions-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.CustomersPage-actions-header button {
+  cursor: pointer;
+}
+
+/* Details header with button */
+.CustomersPage-details > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.CustomersPage-details > header > div:first-child {
+  flex: 1;
+}

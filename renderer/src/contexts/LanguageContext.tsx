@@ -93,6 +93,15 @@ const translations = {
     allItemsInStock: 'All items in stock',
     quickActions: 'Quick Actions',
     newSale: 'New Sale',
+    editProduct: 'Edit Product',
+    productName: 'Product Name',
+    sellingPriceIQD: 'Selling Price (IQD)',
+    saving: 'Saving...',
+    failedToUpdateProduct: 'Failed to update product',
+    linkSale: 'Link Sale',
+    enterSaleId: 'Enter Sale ID',
+    saleLinkedSuccessfully: 'Sale linked successfully',
+    failedToLinkSale: 'Failed to link sale',
     viewReports: 'View Reports',
     backupData: 'Backup Data',
     left: 'left',
@@ -226,6 +235,7 @@ const translations = {
     loadMoreCount: 'Load More Products ({count} loaded)',
     loaded: 'loaded',
     tab: 'Tab',
+    saleCompleted: 'Sale completed successfully!',
 
     // Settings
     configureSystem: 'Configure your system settings',
@@ -492,6 +502,9 @@ const translations = {
     costOfGoods: 'Cost of Goods',
     // netProfit: 'Net Profit', // Duplicate
     inventoryValue: 'Inventory Value',
+    inventoryBySupplier: 'Inventory by Supplier',
+    valueUSD: 'Value (USD)',
+    noSupplierAssigned: 'No Supplier',
     viewDetails: 'View Details',
     noProductsFound: 'No products found. Add your first item.',
     uncategorized: 'Uncategorized',
@@ -634,6 +647,14 @@ const translations = {
     profitUSD: 'الربح (USD)',
     nameRequired: 'الاسم مطلوب.',
     pricePositive: 'يجب أن يكون سعر البيع رقماً موجباً.',
+    productName: 'اسم المنتج',
+    sellingPriceIQD: 'سعر البيع (IQD)',
+    saving: 'جاري الحفظ...',
+    failedToUpdateProduct: 'فشل في تحديث المنتج',
+    linkSale: 'ربط بيعة',
+    enterSaleId: 'أدخل رقم البيعة',
+    saleLinkedSuccessfully: 'تم ربط البيعة بنجاح',
+    failedToLinkSale: 'فشل في ربط البيعة',
 
     // Sales
     sale: 'بيع',
@@ -745,6 +766,7 @@ const translations = {
     loadMoreCount: 'تحميل المزيد من المنتجات ({count} تم تحميلها)',
     loaded: 'تم تحميلها',
     tab: 'تبويب',
+    saleCompleted: 'تمت عملية البيع بنجاح!',
 
     // Settings
     configureSystem: 'تكوين إعدادات النظام',
@@ -1046,6 +1068,9 @@ const translations = {
     costOfGoods: 'تكلفة البضائع',
     // netProfit: 'صافي الربح', // Duplicate
     inventoryValue: 'قيمة المخزون',
+    inventoryBySupplier: 'قيمة المخزون حسب المورد',
+    valueUSD: 'القيمة (USD)',
+    noSupplierAssigned: 'بدون مورد',
     viewDetails: 'عرض التفاصيل',
     noProductsFound: 'لم يتم العثور على منتجات. أضف أول عنصر.',
     uncategorized: 'غير مصنف',

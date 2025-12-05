@@ -279,6 +279,12 @@ export interface ActivityLogEntry {
   createdAt: string;
 }
 
+export interface SupplierInventory {
+  supplierName: string;
+  totalQuantity: number;
+  totalValueUSD: number;
+}
+
 export interface AdvancedReports {
   dailySales: DailySalesEntry[];
   bestSellingItems: NamedMetric[];
@@ -290,11 +296,17 @@ export interface AdvancedReports {
     costIQD: number;
     expensesIQD: number;
     netProfitIQD: number;
+    profitMarginPercent: number;
   };
   inventoryValue: number;
   lowStock: Array<{ sku: string; productName: string; color?: string | null; size?: string | null; quantity: number }>;
   expensesVsSales: ExpensesVsSalesEntry[];
   activityLogs: ActivityLogEntry[];
+  inventoryBySupplier: SupplierInventory[];
+  returnsSummary: {
+    count: number;
+    totalIQD: number;
+  };
 }
 
 export interface ActivityLog {
@@ -317,7 +329,7 @@ export interface ProductsListResponse {
 }
 
 export interface SalesListResponse {
-  sales: Sale[];
+  sales: SaleDetail[];
 }
 
 export interface ExchangeRateResponse {

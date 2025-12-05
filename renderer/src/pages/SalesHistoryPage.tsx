@@ -6,7 +6,6 @@ import PrintingModal from '../components/PrintingModal';
 import './Pages.css';
 import './SalesHistoryPage.css';
 
-type Sale = import('../types/electron').Sale;
 type SaleDetail = import('../types/electron').SaleDetail;
 type DateRange = import('../types/electron').DateRange;
 
@@ -15,7 +14,7 @@ const SalesHistoryPage = (): JSX.Element => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { saleId } = useParams<{ saleId: string }>();
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<SaleDetail[]>([]);
   const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +92,38 @@ const SalesHistoryPage = (): JSX.Element => {
       }))
     };
     setPrintSummary(summaryData);
+  };
+
+  const handleQuickFilter = (range: 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth') => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (range) {
+      case 'today':
+        break; // start and end are already now
+      case 'yesterday':
+        start.setDate(now.getDate() - 1);
+        end.setDate(now.getDate() - 1);
+        break;
+      case 'last7':
+        start.setDate(now.getDate() - 6);
+        break;
+      case 'last30':
+        start.setDate(now.getDate() - 29);
+        break;
+      case 'thisMonth':
+        start.setDate(1);
+        break;
+      case 'lastMonth':
+        start.setMonth(now.getMonth() - 1);
+        start.setDate(1);
+        end.setDate(0); // Last day of previous month
+        break;
+    }
+
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
   };
 
   const handleDeleteSale = async (id: number) => {
@@ -230,6 +261,14 @@ const SalesHistoryPage = (): JSX.Element => {
 
       <div className="Page-content">
         <div className="SalesHistory-filters">
+          <div className="SalesHistory-quickFilters">
+            <button onClick={() => handleQuickFilter('today')}>{t('today')}</button>
+            <button onClick={() => handleQuickFilter('yesterday')}>{t('yesterday')}</button>
+            <button onClick={() => handleQuickFilter('last7')}>{t('last7Days')}</button>
+            <button onClick={() => handleQuickFilter('last30')}>{t('last30Days')}</button>
+            <button onClick={() => handleQuickFilter('thisMonth')}>{t('thisMonth')}</button>
+            <button onClick={() => handleQuickFilter('lastMonth')}>{t('lastMonth')}</button>
+          </div>
           <div className="SalesHistory-filterGroup">
             <label>{t('startDate')}</label>
             <input
@@ -269,6 +308,7 @@ const SalesHistoryPage = (): JSX.Element => {
               <thead>
                 <tr>
                   <th>{t('saleId')}</th>
+                  <th>{t('items')}</th>
                   <th>{t('date')}</th>
                   <th>{t('total')}</th>
                   <th>{t('paymentMethod')}</th>
@@ -279,7 +319,7 @@ const SalesHistoryPage = (): JSX.Element => {
               <tbody>
                 {sales.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="SalesHistory-empty">
+                    <td colSpan={7} className="SalesHistory-empty">
                       {t('noSalesFound')}
                     </td>
                   </tr>
@@ -293,6 +333,15 @@ const SalesHistoryPage = (): JSX.Element => {
                             {t('returned')}
                           </span>
                         )}
+                      </td>
+                      <td className="SalesHistory-items-summary">
+                        {sale.items.map((item, idx) => (
+                          <div key={idx} className="SalesHistory-item-row">
+                            {item.productName}
+                            {item.size || item.color ? ` (${[item.size, item.color].filter(Boolean).join('/')})` : ''}
+                            {' '}x{item.quantity}
+                          </div>
+                        ))}
                       </td>
                       <td>{new Date(sale.saleDate).toLocaleString()}</td>
                       <td>{sale.totalIQD.toLocaleString('en-IQ')} IQD</td>

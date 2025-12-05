@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import LabelSettingsSection from '../components/LabelSettingsSection';
+import NumberInput from '../components/NumberInput';
 import './Pages.css';
 import './SettingsPage.css';
 
@@ -26,8 +27,21 @@ const SettingsPage = (): JSX.Element => {
   const [calculatedMargin, setCalculatedMargin] = useState<string>('—');
   const [calculatedProfit, setCalculatedProfit] = useState<string>('—');
 
+  // Email Settings
+  const [emailHost, setEmailHost] = useState('smtp.gmail.com');
+  const [emailPort, setEmailPort] = useState('587');
+  const [emailUser, setEmailUser] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailSendTime, setEmailSendTime] = useState('20:00'); // Default 8 PM
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailTesting, setEmailTesting] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+
   useEffect(() => {
     loadExchangeRate();
+    loadEmailSettings();
   }, []);
 
   const loadExchangeRate = async () => {
@@ -39,6 +53,63 @@ const SettingsPage = (): JSX.Element => {
       }
     } catch (err) {
       console.error('Failed to load exchange rate:', err);
+    }
+  };
+
+  const loadEmailSettings = async () => {
+    if (!window.evaApi || !token) return;
+    try {
+      const settings = await window.evaApi.email.getSettings(token);
+      setEmailHost(settings.smtpHost || 'smtp.gmail.com');
+      setEmailPort(String(settings.smtpPort || 587));
+      setEmailUser(settings.smtpUser || '');
+      setEmailPassword(settings.smtpPassword || '');
+      setEmailRecipient(settings.emailRecipient || '');
+      setEmailEnabled(settings.emailEnabled || false);
+      setEmailSendTime(settings.sendTime || '20:00');
+    } catch (err) {
+      console.error('Failed to load email settings:', err);
+    }
+  };
+
+  const handleSaveEmailSettings = async () => {
+    if (!window.evaApi || !token) return;
+    try {
+      setEmailSaving(true);
+      setEmailMessage(null);
+      await window.evaApi.email.saveSettings(token, {
+        smtpHost: emailHost,
+        smtpPort: parseInt(emailPort, 10) || 587,
+        smtpSecure: parseInt(emailPort, 10) === 465,
+        smtpUser: emailUser,
+        smtpPassword: emailPassword,
+        emailRecipient: emailRecipient,
+        emailEnabled: emailEnabled,
+        sendTime: emailSendTime,
+      });
+      setEmailMessage('✅ ' + (t('emailSettingsSaved') || 'Email settings saved successfully!'));
+    } catch (err) {
+      setEmailMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!window.evaApi || !token) return;
+    try {
+      setEmailTesting(true);
+      setEmailMessage(null);
+      const result = await window.evaApi.email.sendTest(token) as { success: boolean; error?: string };
+      if (result.success) {
+        setEmailMessage('✅ ' + (t('testEmailSuccess') || 'Test email sent! Check your inbox.'));
+      } else {
+        setEmailMessage('⚠️ ' + (result.error || t('testEmailFailed') || 'Email not sent. Please check settings.'));
+      }
+    } catch (err) {
+      setEmailMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setEmailTesting(false);
     }
   };
 
@@ -178,8 +249,7 @@ const SettingsPage = (): JSX.Element => {
               <div className="SettingsPage-updateRate">
                 <label>{t('updateExchangeRate')}</label>
                 <div className="input-group">
-                  <input
-                    type="number"
+                  <NumberInput
                     value={newRate}
                     onChange={(e) => setNewRate(e.target.value)}
                     placeholder={t('enterNewRate')}
@@ -210,8 +280,7 @@ const SettingsPage = (): JSX.Element => {
             <div className="SettingsPage-calcInputs">
               <div className="SettingsPage-calcField">
                 <label>{t('costUSD')}</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={costUSD}
                   onChange={(e) => setCostUSD(e.target.value)}
                   placeholder="0.00"
@@ -221,8 +290,7 @@ const SettingsPage = (): JSX.Element => {
 
               <div className="SettingsPage-calcField">
                 <label>{t('salePriceIQD')}</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={salePriceIQD}
                   onChange={(e) => setSalePriceIQD(e.target.value)}
                   placeholder="0"
@@ -253,6 +321,114 @@ const SettingsPage = (): JSX.Element => {
             </div>
           </div>
         </div>
+
+        {/* Email Reports - Configuration Section */}
+        {hasRole(['admin']) && (
+          <div className="SettingsPage-section">
+            <h2>📧 {t('emailReports') || 'Email Reports'}</h2>
+            <p>{t('emailReportsDesc') || 'Configure daily Arabic email reports with sales summary, profits, and items sold.'}</p>
+
+            <div className="SettingsPage-emailForm">
+              <div className="SettingsPage-emailRow">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={emailEnabled}
+                    onChange={(e) => setEmailEnabled(e.target.checked)}
+                  />
+                  {t('enableEmailReports') || 'Enable Email Reports'}
+                </label>
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('smtpHost') || 'SMTP Host'}</label>
+                <input
+                  type="text"
+                  value={emailHost}
+                  onChange={(e) => setEmailHost(e.target.value)}
+                  placeholder="smtp.gmail.com"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('smtpPort') || 'SMTP Port'}</label>
+                <input
+                  type="text"
+                  value={emailPort}
+                  onChange={(e) => setEmailPort(e.target.value)}
+                  placeholder="587"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('senderEmail') || 'Sender Email'}</label>
+                <input
+                  type="email"
+                  value={emailUser}
+                  onChange={(e) => setEmailUser(e.target.value)}
+                  placeholder="your-email@gmail.com"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('emailPassword') || 'App Password'}</label>
+                <input
+                  type="password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('recipientEmail') || 'Recipient Email'}</label>
+                <input
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                  placeholder="recipient@example.com"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('dailySendTime') || 'Daily Send Time'}</label>
+                <input
+                  type="time"
+                  value={emailSendTime}
+                  onChange={(e) => setEmailSendTime(e.target.value)}
+                />
+                <small style={{ color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                  {t('emailSendTimeNote') || 'Email will be sent automatically at this time every day'}
+                </small>
+              </div>
+
+              {emailMessage && (
+                <div className="SettingsPage-emailMessage">{emailMessage}</div>
+              )}
+
+              <div className="SettingsPage-emailActions">
+                <button
+                  className="SettingsPage-saveEmailButton"
+                  onClick={handleSaveEmailSettings}
+                  disabled={emailSaving}
+                >
+                  💾 {emailSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                </button>
+                <button
+                  className="SettingsPage-testEmailButton"
+                  onClick={handleTestEmail}
+                  disabled={emailTesting || !emailUser || !emailRecipient}
+                >
+                  🚀 {emailTesting ? (t('sending') || 'Sending...') : (t('sendTestEmail') || 'Send Test Email')}
+                </button>
+              </div>
+
+              <div className="SettingsPage-emailHelp">
+                <small>💡 {t('gmailNote') || 'For Gmail: Use an App Password from myaccount.google.com > Security > App Passwords'}</small>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Label Settings */}
         <LabelSettingsSection />

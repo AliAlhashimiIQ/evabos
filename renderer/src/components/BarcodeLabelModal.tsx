@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useLanguage } from '../contexts/LanguageContext';
 import './BarcodeLabelModal.css';
+import NumberInput from './NumberInput';
 
 type Product = import('../types/electron').Product;
 
@@ -330,8 +331,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                 <div className="BarcodeLabelModal-controlGroup">
                   <label>
                     {t('quantity')}
-                    <input
-                      type="number"
+                    <NumberInput
                       min="1"
                       max="100"
                       value={quantity}

@@ -115,7 +115,14 @@ const getDb = (): sqlite3.Database => {
         }
 
         // Create backup with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${year}-${month}-${day}T${hours}-${minutes}-${seconds}`;
         const backupPath = path.join(backupDir, `eva-pos-autobackup-${timestamp}.db`);
 
         // Copy file (async to not block startup too much, but simple copy is fast)
@@ -1096,6 +1103,8 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     SELECT IFNULL(SUM(vs.quantity * pv.avgCostUSD * 1500), 0) as value
     FROM variant_stock vs
     JOIN product_variants pv ON pv.id = vs.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE p.isActive = 1 AND pv.isActive = 1
   `,
   );
 
@@ -1156,6 +1165,41 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
   `,
   );
 
+  const inventoryBySupplier = await all<{ supplierName: string; totalQuantity: number; totalValueUSD: number }>(
+    `
+    SELECT
+      COALESCE(s.name, 'No Supplier') as supplierName,
+      IFNULL(SUM(vs.quantity), 0) as totalQuantity,
+      IFNULL(SUM(vs.quantity * pv.avgCostUSD), 0) as totalValueUSD
+    FROM variant_stock vs
+    JOIN product_variants pv ON pv.id = vs.variantId
+    JOIN products p ON p.id = pv.productId
+    LEFT JOIN suppliers s ON s.id = p.defaultSupplierId
+    WHERE p.isActive = 1 AND pv.isActive = 1
+    GROUP BY p.defaultSupplierId
+    ORDER BY totalValueUSD DESC
+  `,
+  );
+
+  // Returns summary for the date range
+  const returnsSummaryRow = await get<{ count: number; totalIQD: number }>(
+    `
+    SELECT 
+      COUNT(*) as count,
+      IFNULL(SUM(refundAmountIQD), 0) as totalIQD
+    FROM returns
+    WHERE date(createdAt) BETWEEN date(?) AND date(?)
+  `,
+    [range.startDate, range.endDate],
+  );
+
+  // Calculate profit margin percentage
+  const revenue = revenueRow?.revenue ?? 0;
+  const cost = costRow?.cost ?? 0;
+  const expenses = expensesRow?.total ?? 0;
+  const netProfit = revenue - cost - expenses;
+  const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+
   return {
     dailySales,
     bestSellingItems,
@@ -1163,16 +1207,50 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     salesByColor,
     topCustomers,
     profitAnalysis: {
-      revenueIQD: revenueRow?.revenue ?? 0,
-      costIQD: costRow?.cost ?? 0,
-      expensesIQD: expensesRow?.total ?? 0,
-      netProfitIQD: (revenueRow?.revenue ?? 0) - (costRow?.cost ?? 0) - (expensesRow?.total ?? 0),
+      revenueIQD: revenue,
+      costIQD: cost,
+      expensesIQD: expenses,
+      netProfitIQD: netProfit,
+      profitMarginPercent: Math.round(profitMargin * 10) / 10, // Round to 1 decimal
     },
     inventoryValue: inventoryValueRow?.value ?? 0,
     lowStock,
     expensesVsSales,
     activityLogs,
+    inventoryBySupplier,
+    returnsSummary: {
+      count: returnsSummaryRow?.count ?? 0,
+      totalIQD: returnsSummaryRow?.totalIQD ?? 0,
+    },
   };
+}
+
+// List all items sold on a specific date (for email reports)
+export async function listSaleItems(dateStr: string): Promise<Array<{ name: string; size?: string; color?: string; quantity: number }>> {
+  const items = await all<{ name: string; size: string | null; color: string | null; quantity: number }>(
+    `
+    SELECT 
+      p.name,
+      pv.size,
+      pv.color,
+      SUM(si.quantity) as quantity
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE date(s.saleDate) = date(?)
+    GROUP BY pv.id
+    ORDER BY quantity DESC
+  `,
+    [dateStr],
+  );
+
+  return items.map(item => ({
+    name: item.name,
+    size: item.size ?? undefined,
+    color: item.color ?? undefined,
+    quantity: item.quantity,
+  }));
 }
 
 const recordCustomerPurchase = async (customerId: number, amountIQD: number): Promise<void> => {
@@ -1781,7 +1859,7 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
       (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
     FROM sales s
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
-    ORDER BY s.saleDate ASC
+    ORDER BY s.saleDate DESC
   `,
     [range.startDate, range.endDate],
   );
@@ -1792,24 +1870,30 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
 
   const saleIds = salesRows.map((s) => s.id);
   const placeholders = saleIds.map(() => '?').join(', ');
-  const itemsRows = await all<SaleItem>(
+  const itemsRows = await all<SaleDetailItem>(
     `
-    SELECT *
-    FROM sale_items
-    WHERE saleId IN (${placeholders})
-    ORDER BY saleId ASC, id ASC
+    SELECT
+      si.*,
+      p.name AS productName,
+      pv.color,
+      pv.size
+    FROM sale_items si
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE si.saleId IN (${placeholders})
+    ORDER BY si.saleId ASC, si.id ASC
   `,
     saleIds,
   );
 
-  const itemsBySale = new Map<number, SaleItem[]>();
+  const itemsBySale = new Map<number, SaleDetailItem[]>();
   for (const row of itemsRows) {
     const saleItems = itemsBySale.get(row.saleId) ?? [];
-    saleItems.push(mapSaleItemRow(row));
+    saleItems.push(row);
     itemsBySale.set(row.saleId, saleItems);
   }
 
-  const sales: Sale[] = salesRows.map((row) => ({
+  const sales: SaleDetail[] = salesRows.map((row) => ({
     ...mapSaleRow(row),
     isReturned: Boolean(row.isReturned),
     items: itemsBySale.get(row.id) ?? [],
@@ -2532,8 +2616,9 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
         refundAmountIQD,
         reason,
         processedBy,
-        type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        type,
+        createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.saleId ?? null,
@@ -2543,6 +2628,7 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
         input.reason ?? null,
         input.processedBy ?? null,
         input.type,
+        new Date().toISOString(), // Use ISO string for consistency with sales
       ],
     );
 

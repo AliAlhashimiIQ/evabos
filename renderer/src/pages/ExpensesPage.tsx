@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './ExpensesPage.css';
+import NumberInput from '../components/NumberInput';
 
 type Expense = import('../types/electron').Expense;
 type ExpenseInput = import('../types/electron').ExpenseInput;
@@ -210,8 +211,7 @@ const ExpensesPage = (): JSX.Element => {
           </label>
           <label>
             {t('amountIQD')}
-            <input
-              type="number"
+            <NumberInput
               min="0"
               value={form.amountIQD}
               onChange={(event) => setForm((prev) => ({ ...prev, amountIQD: Number(event.target.value) || 0 }))}

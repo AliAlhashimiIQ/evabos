@@ -26,7 +26,7 @@ const getDbPath = (): string => {
     throw new Error('App not ready');
   }
 
-  // Fix: Use correct path in production (same as database.ts)
+  // For portable/USB mode: Store DB next to the executable
   if (app.isPackaged) {
     return path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
   }
@@ -49,7 +49,14 @@ export async function createBackup(): Promise<BackupInfo> {
   const dbPath = getDbPath();
   const backupDir = await ensureBackupDir();
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${year}-${month}-${day}T${hours}-${minutes}-${seconds}`;
   const filename = `eva-pos-backup-${timestamp}.db`;
   const backupPath = path.join(backupDir, filename);
 

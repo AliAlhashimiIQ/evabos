@@ -4,15 +4,86 @@
 
 .ProductsPage-header {
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ProductsPage-headerTop {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .ProductsPage-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.ProductsPage-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 1rem;
+  width: 100%;
+}
+
+.ProductsPage-filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ProductsPage-filterGroup label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ProductsPage-filterInput,
+.ProductsPage-filterSelect {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.ProductsPage-filterInput:focus,
+.ProductsPage-filterSelect:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.ProductsPage-clearFilters {
+  margin-top: auto;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  height: 38px;
+  /* Match input height */
+}
+
+.ProductsPage-clearFilters:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 .ProductsPage-importButton {
@@ -30,7 +101,6 @@
 .ProductsPage-importButton:hover {
   background: rgba(148, 163, 184, 0.25);
   border-color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.5); */
 }
 
 .ProductsPage-addButton {
@@ -68,7 +138,6 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.9); */
 }
 
 .ProductsPage-table tbody tr:hover {
@@ -79,7 +148,6 @@
   padding: 2rem;
   text-align: center;
   color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.9); */
 }
 
 .ProductsPage-alert {
@@ -103,6 +171,8 @@
 
 .ProductsPage-modal {
   width: min(640px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--bg-card);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
@@ -121,7 +191,73 @@
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  /* was: rgba(248, 250, 252, 0.6); */
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+.ProductsPage-editModal {
+  max-width: 400px;
+}
+
+.ProductsPage-editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.ProductsPage-editForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.ProductsPage-editForm input {
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.5rem;
+  background: var(--bg-input);
+  color: inherit;
+  font-size: 1rem;
+}
+
+.ProductsPage-editActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.ProductsPage-cancelButton {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ProductsPage-saveButton {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: linear-gradient(120deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ProductsPage-saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ProductVariantTable-editButton {
+  background: rgba(59, 130, 246, 0.15);
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.9rem;
 }

@@ -386,6 +386,41 @@ const ReportsPage = (): JSX.Element => {
         </div>
       </div>
 
+      <section className="Reports-quickFilters">
+        <button onClick={() => {
+          const today = new Date();
+          setRange({ startDate: formatDateInput(today), endDate: formatDateInput(today) });
+        }}>{t('today')}</button>
+        <button onClick={() => {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          setRange({ startDate: formatDateInput(yesterday), endDate: formatDateInput(yesterday) });
+        }}>{t('yesterday')}</button>
+        <button onClick={() => {
+          const today = new Date();
+          const start = new Date();
+          start.setDate(today.getDate() - 6);
+          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+        }}>{t('last7days')}</button>
+        <button onClick={() => {
+          const today = new Date();
+          const start = new Date();
+          start.setDate(today.getDate() - 29);
+          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+        }}>{t('last30days')}</button>
+        <button onClick={() => {
+          const today = new Date();
+          const start = new Date(today.getFullYear(), today.getMonth(), 1);
+          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+        }}>{t('thisMonth')}</button>
+        <button onClick={() => {
+          const today = new Date();
+          const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          const end = new Date(today.getFullYear(), today.getMonth(), 0);
+          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
+        }}>{t('lastMonth')}</button>
+      </section>
+
       <section className="Reports-filters">
         <label>
           {t('startDate')}
@@ -424,16 +459,22 @@ const ReportsPage = (): JSX.Element => {
               <strong>{reports.profitAnalysis.costIQD.toLocaleString('en-IQ')}</strong>
             </div>
             <div>
-              <span>Expenses</span>
+              <span>{t('expenses')}</span>
               <strong>{reports.profitAnalysis.expensesIQD.toLocaleString('en-IQ')}</strong>
             </div>
-            <div>
+            <div className={reports.profitAnalysis.netProfitIQD >= 0 ? 'Reports-stat--positive' : 'Reports-stat--negative'}>
               <span>{t('netProfit')}</span>
               <strong>{reports.profitAnalysis.netProfitIQD.toLocaleString('en-IQ')}</strong>
+              <small className="Reports-margin">({reports.profitAnalysis.profitMarginPercent}%)</small>
             </div>
             <div>
               <span>{t('inventoryValue')}</span>
               <strong>{reports.inventoryValue.toLocaleString('en-IQ')}</strong>
+            </div>
+            <div>
+              <span>{t('returns')}</span>
+              <strong>{reports.returnsSummary.totalIQD.toLocaleString('en-IQ')}</strong>
+              <small>({reports.returnsSummary.count} {t('items')})</small>
             </div>
           </section>
 
@@ -644,6 +685,34 @@ const ReportsPage = (): JSX.Element => {
                   ))}
                 </tbody>
               </table>
+            </article>
+
+            <article>
+              <header>
+                <h3>{t('inventoryBySupplier')}</h3>
+              </header>
+              {reports.inventoryBySupplier && reports.inventoryBySupplier.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t('supplier')}</th>
+                      <th>{t('quantity')}</th>
+                      <th>{t('valueUSD')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.inventoryBySupplier.map((item) => (
+                      <tr key={item.supplierName}>
+                        <td>{item.supplierName === 'No Supplier' ? t('noSupplierAssigned') : item.supplierName}</td>
+                        <td>{item.totalQuantity.toLocaleString('en-IQ')}</td>
+                        <td>${item.totalValueUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="Reports-empty">{t('noData')}</div>
+              )}
             </article>
           </section>
         </>
