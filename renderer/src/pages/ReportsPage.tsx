@@ -472,6 +472,10 @@ const ReportsPage = (): JSX.Element => {
               <strong>{reports.inventoryValue.toLocaleString('en-IQ')}</strong>
             </div>
             <div>
+              <span>{t('totalValueInclSold') || 'Total Value (Incl. Sold)'}</span>
+              <strong>{(reports.totalInventoryValueIncludingSoldIQD || 0).toLocaleString('en-IQ')}</strong>
+            </div>
+            <div>
               <span>{t('returns')}</span>
               <strong>{reports.returnsSummary.totalIQD.toLocaleString('en-IQ')}</strong>
               <small>({reports.returnsSummary.count} {t('items')})</small>
@@ -698,6 +702,9 @@ const ReportsPage = (): JSX.Element => {
                       <th>{t('supplier')}</th>
                       <th>{t('quantity')}</th>
                       <th>{t('valueUSD')}</th>
+                      <th>{t('soldQuantity') || 'Sold Qty'}</th>
+                      <th>{t('soldValueUSD') || 'Sold Value (USD)'}</th>
+                      <th>{t('totalValueAllTime') || 'Total Value (All Time)'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -706,6 +713,9 @@ const ReportsPage = (): JSX.Element => {
                         <td>{item.supplierName === 'No Supplier' ? t('noSupplierAssigned') : item.supplierName}</td>
                         <td>{item.totalQuantity.toLocaleString('en-IQ')}</td>
                         <td>${item.totalValueUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>{(item.soldQuantity || 0).toLocaleString('en-IQ')}</td>
+                        <td>${(item.totalSoldValueUSD || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td><strong>${((item.totalValueUSD || 0) + (item.totalSoldValueUSD || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                       </tr>
                     ))}
                   </tbody>

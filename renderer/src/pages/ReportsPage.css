@@ -103,16 +103,28 @@
   gap: 0.75rem;
 }
 
+/* Table specific improvements */
+.Reports-grid article {
+  overflow-x: auto;
+  /* Allow horizontal scroll for the card if content is too wide */
+}
+
 .Reports-grid table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
+  /* Force minimum width to prevent squashing */
 }
 
 .Reports-grid th,
 .Reports-grid td {
-  padding: 0.65rem 0.75rem;
+  padding: 0.5rem 0.6rem;
+  /* Reduced padding */
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  /* Slightly smaller font */
+  white-space: nowrap;
+  /* Prevent wrapping inside cells */
 }
 
 .Reports-table {
@@ -151,6 +163,7 @@
   border: 1px solid rgba(248, 113, 113, 0.6);
   color: #fecaca;
 }
+
 .Reports-quickFilters {
   display: flex;
   flex-wrap: wrap;

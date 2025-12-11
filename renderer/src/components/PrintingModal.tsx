@@ -146,7 +146,8 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       }
       .footer { 
         margin-top: 20px; 
-        padding-top: 10px; 
+        padding-top: 10px;
+        padding-bottom: 150px; /* Increased to ensure clearance */ 
         border-top: 2px solid #000; 
         text-align: center; 
         width: 100%;
@@ -213,6 +214,11 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       </tbody>
     </table>
     <div class="footer">${payload.footer}</div>
+    <br />
+    <br />
+    <br />
+    <br />
+    <div style="text-align: center; font-size: 10px;">.</div>
   </body>
 </html>
 `;

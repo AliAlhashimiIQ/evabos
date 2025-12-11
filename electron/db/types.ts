@@ -283,6 +283,8 @@ export interface SupplierInventory {
   supplierName: string;
   totalQuantity: number;
   totalValueUSD: number;
+  soldQuantity: number;
+  totalSoldValueUSD: number;
 }
 
 export interface AdvancedReports {
@@ -307,6 +309,7 @@ export interface AdvancedReports {
     count: number;
     totalIQD: number;
   };
+  totalInventoryValueIncludingSoldIQD?: number;
 }
 
 export interface ActivityLog {

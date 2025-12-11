@@ -1108,6 +1108,17 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
   `,
   );
 
+  // Calculate total cost of all items ever sold
+  const totalSoldCostRow = await get<{ totalCost: number }>(
+    `
+    SELECT IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as totalCost
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    `
+  );
+
+  const totalInventoryValueIncludingSoldIQD = (inventoryValueRow?.value || 0) + (totalSoldCostRow?.totalCost || 0);
+
   const lowStock = await all<{ sku: string; productName: string; color?: string; size?: string; quantity: number }>(
     `
     SELECT
@@ -1165,12 +1176,26 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
   `,
   );
 
-  const inventoryBySupplier = await all<{ supplierName: string; totalQuantity: number; totalValueUSD: number }>(
+  const inventoryBySupplier = await all<{ supplierName: string; totalQuantity: number; totalValueUSD: number; soldQuantity: number; totalSoldValueUSD: number }>(
     `
     SELECT
       COALESCE(s.name, 'No Supplier') as supplierName,
       IFNULL(SUM(vs.quantity), 0) as totalQuantity,
-      IFNULL(SUM(vs.quantity * pv.avgCostUSD), 0) as totalValueUSD
+      IFNULL(SUM(vs.quantity * pv.avgCostUSD), 0) as totalValueUSD,
+      (
+        SELECT IFNULL(SUM(si.quantity), 0)
+        FROM sale_items si
+        JOIN product_variants pv2 ON pv2.id = si.variantId
+        JOIN products p2 ON p2.id = pv2.productId
+        WHERE p2.defaultSupplierId = p.defaultSupplierId
+      ) as soldQuantity,
+      (
+        SELECT IFNULL(SUM(si.quantity * pv2.avgCostUSD), 0)
+        FROM sale_items si
+        JOIN product_variants pv2 ON pv2.id = si.variantId
+        JOIN products p2 ON p2.id = pv2.productId
+        WHERE p2.defaultSupplierId = p.defaultSupplierId
+      ) as totalSoldValueUSD
     FROM variant_stock vs
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
@@ -1222,6 +1247,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       count: returnsSummaryRow?.count ?? 0,
       totalIQD: returnsSummaryRow?.totalIQD ?? 0,
     },
+    totalInventoryValueIncludingSoldIQD,
   };
 }
 
