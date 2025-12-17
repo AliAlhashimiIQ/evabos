@@ -199,7 +199,7 @@ const BranchesPage = (): JSX.Element => {
                 <label>Address</label>
                 <input
                   type="text"
-                  value={formData.address}
+                  value={formData.address ?? ''}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
@@ -208,7 +208,7 @@ const BranchesPage = (): JSX.Element => {
                 <label>Phone</label>
                 <input
                   type="text"
-                  value={formData.phone}
+                  value={formData.phone ?? ''}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>

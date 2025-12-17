@@ -95,6 +95,11 @@ contextBridge.exposeInMainWorld('evaApi', {
   },
   reports: {
     advanced: (token: string, range: DateRange) => ipcRenderer.invoke('reports:advanced', token, range),
+    peakHours: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => ipcRenderer.invoke('reports:peakHours', token, params),
+    peakDays: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => ipcRenderer.invoke('reports:peakDays', token, params),
+    leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number }) => ipcRenderer.invoke('reports:leastProfitableItems', token, params),
+    leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number }) => ipcRenderer.invoke('reports:leastProfitableSuppliers', token, params),
+    inventoryAging: (token: string, params: { limit?: number }) => ipcRenderer.invoke('reports:inventoryAging', token, params),
   },
   email: {
     getSettings: (token: string) => ipcRenderer.invoke('email:getSettings', token),

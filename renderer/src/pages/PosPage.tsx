@@ -8,6 +8,7 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useShortcutKeys } from '../hooks/useShortcutKeys';
 import PrintingModal from '../components/PrintingModal';
 import NumberInput from '../components/NumberInput';
+import { confirmDialog } from '../utils/confirmDialog';
 
 type Product = import('../types/electron').Product;
 type Customer = import('../types/electron').Customer;
@@ -101,6 +102,8 @@ const PosPage = (): JSX.Element => {
     }
   }, [activeProfileIndex]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [printSale, setPrintSale] = useState<Sale | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
   const [, setLoading] = useState(false);
@@ -130,7 +133,7 @@ const PosPage = (): JSX.Element => {
     selectedCustomerId,
     discountMode,
     discountValue,
-    isManualDiscount,
+    isManualDiscount: _isManualDiscount,
     paymentMethod,
     success: profileSuccess,
     error: profileError,
@@ -514,12 +517,10 @@ const PosPage = (): JSX.Element => {
 
   const handleScan = useCallback(
     (value: string) => {
-      // ALWAYS clear search term and refocus immediately, even if we debounce the action.
-      // This ensures that "ghost" scans (double scans) don't leave text in the input.
+      // Clear search term in case anything got typed
       setSearchTerm('');
       if (searchInputRef.current) {
         searchInputRef.current.value = '';
-        searchInputRef.current.focus();
       }
 
       // Prevent double scanning (debounce)
@@ -561,11 +562,9 @@ const PosPage = (): JSX.Element => {
       // Keep the timeout as a backup for React render cycles
       setTimeout(() => {
         setScannerMessage(null);
-        // Clear AGAIN just to be sure
         setSearchTerm('');
         if (searchInputRef.current) {
           searchInputRef.current.value = '';
-          searchInputRef.current.focus();
         }
         // Release lock after 500ms (ignoring any secondary Enters)
         isScanningRef.current = false;
@@ -630,9 +629,9 @@ const PosPage = (): JSX.Element => {
                 }
               }
             }}
-            autoFocus
             ref={searchInputRef}
             autoComplete="off"
+            data-barcode-input="true"
           />
           <button
             className="Pos-searchButton"
@@ -688,7 +687,7 @@ const PosPage = (): JSX.Element => {
               <button
                 className="Pos-clearButton"
                 onClick={() => {
-                  if (window.confirm(t('clearAllItems'))) {
+                  if (confirmDialog(t('clearAllItems'))) {
                     updateCurrentProfile((profile) => ({
                       ...profile,
                       cart: [],
@@ -796,22 +795,78 @@ const PosPage = (): JSX.Element => {
           <div className="Pos-controls">
             <label>
               {t('customer')}
-              <select
-                value={selectedCustomerId}
-                onChange={(event) =>
-                  updateCurrentProfile((profile) => ({
-                    ...profile,
-                    selectedCustomerId: event.target.value ? Number(event.target.value) : '',
-                  }))
-                }
-              >
-                <option value="">{t('walkIn')}</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
+              <div className="Pos-customerSearch">
+                <input
+                  type="text"
+                  placeholder={t('searchCustomer') || 'Search by name or phone...'}
+                  value={customerSearchTerm}
+                  onChange={(e) => {
+                    setCustomerSearchTerm(e.target.value);
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                />
+                {selectedCustomerId && (
+                  <button
+                    type="button"
+                    className="Pos-clearCustomer"
+                    onClick={() => {
+                      updateCurrentProfile((profile) => ({
+                        ...profile,
+                        selectedCustomerId: '',
+                      }));
+                      setCustomerSearchTerm('');
+                    }}
+                    title={t('clear')}
+                  >
+                    ✕
+                  </button>
+                )}
+                {showCustomerDropdown && (
+                  <div className="Pos-customerDropdown">
+                    <div
+                      className={`Pos-customerOption ${selectedCustomerId === '' ? 'selected' : ''}`}
+                      onMouseDown={() => {
+                        updateCurrentProfile((profile) => ({
+                          ...profile,
+                          selectedCustomerId: '',
+                        }));
+                        setCustomerSearchTerm('');
+                        setShowCustomerDropdown(false);
+                      }}
+                    >
+                      {t('walkIn')}
+                    </div>
+                    {customers
+                      .filter((c) => {
+                        const search = customerSearchTerm.toLowerCase();
+                        return (
+                          c.name.toLowerCase().includes(search) ||
+                          (c.phone && c.phone.includes(search))
+                        );
+                      })
+                      .slice(0, 10)
+                      .map((customer) => (
+                        <div
+                          key={customer.id}
+                          className={`Pos-customerOption ${selectedCustomerId === customer.id ? 'selected' : ''}`}
+                          onMouseDown={() => {
+                            updateCurrentProfile((profile) => ({
+                              ...profile,
+                              selectedCustomerId: customer.id,
+                            }));
+                            setCustomerSearchTerm(customer.name);
+                            setShowCustomerDropdown(false);
+                          }}
+                        >
+                          <span className="Pos-customerName">{customer.name}</span>
+                          {customer.phone && <span className="Pos-customerPhone">{customer.phone}</span>}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </label>
             <label>
               {t('discount')}

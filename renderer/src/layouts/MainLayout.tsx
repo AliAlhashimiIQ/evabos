@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -51,12 +50,6 @@ const MainLayout = (): JSX.Element => {
     navigate('/login');
   };
 
-  const handleResetFocus = async () => {
-    if (window.electronAPI) {
-      await window.electronAPI.resetFocus();
-    }
-  };
-
   return (
     <div className="Layout">
       <aside className="Layout-sidebar">
@@ -88,14 +81,6 @@ const MainLayout = (): JSX.Element => {
             <div className="Layout-status">
               EVA Main • {user?.username ?? 'Unknown'} ({user?.role ?? '—'})
             </div>
-            <button
-              onClick={handleResetFocus}
-              className="Layout-fixButton"
-              title="Click if inputs are frozen (resets keyboard focus)"
-              style={{ marginRight: '8px', padding: '4px 8px', cursor: 'pointer' }}
-            >
-              ⌨️ Fix Inputs
-            </button>
             {hasRole(['admin', 'manager']) && (
               <button
                 onClick={handleLockToggle}

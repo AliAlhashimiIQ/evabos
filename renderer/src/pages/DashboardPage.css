@@ -503,4 +503,116 @@
   .Dashboard-actionButtons {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .Dashboard-chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Peak Hours & Peak Days Charts */
+.Dashboard-chartsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.Dashboard-chartCard {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.Dashboard-chartTitle {
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.Dashboard-barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.Dashboard-barChart--days {
+  gap: 8px;
+}
+
+.Dashboard-barItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  cursor: pointer;
+}
+
+.Dashboard-barItem--day {
+  min-width: 40px;
+}
+
+.Dashboard-bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  transition: all 0.3s ease;
+}
+
+.Dashboard-barItem:hover .Dashboard-bar {
+  opacity: 0.8;
+  transform: scaleY(1.05);
+}
+
+.Dashboard-barLabel {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.Dashboard-barItem--day .Dashboard-barLabel {
+  font-size: 0.7rem;
+}
+
+.Dashboard-chartLegend {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.Dashboard-barValue {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.Dashboard-chartSummary {
+  margin-bottom: 1rem;
+}
+
+.Dashboard-chartStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.Dashboard-chartStats strong {
+  color: var(--text-primary);
 }

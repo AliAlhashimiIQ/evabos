@@ -12,19 +12,25 @@ export function useBarcodeScanner({ onScan, threshold = 150, minLength = 3 }: Op
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
+      // Ignore modifier keys
       if (event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt') {
         return;
       }
 
-      // REMOVED: Ignore if user is typing in an input
-      // We now allow scanning even if an input is focused, to support "Global Scanning"
-      // as requested by the user. The scanner's speed (threshold) distinguishes it from manual typing.
-      /*
-      const target = event.target as HTMLElement;
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+      // Ignore navigation/editing keys that are not part of barcodes
+      if (['Backspace', 'Delete', 'Tab', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
         return;
       }
-      */
+
+      // Ignore if user is typing in an input field (except the barcode search input)
+      // This prevents interference with other inputs like customer search, discount, etc.
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+        // Only allow if it's specifically the barcode input (marked with data-barcode-input)
+        if (!target.hasAttribute('data-barcode-input')) {
+          return;
+        }
+      }
 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);

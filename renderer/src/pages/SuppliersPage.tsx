@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './SuppliersPage.css';
+import { confirmDialog } from '../utils/confirmDialog';
 
 type Supplier = import('../types/electron').Supplier;
 type SupplierInput = import('../types/electron').SupplierInput;
@@ -159,7 +160,7 @@ const SuppliersPage = (): JSX.Element => {
                       className="icon-button delete-icon"
                       onClick={async (e) => {
                         e.stopPropagation();
-                        if (window.confirm(t('confirmDeleteSupplier'))) {
+                        if (confirmDialog(t('confirmDeleteSupplier'))) {
                           try {
                             await window.evaApi.suppliers.delete(token!, supplier.id);
                             loadSuppliers();

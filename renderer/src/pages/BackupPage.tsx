@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './BackupPage.css';
+import { confirmDialog } from '../utils/confirmDialog';
 
 type BackupInfo = import('../types/electron').BackupInfo;
 
@@ -77,7 +78,7 @@ const BackupPage = (): JSX.Element => {
       }
 
       const filename = selectedPath.split(/[/\\]/).pop() || 'selected file';
-      const confirmed = window.confirm(
+      const confirmed = confirmDialog(
         t('confirmRestore', { filename })
       );
 
@@ -100,7 +101,7 @@ const BackupPage = (): JSX.Element => {
   const handleRestore = async (backupPath: string, filename: string) => {
     if (!token || !window.evaApi) return;
 
-    const confirmed = window.confirm(
+    const confirmed = confirmDialog(
       t('confirmRestore', { filename })
     );
 
@@ -124,7 +125,7 @@ const BackupPage = (): JSX.Element => {
   const handleDelete = async (backupPath: string, filename: string) => {
     if (!token || !window.evaApi) return;
 
-    const confirmed = window.confirm(t('confirmDeleteBackup', { filename }));
+    const confirmed = confirmDialog(t('confirmDeleteBackup', { filename }));
 
     if (!confirmed) return;
 

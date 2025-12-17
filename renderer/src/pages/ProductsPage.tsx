@@ -10,6 +10,7 @@ import BarcodeLabelModal from '../components/BarcodeLabelModal';
 import './Pages.css';
 import './ProductsPage.css';
 import NumberInput from '../components/NumberInput';
+import { confirmDialog } from '../utils/confirmDialog';
 
 type Product = import('../types/electron').Product;
 type ProductInput = import('../types/electron').ProductInput;
@@ -130,7 +131,7 @@ const ProductsPage = (): JSX.Element => {
 
   const handleDeleteVariant = async (variant: Product) => {
     if (!window.evaApi || !token) return;
-    if (!window.confirm(t('areYouSureDelete', { name: variant.productName, sku: variant.sku }))) {
+    if (!confirmDialog(t('areYouSureDelete', { name: variant.productName, sku: variant.sku }))) {
       return;
     }
     try {
@@ -140,7 +141,7 @@ const ProductsPage = (): JSX.Element => {
       const errorMessage = err instanceof Error ? err.message : String(err);
       // Check for constraint violation or generic error
       if (errorMessage.includes('constraint') || errorMessage.includes('foreign key') || errorMessage.includes('Cannot delete variant')) {
-        if (window.confirm(t('deleteConstraintDeactivate', { name: variant.productName }) ||
+        if (confirmDialog(t('deleteConstraintDeactivate', { name: variant.productName }) ||
           `Cannot delete "${variant.productName}" because it has sales history.\n\nWould you like to deactivate (archive) it instead?`)) {
           try {
             await window.evaApi.products.updateVariant(token, {

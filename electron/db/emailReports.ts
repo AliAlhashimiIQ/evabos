@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import log from 'electron-log';
 import { getSetting, getAdvancedReports, listSaleItems } from './database';
 import type { DateRange } from './types';
 
@@ -84,11 +85,11 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
       html,
     });
 
-    console.log('[email] Daily report sent successfully');
+    log.info('[email] Daily report sent successfully');
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[email] Failed to send daily report:', errorMessage);
+    log.error('[email] Failed to send daily report:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }

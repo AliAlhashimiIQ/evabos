@@ -1,4 +1,4 @@
-import React from 'react';
+
 import './BrowserWarning.css';
 
 export function BrowserWarning(): JSX.Element | null {

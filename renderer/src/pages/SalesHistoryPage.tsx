@@ -24,6 +24,8 @@ const SalesHistoryPage = (): JSX.Element => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [printSale, setPrintSale] = useState<SaleDetail | null>(null);
   const [printSummary, setPrintSummary] = useState<import('../components/PrintingModal').SalesSummaryData | null>(null);
+  // Map of saleId -> Map of variantId -> quantity returned
+  const [returnedItems, setReturnedItems] = useState<Map<number, Map<number, number>>>(new Map());
 
   useEffect(() => {
     if (saleId) {
@@ -45,8 +47,27 @@ const SalesHistoryPage = (): JSX.Element => {
         startDate,
         endDate,
       };
-      const response = await window.evaApi.sales.listByDateRange(token, range);
-      setSales(response.sales);
+      const [salesResponse, returnsResponse] = await Promise.all([
+        window.evaApi.sales.listByDateRange(token, range),
+        window.evaApi.returns.list(token)
+      ]);
+      setSales(salesResponse.sales);
+
+      // Build map of returned items: saleId -> Map of variantId -> quantity returned
+      const returnedMap = new Map<number, Map<number, number>>();
+      for (const ret of returnsResponse || []) {
+        if (ret.saleId && ret.items) {
+          if (!returnedMap.has(ret.saleId)) {
+            returnedMap.set(ret.saleId, new Map());
+          }
+          const saleReturns = returnedMap.get(ret.saleId)!;
+          for (const item of ret.items) {
+            const current = saleReturns.get(item.variantId) || 0;
+            saleReturns.set(item.variantId, current + item.quantity);
+          }
+        }
+      }
+      setReturnedItems(returnedMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadData'));
     } finally {
@@ -76,22 +97,53 @@ const SalesHistoryPage = (): JSX.Element => {
     setPrintSale(sale);
   };
 
-  const handlePrintSummary = () => {
-    if (sales.length === 0) return;
+  const handlePrintSummary = async () => {
+    if (sales.length === 0 || !window.evaApi || !token) return;
 
-    const totalAmount = sales.reduce((sum, sale) => sum + sale.totalIQD, 0);
-    const summaryData: import('../components/PrintingModal').SalesSummaryData = {
-      startDate,
-      endDate,
-      totalCount: sales.length,
-      totalAmount,
-      sales: sales.map(sale => ({
-        id: sale.id,
-        date: sale.saleDate,
-        total: sale.totalIQD
-      }))
-    };
-    setPrintSummary(summaryData);
+    try {
+      // Fetch returns to get refund amounts per sale
+      const returnsResponse = await window.evaApi.returns.list(token);
+      const returns = returnsResponse || [];
+
+      // Build a map of saleId -> total refunded amount
+      const refundsBySaleId = new Map<number, number>();
+      for (const ret of returns) {
+        if (ret.saleId) {
+          const current = refundsBySaleId.get(ret.saleId) || 0;
+          refundsBySaleId.set(ret.saleId, current + (ret.refundAmountIQD || 0));
+        }
+      }
+
+      // Calculate net amounts for each sale (original total minus refunds)
+      const salesWithNetAmounts = sales.map(sale => {
+        const refundedAmount = refundsBySaleId.get(sale.id) || 0;
+        const netTotal = sale.totalIQD - refundedAmount;
+        return {
+          ...sale,
+          netTotal,
+          refundedAmount
+        };
+      });
+
+      // Only include sales that have a positive net amount
+      const activeSales = salesWithNetAmounts.filter(sale => sale.netTotal > 0);
+      const totalAmount = activeSales.reduce((sum, sale) => sum + sale.netTotal, 0);
+
+      const summaryData: import('../components/PrintingModal').SalesSummaryData = {
+        startDate,
+        endDate,
+        totalCount: activeSales.length,
+        totalAmount,
+        sales: activeSales.map(sale => ({
+          id: sale.id,
+          date: sale.saleDate,
+          total: sale.netTotal
+        }))
+      };
+      setPrintSummary(summaryData);
+    } catch (err) {
+      console.error('Error calculating print summary:', err);
+    }
   };
 
   const handleQuickFilter = (range: 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth') => {
@@ -335,13 +387,22 @@ const SalesHistoryPage = (): JSX.Element => {
                         )}
                       </td>
                       <td className="SalesHistory-items-summary">
-                        {sale.items.map((item, idx) => (
-                          <div key={idx} className="SalesHistory-item-row">
-                            {item.productName}
-                            {item.size || item.color ? ` (${[item.size, item.color].filter(Boolean).join('/')})` : ''}
-                            {' '}x{item.quantity}
-                          </div>
-                        ))}
+                        {sale.items.map((item, idx) => {
+                          const saleReturns = returnedItems.get(sale.id);
+                          const returnedQty = saleReturns?.get(item.variantId) || 0;
+                          return (
+                            <div key={idx} className={`SalesHistory-item-row ${returnedQty > 0 ? 'SalesHistory-item--returned' : ''}`}>
+                              {item.productName}
+                              {item.size || item.color ? ` (${[item.size, item.color].filter(Boolean).join('/')})` : ''}
+                              {' '}x{item.quantity}
+                              {returnedQty > 0 && (
+                                <span className="SalesHistory-returned-badge">
+                                  ↩ {returnedQty} {t('returned')}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </td>
                       <td>{new Date(sale.saleDate).toLocaleString()}</td>
                       <td>{sale.totalIQD.toLocaleString('en-IQ')} IQD</td>

@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import LabelSettingsSection from '../components/LabelSettingsSection';
 import NumberInput from '../components/NumberInput';
+import { confirmDialog } from '../utils/confirmDialog';
 import './Pages.css';
 import './SettingsPage.css';
 
@@ -443,8 +444,8 @@ const SettingsPage = (): JSX.Element => {
               <button
                 className="SettingsPage-resetButton"
                 onClick={async () => {
-                  if (window.confirm('WARNING: This will delete ALL sales, products, customers, and expenses. This action CANNOT be undone.\n\nAre you sure you want to proceed?')) {
-                    if (window.confirm('Double Check: Are you absolutely sure? All data will be lost forever.')) {
+                  if (confirmDialog('WARNING: This will delete ALL sales, products, customers, and expenses. This action CANNOT be undone.\n\nAre you sure you want to proceed?')) {
+                    if (confirmDialog('Double Check: Are you absolutely sure? All data will be lost forever.')) {
                       if (!window.evaApi || !token) return;
                       try {
                         await window.evaApi.settings.reset(token);

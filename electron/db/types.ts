@@ -208,6 +208,7 @@ export interface Customer {
   totalSpentIQD: number;
   lastVisitAt?: string | null;
   loyaltyPoints: number;
+  discountPercent?: number | null;
 }
 
 export interface CustomerInput extends Omit<
@@ -310,6 +311,53 @@ export interface AdvancedReports {
     totalIQD: number;
   };
   totalInventoryValueIncludingSoldIQD?: number;
+  totalItemsInStock?: number;
+}
+
+export interface PeakHourData {
+  hour: number;
+  saleCount: number;
+  totalSalesIQD: number;
+}
+
+export interface PeakDayData {
+  dayOfWeek: number;
+  dayName: string;
+  saleCount: number;
+  totalSalesIQD: number;
+}
+
+export interface LeastProfitableItem {
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}
+
+export interface LeastProfitableSupplier {
+  supplierName: string;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}
+
+export interface InventoryAgingItem {
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  currentStock: number;
+  costUSD: number;
+  totalValueUSD: number;
+  daysInStock: number;
+  lastSoldAt: string | null;
 }
 
 export interface ActivityLog {
@@ -449,6 +497,7 @@ export interface SaleDetail extends Sale {
 export interface DashboardKPIs {
   todaySales: {
     count: number;
+    totalItemsSold: number;
     totalIQD: number;
     profitIQD: number;
     avgTicket: number;

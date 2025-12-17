@@ -2,6 +2,7 @@ import { ipcMain, app } from 'electron';
 import * as os from 'os';
 import * as crypto from 'crypto';
 import { execSync } from 'child_process';
+import log from 'electron-log';
 import { getSetting, setSetting } from '../db/database';
 
 let handlersRegistered = false;
@@ -72,7 +73,7 @@ async function validateLicense(): Promise<{ valid: boolean; reason?: string; isU
     // We still detect if it's USB for information purposes, but we don't block.
     return { valid: true, isUsb };
   } catch (err) {
-    console.error('[LICENSE] Validation error:', err);
+    log.error('[LICENSE] Validation error:', err);
     // Even on error, allow access in portable mode
     return { valid: true, reason: 'Portable mode active' };
   }

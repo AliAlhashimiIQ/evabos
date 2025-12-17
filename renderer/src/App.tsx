@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PosLockOverlay } from './components/PosLockOverlay';
 import { BrowserWarning } from './components/BrowserWarning';

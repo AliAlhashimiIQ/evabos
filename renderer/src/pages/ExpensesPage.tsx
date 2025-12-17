@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './ExpensesPage.css';
 import NumberInput from '../components/NumberInput';
+import { confirmDialog } from '../utils/confirmDialog';
 
 type Expense = import('../types/electron').Expense;
 type ExpenseInput = import('../types/electron').ExpenseInput;
@@ -33,6 +34,7 @@ const ExpensesPage = (): JSX.Element => {
   });
   const [summary, setSummary] = useState<ExpenseSummary>({ totalIQD: 0, categories: [] });
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Extract unique categories from expenses and combine with default categories
   const categories = useMemo(() => {
@@ -85,6 +87,7 @@ const ExpensesPage = (): JSX.Element => {
         expenseDate: new Date(form.expenseDate ?? new Date().toISOString()).toISOString(),
       });
       setForm(defaultForm);
+      setShowAddForm(false);
       await loadExpenses();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToSaveExpense'));
@@ -95,6 +98,10 @@ const ExpensesPage = (): JSX.Element => {
 
   const handleDelete = async (expenseId: number) => {
     if (!window.evaApi || !token) return;
+    // Confirmation dialog
+    if (!confirmDialog(t('confirmDeleteExpense') || 'Are you sure you want to delete this expense?')) {
+      return;
+    }
     try {
       await window.evaApi.expenses.delete(token, expenseId);
       await loadExpenses();
@@ -121,122 +128,175 @@ const ExpensesPage = (): JSX.Element => {
     URL.revokeObjectURL(url);
   };
 
+  // Quick date filter handlers
+  const handleQuickFilter = (filterType: 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth') => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (filterType) {
+      case 'today':
+        // start and end are already today
+        break;
+      case 'yesterday':
+        start.setDate(now.getDate() - 1);
+        end.setDate(now.getDate() - 1);
+        break;
+      case 'thisWeek':
+        start.setDate(now.getDate() - 6);
+        break;
+      case 'thisMonth':
+        start.setDate(1);
+        break;
+      case 'lastMonth':
+        start.setMonth(now.getMonth() - 1);
+        start.setDate(1);
+        end.setDate(0); // Last day of previous month
+        break;
+    }
+
+    setRange({
+      startDate: start.toISOString().slice(0, 10),
+      endDate: end.toISOString().slice(0, 10),
+    });
+  };
+
   return (
     <div className="Page Page--transparent ExpensesPage">
+      {/* Header with Title and Actions */}
       <div className="ExpensesPage-header">
         <div>
           <h1>{t('expenses')}</h1>
           <p>{t('trackOperatingCosts')}</p>
         </div>
-        <button onClick={exportToCSV}>{t('exportToCSV')}</button>
+        <div className="ExpensesPage-headerActions">
+          <button className="ExpensesPage-addBtn" onClick={() => setShowAddForm(!showAddForm)}>
+            {showAddForm ? '✕' : '+'} {showAddForm ? t('cancel') : t('addExpense')}
+          </button>
+          <button className="ExpensesPage-exportBtn" onClick={exportToCSV}>
+            📥 {t('exportToCSV')}
+          </button>
+        </div>
       </div>
 
       {error && <div className="ExpensesPage-alert">{error}</div>}
 
+      {/* Collapsible Add Expense Form */}
+      {showAddForm && (
+        <section className="ExpensesPage-formCard">
+          <header>
+            <h3>➕ {t('addExpense')}</h3>
+          </header>
+          <form onSubmit={handleSubmit}>
+            <label>
+              {t('dateExpense')}
+              <input
+                type="date"
+                value={form.expenseDate?.slice(0, 10) ?? ''}
+                onChange={(event) => setForm((prev) => ({ ...prev, expenseDate: event.target.value }))}
+                required
+              />
+            </label>
+            <label>
+              {t('category')}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  list="expense-categories"
+                  value={form.category}
+                  onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+                  placeholder={t('selectOrTypeCategory')}
+                  required
+                  style={{ width: '100%' }}
+                />
+                <datalist id="expense-categories">
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+              </div>
+            </label>
+            <label>
+              {t('amountIQD')}
+              <NumberInput
+                min="0"
+                value={form.amountIQD}
+                onChange={(event) => setForm((prev) => ({ ...prev, amountIQD: Number(event.target.value) || 0 }))}
+                required
+              />
+            </label>
+            <label className="ExpensesPage-span">
+              {t('notes')}
+              <textarea
+                rows={2}
+                value={form.note ?? ''}
+                onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+              />
+            </label>
+            <div className="ExpensesPage-actions">
+              <button type="button" className="ExpensesPage-cancelBtn" onClick={() => setShowAddForm(false)}>
+                {t('cancel')}
+              </button>
+              <button type="submit" disabled={submitting}>
+                {submitting ? t('saving') : t('saveExpense')}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {/* Summary Card - Total Only */}
       <section className="ExpensesPage-summary">
-        <div>
+        <div className="ExpensesPage-summaryMain">
           <span>{t('total')} ({range.startDate} → {range.endDate})</span>
           <strong>{summary.totalIQD.toLocaleString('en-IQ')} IQD</strong>
         </div>
-        {summary.categories.map((category) => (
-          <div key={category.category}>
-            <span>{category.category}</span>
-            <strong>{category.amountIQD.toLocaleString('en-IQ')} IQD</strong>
-          </div>
-        ))}
       </section>
 
-      <section className="ExpensesPage-filters">
-        <label>
-          {t('startDateExpense')}
-          <input
-            type="date"
-            value={range.startDate}
-            onChange={(event) => setRange((prev) => ({ ...prev, startDate: event.target.value }))}
-          />
-        </label>
-        <label>
-          {t('endDate')}
-          <input
-            type="date"
-            value={range.endDate}
-            onChange={(event) => setRange((prev) => ({ ...prev, endDate: event.target.value }))}
-          />
-        </label>
-        <label>
-          {t('category')}
-          <select value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}>
-            <option value="all">{t('all')}</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-
-      <section className="ExpensesPage-formCard">
-        <header>
-          <h3>{t('addExpense')}</h3>
-        </header>
-        <form onSubmit={handleSubmit}>
+      {/* Quick Filters + Date Range */}
+      <section className="ExpensesPage-filtersSection">
+        <div className="ExpensesPage-quickFilters">
+          <button type="button" onClick={() => handleQuickFilter('today')}>{t('today')}</button>
+          <button type="button" onClick={() => handleQuickFilter('yesterday')}>{t('yesterday')}</button>
+          <button type="button" onClick={() => handleQuickFilter('thisWeek')}>{t('last7Days')}</button>
+          <button type="button" onClick={() => handleQuickFilter('thisMonth')}>{t('thisMonth')}</button>
+          <button type="button" onClick={() => handleQuickFilter('lastMonth')}>{t('lastMonth')}</button>
+        </div>
+        <div className="ExpensesPage-filters">
           <label>
-            {t('dateExpense')}
+            {t('startDateExpense')}
             <input
               type="date"
-              value={form.expenseDate?.slice(0, 10) ?? ''}
-              onChange={(event) => setForm((prev) => ({ ...prev, expenseDate: event.target.value }))}
-              required
+              value={range.startDate}
+              onChange={(event) => setRange((prev) => ({ ...prev, startDate: event.target.value }))}
+            />
+          </label>
+          <label>
+            {t('endDate')}
+            <input
+              type="date"
+              value={range.endDate}
+              onChange={(event) => setRange((prev) => ({ ...prev, endDate: event.target.value }))}
             />
           </label>
           <label>
             {t('category')}
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                list="expense-categories"
-                value={form.category}
-                onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-                placeholder={t('selectOrTypeCategory')}
-                required
-                style={{ width: '100%' }}
-              />
-              <datalist id="expense-categories">
-                {categories.map((cat) => (
-                  <option key={cat} value={cat} />
-                ))}
-              </datalist>
-            </div>
+            <select value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}>
+              <option value="all">{t('all')}</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </label>
-          <label>
-            {t('amountIQD')}
-            <NumberInput
-              min="0"
-              value={form.amountIQD}
-              onChange={(event) => setForm((prev) => ({ ...prev, amountIQD: Number(event.target.value) || 0 }))}
-              required
-            />
-          </label>
-          <label className="ExpensesPage-span">
-            {t('notes')}
-            <textarea
-              rows={2}
-              value={form.note ?? ''}
-              onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-            />
-          </label>
-          <div className="ExpensesPage-actions">
-            <button type="submit" disabled={submitting}>
-              {submitting ? t('saving') : t('saveExpense')}
-            </button>
-          </div>
-        </form>
+        </div>
       </section>
 
+      {/* Expenses List */}
       <section className="ExpensesPage-list">
         <header>
-          <h3>{t('expenses')}</h3>
+          <h3>📋 {t('expenses')} ({filteredExpenses.length})</h3>
         </header>
         {loading ? (
           <div className="ExpensesPage-empty">{t('loadingExpenses')}</div>
@@ -257,11 +317,15 @@ const ExpensesPage = (): JSX.Element => {
               {filteredExpenses.map((expense) => (
                 <tr key={expense.id}>
                   <td>{new Date(expense.expenseDate).toLocaleDateString()}</td>
-                  <td>{expense.category}</td>
-                  <td>{expense.amountIQD.toLocaleString('en-IQ')}</td>
-                  <td>{expense.note ?? '—'}</td>
                   <td>
-                    <button onClick={() => handleDelete(expense.id)}>{t('delete')}</button>
+                    <span className="ExpensesPage-categoryBadge">{expense.category}</span>
+                  </td>
+                  <td className="ExpensesPage-amount">{expense.amountIQD.toLocaleString('en-IQ')} IQD</td>
+                  <td className="ExpensesPage-note">{expense.note ?? '—'}</td>
+                  <td>
+                    <button className="ExpensesPage-deleteBtn" onClick={() => handleDelete(expense.id)}>
+                      🗑️ {t('delete')}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -274,4 +338,3 @@ const ExpensesPage = (): JSX.Element => {
 };
 
 export default ExpensesPage;
-

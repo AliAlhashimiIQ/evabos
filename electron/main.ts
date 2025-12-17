@@ -127,6 +127,21 @@ async function createWindow(): Promise<void> {
     mainWindow.webContents.openDevTools();
   }
 
+  // Fix Chromium focus desync bug on Windows
+  // When the window regains focus, ensure webContents also has focus
+  mainWindow.on('focus', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.focus();
+    }
+  });
+
+  // Also fix focus when the app becomes active
+  mainWindow.on('show', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.focus();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -174,14 +189,14 @@ let dailyBackupTimeout: NodeJS.Timeout | null = null;
 let dailyBackupInterval: NodeJS.Timeout | null = null;
 
 const performBackup = async (): Promise<void> => {
-  console.log('[backup] Starting scheduled backup...');
+  log.info('[backup] Starting scheduled backup...');
 
   try {
     const startTime = Date.now();
     await createBackup();
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    console.log(`[backup] ✅ Completed successfully in ${duration}s`);
+    log.info(`[backup] Completed successfully in ${duration}s`);
 
     // Notify renderer (optional - show toast notification)
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -191,7 +206,7 @@ const performBackup = async (): Promise<void> => {
       });
     }
   } catch (err) {
-    console.error('[backup] ❌ Failed:', err);
+    log.error('[backup] Failed:', err);
 
     // Notify renderer of failure
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -208,7 +223,7 @@ const scheduleDailyBackup = (): void => {
   if (dailyBackupTimeout) clearTimeout(dailyBackupTimeout);
   if (dailyBackupInterval) clearInterval(dailyBackupInterval);
 
-  console.log('[backup] Scheduling daily backup (deferred 10s to avoid blocking startup)...');
+  log.info('[backup] Scheduling daily backup (deferred 10s to avoid blocking startup)...');
 
   // Defer first backup by 10 seconds (app fully loaded)
   dailyBackupTimeout = setTimeout(async () => {
@@ -227,7 +242,7 @@ const scheduleDailyEmailReport = async (): Promise<void> => {
   if (dailyEmailTimeout) clearTimeout(dailyEmailTimeout);
   if (dailyEmailInterval) clearInterval(dailyEmailInterval);
 
-  console.log('[email] Scheduling daily email reports...');
+  log.info('[email] Scheduling daily email reports...');
 
   // Get send time from settings (default 20:00)
   let sendTime = '20:00';
@@ -236,7 +251,7 @@ const scheduleDailyEmailReport = async (): Promise<void> => {
     const settings = await getEmailSettings();
     sendTime = settings.sendTime || '20:00';
   } catch (err) {
-    console.log('[email] Could not load settings, using default 20:00');
+    log.warn('[email] Could not load settings, using default 20:00');
   }
 
   // Parse hour and minute from sendTime (format "HH:MM")
@@ -254,15 +269,15 @@ const scheduleDailyEmailReport = async (): Promise<void> => {
   }
 
   const msUntilTarget = target.getTime() - now.getTime();
-  console.log(`[email] Next email report scheduled for ${target.toLocaleString()} (${sendTime})`);
+  log.info(`[email] Next email report scheduled for ${target.toLocaleString()} (${sendTime})`);
 
   dailyEmailTimeout = setTimeout(async () => {
     try {
       const { sendDailyReport } = await import('./db/emailReports');
       const result = await sendDailyReport();
-      console.log('[email] Daily report result:', result);
+      log.info('[email] Daily report result:', result);
     } catch (err) {
-      console.error('[email] Failed to send daily report:', err);
+      log.error('[email] Failed to send daily report:', err);
     }
 
     // Schedule subsequent emails every 24 hours
@@ -270,9 +285,9 @@ const scheduleDailyEmailReport = async (): Promise<void> => {
       try {
         const { sendDailyReport } = await import('./db/emailReports');
         const result = await sendDailyReport();
-        console.log('[email] Daily report result:', result);
+        log.info('[email] Daily report result:', result);
       } catch (err) {
-        console.error('[email] Failed to send daily report:', err);
+        log.error('[email] Failed to send daily report:', err);
       }
     }, 24 * 60 * 60 * 1000);
   }, msUntilTarget);
@@ -316,7 +331,7 @@ app.whenReady().then(async () => {
 
         callback({ mimeType, data });
       } catch (error) {
-        console.error('[protocol] Failed to load:', filePath, error);
+        log.error('[protocol] Failed to load:', filePath, error);
         callback({ error: -6 }); // FILE_NOT_FOUND
       }
     });

@@ -433,6 +433,86 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
+/* Customer Search Dropdown */
+.Pos-customerSearch {
+  position: relative;
+}
+
+.Pos-customerSearch input {
+  width: 100%;
+  padding-right: 2rem;
+}
+
+.Pos-clearCustomer {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.8);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.Pos-clearCustomer:hover {
+  color: #f87171;
+}
+
+.Pos-customerDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-input);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+  margin-top: 0.25rem;
+}
+
+.Pos-customerOption {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.Pos-customerOption:last-child {
+  border-bottom: none;
+}
+
+.Pos-customerOption:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.Pos-customerOption.selected {
+  background: rgba(59, 130, 246, 0.25);
+  font-weight: 600;
+}
+
+.Pos-customerName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.Pos-customerPhone {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
 .Pos-discountModes {
   display: inline-flex;
   gap: 0.5rem;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { utils, writeFile } from 'xlsx';
@@ -11,6 +11,9 @@ defaultStart.setDate(defaultStart.getDate() - 7);
 const formatDateInput = (date: Date): string => date.toISOString().slice(0, 10);
 
 type AdvancedReports = import('../types/electron').AdvancedReports;
+type LeastProfitableItem = import('../types/electron').LeastProfitableItem;
+type LeastProfitableSupplier = import('../types/electron').LeastProfitableSupplier;
+type InventoryAgingItem = import('../types/electron').InventoryAgingItem;
 
 const ReportsPage = (): JSX.Element => {
   const { token } = useAuth();
@@ -22,6 +25,10 @@ const ReportsPage = (): JSX.Element => {
   const [reports, setReports] = useState<AdvancedReports | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [leastProfitableItems, setLeastProfitableItems] = useState<LeastProfitableItem[]>([]);
+  const [leastProfitableSuppliers, setLeastProfitableSuppliers] = useState<LeastProfitableSupplier[]>([]);
+  const [inventoryAging, setInventoryAging] = useState<InventoryAgingItem[]>([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
 
   const loadReports = async () => {
     if (!window.evaApi || !token) {
@@ -32,8 +39,18 @@ const ReportsPage = (): JSX.Element => {
     try {
       setLoading(true);
       setError(null);
-      const response = await window.evaApi.reports.advanced(token, range);
+
+      const [response, leastItems, leastSuppliers, aging] = await Promise.all([
+        window.evaApi.reports.advanced(token, range),
+        window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate }),
+        window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate }),
+        window.evaApi.reports.inventoryAging(token, { limit: 50 }),
+      ]);
+
       setReports(response);
+      setLeastProfitableItems(leastItems);
+      setLeastProfitableSuppliers(leastSuppliers);
+      setInventoryAging(aging);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadReports'));
     } finally {
@@ -476,6 +493,10 @@ const ReportsPage = (): JSX.Element => {
               <strong>{(reports.totalInventoryValueIncludingSoldIQD || 0).toLocaleString('en-IQ')}</strong>
             </div>
             <div>
+              <span>{t('totalStockCount') || 'Total Items in Stock'}</span>
+              <strong>{(reports.totalItemsInStock || 0).toLocaleString('en-IQ')}</strong>
+            </div>
+            <div>
               <span>{t('returns')}</span>
               <strong>{reports.returnsSummary.totalIQD.toLocaleString('en-IQ')}</strong>
               <small>({reports.returnsSummary.count} {t('items')})</small>
@@ -694,11 +715,21 @@ const ReportsPage = (): JSX.Element => {
             <article>
               <header>
                 <h3>{t('inventoryBySupplier')}</h3>
+                {reports.inventoryBySupplier && reports.inventoryBySupplier.length > 0 && selectedSuppliers.size > 0 && (
+                  <button
+                    className="Reports-clearSelection"
+                    onClick={() => setSelectedSuppliers(new Set())}
+                    style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '4px 8px', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: '4px', color: '#f87171', cursor: 'pointer' }}
+                  >
+                    ✕ {t('clearSelection') || 'Clear Selection'} ({selectedSuppliers.size})
+                  </button>
+                )}
               </header>
               {reports.inventoryBySupplier && reports.inventoryBySupplier.length > 0 ? (
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>✓</th>
                       <th>{t('supplier')}</th>
                       <th>{t('quantity')}</th>
                       <th>{t('valueUSD')}</th>
@@ -709,13 +740,201 @@ const ReportsPage = (): JSX.Element => {
                   </thead>
                   <tbody>
                     {reports.inventoryBySupplier.map((item) => (
-                      <tr key={item.supplierName}>
+                      <tr
+                        key={item.supplierName}
+                        onClick={() => {
+                          const newSelected = new Set(selectedSuppliers);
+                          if (newSelected.has(item.supplierName)) {
+                            newSelected.delete(item.supplierName);
+                          } else {
+                            newSelected.add(item.supplierName);
+                          }
+                          setSelectedSuppliers(newSelected);
+                        }}
+                        style={{
+                          cursor: 'pointer',
+                          background: selectedSuppliers.has(item.supplierName) ? 'rgba(59,130,246,0.2)' : undefined,
+                          borderLeft: selectedSuppliers.has(item.supplierName) ? '3px solid #3b82f6' : '3px solid transparent'
+                        }}
+                      >
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedSuppliers.has(item.supplierName)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const newSelected = new Set(selectedSuppliers);
+                              if (e.target.checked) {
+                                newSelected.add(item.supplierName);
+                              } else {
+                                newSelected.delete(item.supplierName);
+                              }
+                              setSelectedSuppliers(newSelected);
+                            }}
+                            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                          />
+                        </td>
                         <td>{item.supplierName === 'No Supplier' ? t('noSupplierAssigned') : item.supplierName}</td>
                         <td>{item.totalQuantity.toLocaleString('en-IQ')}</td>
                         <td>${item.totalValueUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td>{(item.soldQuantity || 0).toLocaleString('en-IQ')}</td>
                         <td>${(item.totalSoldValueUSD || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td><strong>${((item.totalValueUSD || 0) + (item.totalSoldValueUSD || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                      </tr>
+                    ))}
+                    {/* Totals Row for Selected Suppliers */}
+                    {selectedSuppliers.size > 0 && (
+                      <tr style={{
+                        background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(59,130,246,0.15))',
+                        fontWeight: 'bold',
+                        borderTop: '2px solid #22c55e'
+                      }}>
+                        <td>📊</td>
+                        <td style={{ color: '#22c55e' }}>
+                          {t('selectedTotal') || 'Selected Total'} ({selectedSuppliers.size} {selectedSuppliers.size === 1 ? t('supplier') : t('suppliers') || 'suppliers'})
+                        </td>
+                        <td style={{ color: '#22c55e' }}>
+                          {reports.inventoryBySupplier
+                            .filter(item => selectedSuppliers.has(item.supplierName))
+                            .reduce((sum, item) => sum + item.totalQuantity, 0)
+                            .toLocaleString('en-IQ')}
+                        </td>
+                        <td style={{ color: '#22c55e' }}>
+                          ${reports.inventoryBySupplier
+                            .filter(item => selectedSuppliers.has(item.supplierName))
+                            .reduce((sum, item) => sum + item.totalValueUSD, 0)
+                            .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ color: '#22c55e' }}>
+                          {reports.inventoryBySupplier
+                            .filter(item => selectedSuppliers.has(item.supplierName))
+                            .reduce((sum, item) => sum + (item.soldQuantity || 0), 0)
+                            .toLocaleString('en-IQ')}
+                        </td>
+                        <td style={{ color: '#22c55e' }}>
+                          ${reports.inventoryBySupplier
+                            .filter(item => selectedSuppliers.has(item.supplierName))
+                            .reduce((sum, item) => sum + (item.totalSoldValueUSD || 0), 0)
+                            .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ color: '#22c55e', fontSize: '1.1em' }}>
+                          <strong>${reports.inventoryBySupplier
+                            .filter(item => selectedSuppliers.has(item.supplierName))
+                            .reduce((sum, item) => sum + (item.totalValueUSD || 0) + (item.totalSoldValueUSD || 0), 0)
+                            .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="Reports-empty">{t('noData')}</div>
+              )}
+            </article>
+          </section>
+
+          {/* Profit Analysis Section */}
+          <section className="Reports-grid">
+            <article>
+              <header>
+                <h3>📉 {t('leastProfitableItems')}</h3>
+              </header>
+              {leastProfitableItems.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t('product')}</th>
+                      <th>{t('sku')}</th>
+                      <th>{t('sold')}</th>
+                      <th>{t('revenue')}</th>
+                      <th>{t('cost')}</th>
+                      <th>{t('profit')}</th>
+                      <th>{t('marginPercent')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leastProfitableItems.map((item, idx) => (
+                      <tr key={idx} className={item.marginPercent < 0 ? 'Reports-negative' : ''}>
+                        <td>{item.productName}</td>
+                        <td>{item.sku}</td>
+                        <td>{item.totalSold}</td>
+                        <td>{item.revenueIQD.toLocaleString()} IQD</td>
+                        <td>{item.costIQD.toLocaleString()} IQD</td>
+                        <td className={item.profitIQD < 0 ? 'Reports-negativeValue' : ''}>{item.profitIQD.toLocaleString()} IQD</td>
+                        <td className={item.marginPercent < 20 ? 'Reports-lowMargin' : ''}>{item.marginPercent}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="Reports-empty">{t('noData')}</div>
+              )}
+            </article>
+
+            <article>
+              <header>
+                <h3>🏭 {t('leastProfitableSuppliers')}</h3>
+              </header>
+              {leastProfitableSuppliers.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t('supplier')}</th>
+                      <th>{t('sold')}</th>
+                      <th>{t('revenue')}</th>
+                      <th>{t('cost')}</th>
+                      <th>{t('profit')}</th>
+                      <th>{t('marginPercent')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leastProfitableSuppliers.map((sup, idx) => (
+                      <tr key={idx} className={sup.marginPercent < 0 ? 'Reports-negative' : ''}>
+                        <td>{sup.supplierName}</td>
+                        <td>{sup.totalSold}</td>
+                        <td>{sup.revenueIQD.toLocaleString()} IQD</td>
+                        <td>{sup.costIQD.toLocaleString()} IQD</td>
+                        <td className={sup.profitIQD < 0 ? 'Reports-negativeValue' : ''}>{sup.profitIQD.toLocaleString()} IQD</td>
+                        <td className={sup.marginPercent < 20 ? 'Reports-lowMargin' : ''}>{sup.marginPercent}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="Reports-empty">{t('noData')}</div>
+              )}
+            </article>
+          </section>
+
+          {/* Inventory Aging Section */}
+          <section className="Reports-grid">
+            <article style={{ gridColumn: '1 / -1' }}>
+              <header>
+                <h3>📦 {t('inventoryAging')}</h3>
+              </header>
+              {inventoryAging.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t('product')}</th>
+                      <th>{t('sku')}</th>
+                      <th>{t('variant')}</th>
+                      <th>{t('stock')}</th>
+                      <th>{t('valueUSD')}</th>
+                      <th>{t('daysInStock')}</th>
+                      <th>{t('lastSold')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventoryAging.map((item, idx) => (
+                      <tr key={idx} className={item.daysInStock > 90 ? 'Reports-aging-critical' : item.daysInStock > 60 ? 'Reports-aging-warning' : ''}>
+                        <td>{item.productName}</td>
+                        <td>{item.sku}</td>
+                        <td>{[item.color, item.size].filter(Boolean).join(' / ') || '-'}</td>
+                        <td>{item.currentStock}</td>
+                        <td>${item.totalValueUSD.toFixed(2)}</td>
+                        <td className={item.daysInStock > 90 && item.daysInStock < 999 ? 'Reports-daysHigh' : item.daysInStock > 60 && item.daysInStock < 999 ? 'Reports-daysMedium' : ''}>{item.daysInStock >= 999 ? '∞' : item.daysInStock}</td>
+                        <td>{item.lastSoldAt ? new Date(item.lastSoldAt).toLocaleDateString() : t('neverSold')}</td>
                       </tr>
                     ))}
                   </tbody>

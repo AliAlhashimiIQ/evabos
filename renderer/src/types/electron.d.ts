@@ -53,6 +53,52 @@ export interface SaleItem {
 
 export type SaleItemInput = Omit<SaleItem, 'id' | 'saleId'>;
 
+export interface PeakHourData {
+  hour: number;
+  saleCount: number;
+  totalSalesIQD: number;
+}
+
+export interface PeakDayData {
+  dayOfWeek: number;
+  dayName: string;
+  saleCount: number;
+  totalSalesIQD: number;
+}
+
+export interface LeastProfitableItem {
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}
+
+export interface LeastProfitableSupplier {
+  supplierName: string;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}
+
+export interface InventoryAgingItem {
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  currentStock: number;
+  costUSD: number;
+  totalValueUSD: number;
+  daysInStock: number;
+  lastSoldAt: string | null;
+}
+
 export interface Sale {
   id: number;
   branchId: number;
@@ -148,6 +194,7 @@ export interface Customer {
   totalSpentIQD: number;
   lastVisitAt?: string | null;
   loyaltyPoints: number;
+  discountPercent?: number | null;
 }
 
 export type CustomerInput = Omit<Customer, 'id' | 'totalVisits' | 'totalSpentIQD' | 'lastVisitAt' | 'loyaltyPoints'>;
@@ -266,8 +313,22 @@ export interface AdvancedReports {
     costIQD: number;
     expensesIQD: number;
     netProfitIQD: number;
+    profitMarginPercent: number;
   };
   inventoryValue: number;
+  totalInventoryValueIncludingSoldIQD: number;
+  totalItemsInStock: number;
+  returnsSummary: {
+    totalIQD: number;
+    count: number;
+  };
+  inventoryBySupplier: Array<{
+    supplierName: string;
+    totalQuantity: number;
+    totalValueUSD: number;
+    soldQuantity: number;
+    totalSoldValueUSD: number;
+  }>;
   lowStock: Array<{ sku: string; productName: string; color?: string | null; size?: string | null; quantity: number }>;
   expensesVsSales: ExpensesVsSalesEntry[];
   activityLogs: ActivityLogEntry[];
@@ -390,6 +451,11 @@ export interface EvaApi {
   };
   reports: {
     advanced: (token: string, range: DateRange) => Promise<AdvancedReports>;
+    peakHours: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => Promise<PeakHourData[]>;
+    peakDays: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => Promise<PeakDayData[]>;
+    leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number }) => Promise<LeastProfitableItem[]>;
+    leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number }) => Promise<LeastProfitableSupplier[]>;
+    inventoryAging: (token: string, params: { limit?: number }) => Promise<InventoryAgingItem[]>;
   };
   printing: {
     getPrinters: () => Promise<Array<{ name: string; description: string; status: number; isDefault: boolean }>>;
@@ -434,6 +500,28 @@ export interface EvaApi {
     validate: () => Promise<{ valid: boolean; reason?: string; isUsb?: boolean }>;
     getMachineId: () => Promise<string>;
     getUsbInfo: () => Promise<{ isUsb: boolean; serial: string | null }>;
+  };
+  email: {
+    getSettings: (token: string) => Promise<{
+      smtpHost: string;
+      smtpPort: number;
+      smtpUser: string;
+      smtpPassword: string;
+      emailRecipient: string;
+      emailEnabled: boolean;
+      sendTime: string;
+    }>;
+    saveSettings: (token: string, settings: {
+      smtpHost: string;
+      smtpPort: number;
+      smtpSecure: boolean;
+      smtpUser: string;
+      smtpPassword: string;
+      emailRecipient: string;
+      emailEnabled: boolean;
+      sendTime?: string;
+    }) => Promise<boolean>;
+    sendTest: (token: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
@@ -519,6 +607,7 @@ export interface VariantUpdateInput {
 export interface DashboardKPIs {
   todaySales: {
     count: number;
+    totalItemsSold: number;
     totalIQD: number;
     profitIQD: number;
     avgTicket: number;

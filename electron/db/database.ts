@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import sqlite3 from 'sqlite3';
 import { app } from 'electron';
+import log from 'electron-log';
 import {
   DateRange,
   ExchangeRate,
@@ -85,7 +86,7 @@ const connect = (): sqlite3.Database => {
   );
 
   database.on('error', (err) => {
-    console.error('[sqlite] unexpected error', err);
+    log.error('[sqlite] unexpected error', err);
   });
 
   database.exec('PRAGMA foreign_keys = ON;');
@@ -127,8 +128,8 @@ const getDb = (): sqlite3.Database => {
 
         // Copy file (async to not block startup too much, but simple copy is fast)
         fs.copyFile(dbPath, backupPath, (err: any) => {
-          if (err) console.error('[AutoBackup] Failed:', err);
-          else console.log('[AutoBackup] Success:', backupPath);
+          if (err) log.error('[AutoBackup] Failed:', err);
+          else log.info('[AutoBackup] Success:', backupPath);
         });
 
         // Cleanup old backups (keep last 5)
@@ -141,7 +142,7 @@ const getDb = (): sqlite3.Database => {
           }
         });
       } catch (err) {
-        console.error('[AutoBackup] Error:', err);
+        log.error('[AutoBackup] Error:', err);
       }
     }
   }
@@ -217,7 +218,7 @@ const verifyPassword = async (password: string, storedHash: string): Promise<boo
   try {
     return await bcrypt.compare(password, storedHash);
   } catch (err) {
-    console.error('[auth] Password verification error:', err);
+    log.error('[auth] Password verification error:', err);
     return false;
   }
 };
@@ -368,7 +369,8 @@ const createTables = async (): Promise<void> => {
       totalVisits INTEGER NOT NULL DEFAULT 0,
       totalSpentIQD REAL NOT NULL DEFAULT 0,
       lastVisitAt TEXT,
-      loyaltyPoints REAL NOT NULL DEFAULT 0
+      loyaltyPoints REAL NOT NULL DEFAULT 0,
+      discountPercent REAL DEFAULT NULL
     )
   `);
 
@@ -568,10 +570,22 @@ export async function initDatabase(): Promise<void> {
     const hasTotalCost = columns.some((c) => c.name === 'totalCostIQD');
     if (!hasTotalCost) {
       await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0');
-      console.log('[db] Added totalCostIQD column to returns table');
+      log.info('[db] Added totalCostIQD column to returns table');
     }
   } catch (err) {
-    console.error('[db] Migration failed:', err);
+    log.error('[db] Migration failed:', err);
+  }
+
+  // Migration: Add discountPercent to customers if missing
+  try {
+    const customerColumns = await all<{ name: string }>('PRAGMA table_info(customers)');
+    const hasDiscount = customerColumns.some((c) => c.name === 'discountPercent');
+    if (!hasDiscount) {
+      await run('ALTER TABLE customers ADD COLUMN discountPercent REAL DEFAULT NULL');
+      log.info('[db] Added discountPercent column to customers table');
+    }
+  } catch (err) {
+    log.error('[db] Customer migration failed:', err);
   }
 
   await seedInitialData();
@@ -950,10 +964,10 @@ export async function listCustomers(): Promise<Customer[]> {
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
   const result = await runWithResult(
     `
-    INSERT INTO customers (name, phone, notes, totalVisits, totalSpentIQD, loyaltyPoints)
-    VALUES (?, ?, ?, 0, 0, 0)
+    INSERT INTO customers (name, phone, notes, totalVisits, totalSpentIQD, loyaltyPoints, discountPercent)
+    VALUES (?, ?, ?, 0, 0, 0, ?)
   `,
-    [input.name, input.phone ?? null, input.notes ?? null],
+    [input.name, input.phone ?? null, input.notes ?? null, input.discountPercent ?? null],
   );
 
   const created = await fetchCustomerById(result.lastID as number);
@@ -974,10 +988,11 @@ export async function updateCustomer(input: CustomerUpdateInput): Promise<Custom
     UPDATE customers
     SET name = COALESCE(?, name),
         phone = COALESCE(?, phone),
-        notes = COALESCE(?, notes)
+        notes = COALESCE(?, notes),
+        discountPercent = COALESCE(?, discountPercent)
     WHERE id = ?
   `,
-    [input.name ?? null, input.phone ?? null, input.notes ?? null, input.id],
+    [input.name ?? null, input.phone ?? null, input.notes ?? null, input.discountPercent ?? null, input.id],
   );
 
   const updated = await fetchCustomerById(input.id);
@@ -1119,6 +1134,16 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
 
   const totalInventoryValueIncludingSoldIQD = (inventoryValueRow?.value || 0) + (totalSoldCostRow?.totalCost || 0);
 
+  const totalStockCountRow = await get<{ count: number }>(
+    `
+    SELECT IFNULL(SUM(quantity), 0) as count
+    FROM variant_stock vs
+    JOIN product_variants pv ON pv.id = vs.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE p.isActive = 1 AND pv.isActive = 1
+    `
+  );
+
   const lowStock = await all<{ sku: string; productName: string; color?: string; size?: string; quantity: number }>(
     `
     SELECT
@@ -1248,18 +1273,248 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       totalIQD: returnsSummaryRow?.totalIQD ?? 0,
     },
     totalInventoryValueIncludingSoldIQD,
+    totalItemsInStock: totalStockCountRow?.count || 0,
   };
+}
+
+// Peak Hours Analytics - Get sales count and revenue by hour of day
+export async function getPeakHoursData(
+  startDate: string,
+  endDate: string,
+  branchId?: number
+): Promise<Array<{ hour: number; saleCount: number; totalSalesIQD: number }>> {
+  const branchFilter = branchId ? 'AND branchId = ?' : '';
+  const params = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
+
+  const rows = await all<{ hour: string; saleCount: number; totalSalesIQD: number }>(
+    `
+    SELECT 
+      strftime('%H', datetime(saleDate, 'localtime')) as hour,
+      COUNT(*) as saleCount,
+      IFNULL(SUM(totalIQD), 0) as totalSalesIQD
+    FROM sales
+    WHERE date(saleDate) BETWEEN date(?) AND date(?) ${branchFilter}
+    GROUP BY hour
+    ORDER BY hour
+    `,
+    params
+  );
+
+  // Fill in missing hours with zeros (0-23)
+  const hourMap = new Map(rows.map(r => [parseInt(r.hour, 10), r]));
+  const result: Array<{ hour: number; saleCount: number; totalSalesIQD: number }> = [];
+  for (let h = 0; h < 24; h++) {
+    const data = hourMap.get(h);
+    result.push({
+      hour: h,
+      saleCount: data?.saleCount || 0,
+      totalSalesIQD: data?.totalSalesIQD || 0,
+    });
+  }
+  return result;
+}
+
+// Peak Days Analytics - Get sales count and revenue by day of week
+export async function getPeakDaysData(
+  startDate: string,
+  endDate: string,
+  branchId?: number
+): Promise<Array<{ dayOfWeek: number; dayName: string; saleCount: number; totalSalesIQD: number }>> {
+  const branchFilter = branchId ? 'AND branchId = ?' : '';
+  const params = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
+
+  const rows = await all<{ dayOfWeek: string; saleCount: number; totalSalesIQD: number }>(
+    `
+    SELECT 
+      strftime('%w', datetime(saleDate, 'localtime')) as dayOfWeek,
+      COUNT(*) as saleCount,
+      IFNULL(SUM(totalIQD), 0) as totalSalesIQD
+    FROM sales
+    WHERE date(saleDate) BETWEEN date(?) AND date(?) ${branchFilter}
+    GROUP BY dayOfWeek
+    ORDER BY dayOfWeek
+    `,
+    params
+  );
+
+  // Day names (0=Sunday, 1=Monday, ...)
+  const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+  // Fill in missing days with zeros
+  const dayMap = new Map(rows.map(r => [parseInt(r.dayOfWeek, 10), r]));
+  const result: Array<{ dayOfWeek: number; dayName: string; saleCount: number; totalSalesIQD: number }> = [];
+  for (let d = 0; d < 7; d++) {
+    const data = dayMap.get(d);
+    result.push({
+      dayOfWeek: d,
+      dayName: dayNames[d],
+      saleCount: data?.saleCount || 0,
+      totalSalesIQD: data?.totalSalesIQD || 0,
+    });
+  }
+  return result;
+}
+
+// Least Profitable Items - Items with lowest profit margin
+export async function getLeastProfitableItems(
+  startDate: string,
+  endDate: string,
+  exchangeRate: number = 1500,
+  limit: number = 20
+): Promise<Array<{
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}>> {
+  const rows = await all<{
+    productName: string;
+    sku: string;
+    color: string | null;
+    size: string | null;
+    totalSold: number;
+    revenueIQD: number;
+    costIQD: number;
+    profitIQD: number;
+    marginPercent: number;
+  }>(
+    `
+    SELECT 
+      p.name as productName,
+      pv.sku,
+      pv.color,
+      pv.size,
+      SUM(si.quantity) as totalSold,
+      SUM(si.lineTotalIQD) as revenueIQD,
+      SUM(si.quantity * pv.avgCostUSD * ?) as costIQD,
+      SUM(si.lineTotalIQD) - SUM(si.quantity * pv.avgCostUSD * ?) as profitIQD,
+      ROUND((SUM(si.lineTotalIQD) - SUM(si.quantity * pv.avgCostUSD * ?)) * 100.0 / NULLIF(SUM(si.lineTotalIQD), 0), 1) as marginPercent
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    GROUP BY pv.id
+    HAVING totalSold > 0
+    ORDER BY marginPercent ASC
+    LIMIT ?
+    `,
+    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, limit]
+  );
+  return rows;
+}
+
+// Least Profitable Suppliers - Suppliers with lowest profit margin
+export async function getLeastProfitableSuppliers(
+  startDate: string,
+  endDate: string,
+  exchangeRate: number = 1500
+): Promise<Array<{
+  supplierName: string;
+  totalSold: number;
+  revenueIQD: number;
+  costIQD: number;
+  profitIQD: number;
+  marginPercent: number;
+}>> {
+  const rows = await all<{
+    supplierName: string;
+    totalSold: number;
+    revenueIQD: number;
+    costIQD: number;
+    profitIQD: number;
+    marginPercent: number;
+  }>(
+    `
+    SELECT 
+      IFNULL(sup.name, 'No Supplier') as supplierName,
+      SUM(si.quantity) as totalSold,
+      SUM(si.lineTotalIQD) as revenueIQD,
+      SUM(si.quantity * pv.avgCostUSD * ?) as costIQD,
+      SUM(si.lineTotalIQD) - SUM(si.quantity * pv.avgCostUSD * ?) as profitIQD,
+      ROUND((SUM(si.lineTotalIQD) - SUM(si.quantity * pv.avgCostUSD * ?)) * 100.0 / NULLIF(SUM(si.lineTotalIQD), 0), 1) as marginPercent
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    LEFT JOIN suppliers sup ON sup.id = p.defaultSupplierId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    GROUP BY p.defaultSupplierId
+    HAVING totalSold > 0
+    ORDER BY marginPercent ASC
+    `,
+    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate]
+  );
+  return rows;
+}
+
+// Inventory Aging Report - Items that have been in stock longest without selling
+export async function getInventoryAging(
+  limit: number = 50
+): Promise<Array<{
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  currentStock: number;
+  costUSD: number;
+  totalValueUSD: number;
+  daysInStock: number;
+  lastSoldAt: string | null;
+}>> {
+  const rows = await all<{
+    productName: string;
+    sku: string;
+    color: string | null;
+    size: string | null;
+    currentStock: number;
+    costUSD: number;
+    totalValueUSD: number;
+    daysInStock: number;
+    lastSoldAt: string | null;
+  }>(
+    `SELECT 
+      p.name as productName,
+      pv.sku,
+      pv.color,
+      pv.size,
+      SUM(vs.quantity) as currentStock,
+      pv.avgCostUSD as costUSD,
+      SUM(vs.quantity) * pv.avgCostUSD as totalValueUSD,
+      COALESCE(CAST(JULIANDAY('now') - JULIANDAY(
+        (SELECT MAX(s.saleDate) FROM sales s 
+         JOIN sale_items si ON si.saleId = s.id 
+         WHERE si.variantId = pv.id)
+      ) AS INTEGER), 999) as daysInStock,
+      (SELECT MAX(s.saleDate) FROM sales s 
+       JOIN sale_items si ON si.saleId = s.id 
+       WHERE si.variantId = pv.id) as lastSoldAt
+    FROM variant_stock vs
+    JOIN product_variants pv ON pv.id = vs.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE vs.quantity > 0 AND p.isActive = 1 AND pv.isActive = 1
+    GROUP BY pv.id
+    ORDER BY daysInStock DESC
+    LIMIT ?`,
+    [limit]
+  );
+  return rows;
 }
 
 // List all items sold on a specific date (for email reports)
 export async function listSaleItems(dateStr: string): Promise<Array<{ name: string; size?: string; color?: string; quantity: number }>> {
   const items = await all<{ name: string; size: string | null; color: string | null; quantity: number }>(
     `
-    SELECT 
-      p.name,
-      pv.size,
-      pv.color,
-      SUM(si.quantity) as quantity
+    SELECT
+  p.name,
+    pv.size,
+    pv.color,
+    SUM(si.quantity) as quantity
     FROM sale_items si
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId
@@ -1267,7 +1522,7 @@ export async function listSaleItems(dateStr: string): Promise<Array<{ name: stri
     WHERE date(s.saleDate) = date(?)
     GROUP BY pv.id
     ORDER BY quantity DESC
-  `,
+    `,
     [dateStr],
   );
 
@@ -1284,11 +1539,11 @@ const recordCustomerPurchase = async (customerId: number, amountIQD: number): Pr
     `
     UPDATE customers
     SET totalVisits = totalVisits + 1,
-        totalSpentIQD = totalSpentIQD + ?,
-        loyaltyPoints = loyaltyPoints + (? / 1000.0),
-        lastVisitAt = ?
-    WHERE id = ?
-  `,
+    totalSpentIQD = totalSpentIQD + ?,
+    loyaltyPoints = loyaltyPoints + (? / 1000.0),
+    lastVisitAt = ?
+      WHERE id = ?
+        `,
     [amountIQD, amountIQD, new Date().toISOString(), customerId],
   );
 };
@@ -1299,7 +1554,7 @@ export async function attachSaleToCustomer(args: { saleId: number; customerId: n
     UPDATE sales
     SET customerId = ?
     WHERE id = ?
-  `,
+      `,
     [args.customerId, args.saleId],
   );
 
@@ -1331,7 +1586,7 @@ export async function deleteCustomer(customerId: number): Promise<boolean> {
     await run('DELETE FROM customers WHERE id = ?', [customerId]);
     return true;
   } catch (err) {
-    console.error('Failed to delete customer:', err);
+    log.error('Failed to delete customer:', err);
     throw err;
   }
 }
@@ -1355,7 +1610,7 @@ export async function deleteSupplier(supplierId: number): Promise<boolean> {
     return true;
   } catch (err) {
     await run('ROLLBACK');
-    console.error('Failed to delete supplier:', err);
+    log.error('Failed to delete supplier:', err);
     throw err;
   }
 }
@@ -1366,7 +1621,7 @@ export async function updateSupplier(id: number, data: SupplierInput): Promise<S
     await run(
       `UPDATE suppliers 
        SET name = ?, contactName = ?, phone = ?, email = ?, address = ?, notes = ?, isActive = ?
-       WHERE id = ?`,
+    WHERE id = ? `,
       [
         name,
         contactName ?? null,
@@ -1389,7 +1644,7 @@ export async function updateSupplier(id: number, data: SupplierInput): Promise<S
       isActive: isActive ?? true,
     };
   } catch (err) {
-    console.error('Failed to update supplier:', err);
+    log.error('Failed to update supplier:', err);
     throw err;
   }
 }
@@ -1402,7 +1657,7 @@ export async function getCustomerHistory(customerId: number): Promise<CustomerHi
     WHERE customerId = ?
     ORDER BY datetime(saleDate) DESC
     LIMIT 100
-  `,
+    `,
     [customerId],
   );
 
@@ -1414,20 +1669,20 @@ export async function getCustomerHistory(customerId: number): Promise<CustomerHi
   const placeholders = saleIds.map(() => '?').join(', ');
   const items = await all<CustomerSaleItemRow>(
     `
-    SELECT
-      si.saleId,
-      si.variantId,
-      si.quantity,
-      si.lineTotalIQD,
-      p.name AS productName,
+  SELECT
+  si.saleId,
+    si.variantId,
+    si.quantity,
+    si.lineTotalIQD,
+    p.name AS productName,
       pv.color,
       pv.size
     FROM sale_items si
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE si.saleId IN (${placeholders})
+    WHERE si.saleId IN(${placeholders})
     ORDER BY si.saleId DESC
-  `,
+    `,
     saleIds,
   );
 
@@ -1473,15 +1728,15 @@ interface PurchaseOrderRow {
 const fetchPurchaseOrderById = async (id: number): Promise<PurchaseOrderWithItems | null> => {
   const order = await get<PurchaseOrderRow>(
     `
-    SELECT
-      po.*,
-      s.name AS supplierName,
+  SELECT
+  po.*,
+    s.name AS supplierName,
       b.name AS branchName
     FROM purchase_orders po
     JOIN suppliers s ON s.id = po.supplierId
     JOIN branches b ON b.id = po.branchId
     WHERE po.id = ?
-  `,
+    `,
     [id],
   );
 
@@ -1495,7 +1750,7 @@ const fetchPurchaseOrderById = async (id: number): Promise<PurchaseOrderWithItem
     FROM purchase_order_items
     WHERE purchaseOrderId = ?
     ORDER BY id ASC
-  `,
+      `,
     [id],
   );
 
@@ -1512,18 +1767,18 @@ interface PurchaseOrderListRow extends PurchaseOrderRow {
 export async function listPurchaseOrders(): Promise<PurchaseOrderWithItems[]> {
   const orders = await all<PurchaseOrderListRow>(
     `
-    SELECT
-      po.*,
-      s.name AS supplierName,
+  SELECT
+  po.*,
+    s.name AS supplierName,
       b.name AS branchName,
-      (
-        SELECT COUNT(*) FROM purchase_order_items poi WHERE poi.purchaseOrderId = po.id
+        (
+          SELECT COUNT(*) FROM purchase_order_items poi WHERE poi.purchaseOrderId = po.id
       ) AS itemCount
     FROM purchase_orders po
     JOIN suppliers s ON s.id = po.supplierId
     JOIN branches b ON b.id = po.branchId
     ORDER BY COALESCE(po.receivedAt, po.orderedAt) DESC
-  `,
+    `,
   );
 
   if (!orders.length) {
@@ -1550,18 +1805,18 @@ export async function createPurchaseOrder(payload: PurchaseOrderInput): Promise<
   try {
     const insert = await runWithResult(
       `
-      INSERT INTO purchase_orders (
-        supplierId,
-        branchId,
-        status,
-        reference,
-        orderedAt,
-        subtotalUSD,
-        shippingUSD,
-        taxesUSD,
-        notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
+      INSERT INTO purchase_orders(
+      supplierId,
+      branchId,
+      status,
+      reference,
+      orderedAt,
+      subtotalUSD,
+      shippingUSD,
+      taxesUSD,
+      notes
+    ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       [
         payload.supplierId,
         payload.branchId,
@@ -1580,14 +1835,14 @@ export async function createPurchaseOrder(payload: PurchaseOrderInput): Promise<
     for (const item of payload.items) {
       await run(
         `
-        INSERT INTO purchase_order_items (
-          purchaseOrderId,
-          variantId,
-          quantity,
-          costUSD,
-          costIQD
-        ) VALUES (?, ?, ?, ?, ?)
-      `,
+        INSERT INTO purchase_order_items(
+        purchaseOrderId,
+        variantId,
+        quantity,
+        costUSD,
+        costIQD
+      ) VALUES(?, ?, ?, ?, ?)
+        `,
         [
           purchaseOrderId,
           item.variantId,
@@ -1629,9 +1884,9 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
       `
       UPDATE purchase_orders
       SET status = 'received',
-          receivedAt = ?
+    receivedAt = ?
       WHERE id = ?
-    `,
+        `,
       [input.receivedAt ?? new Date().toISOString(), input.purchaseOrderId],
     );
 
@@ -1641,7 +1896,7 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
         SELECT id, avgCostUSD, purchaseCostUSD
         FROM product_variants
         WHERE id = ?
-      `,
+    `,
         [item.variantId],
       );
 
@@ -1655,7 +1910,7 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
         SELECT quantity
         FROM variant_stock
         WHERE variantId = ? AND branchId = ?
-      `,
+    `,
         [item.variantId, order.branchId],
       );
 
@@ -1672,9 +1927,9 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
         `
         UPDATE product_variants
         SET lastPurchaseCostUSD = ?,
-            avgCostUSD = ?
-        WHERE id = ?
-      `,
+    avgCostUSD = ?
+      WHERE id = ?
+        `,
         [item.costUSD, newAvg, item.variantId],
       );
 
@@ -1683,7 +1938,7 @@ export async function receivePurchaseOrder(input: PurchaseOrderReceiveInput): Pr
         order.branchId,
         item.quantity,
         'purchase_order',
-        `PO #${order.id}`,
+        `PO #${order.id} `,
         input.receivedBy ?? null,
       );
     }
@@ -1707,8 +1962,8 @@ export async function createProduct(product: ProductInput): Promise<Product> {
   try {
     const productResult = await runWithResult(
       `
-      INSERT INTO products (name, baseCode, category, description, defaultSupplierId)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO products(name, baseCode, category, description, defaultSupplierId)
+  VALUES(?, ?, ?, ?, ?)
     `,
       [
         product.name,
@@ -1725,11 +1980,11 @@ export async function createProduct(product: ProductInput): Promise<Product> {
 
     const variantResult = await runWithResult(
       `
-      INSERT INTO product_variants (
-        productId, size, color, sku, barcode,
-        defaultPriceIQD, purchaseCostUSD, avgCostUSD, lastPurchaseCostUSD
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
+      INSERT INTO product_variants(
+      productId, size, color, sku, barcode,
+      defaultPriceIQD, purchaseCostUSD, avgCostUSD, lastPurchaseCostUSD
+    ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       [
         productId,
         product.size ?? null,
@@ -1781,11 +2036,11 @@ export async function createSale(input: SaleInput): Promise<Sale> {
   try {
     const saleResult = await runWithResult(
       `
-      INSERT INTO sales (
+      INSERT INTO sales(
         branchId, cashierId, customerId, saleDate,
         subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.branchId,
@@ -1809,11 +2064,11 @@ export async function createSale(input: SaleInput): Promise<Sale> {
     for (const item of input.items) {
       await run(
         `
-        INSERT INTO sale_items (
-          saleId, variantId, quantity,
-          unitPriceIQD, unitCostIQDAtSale, lineTotalIQD
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items(
+      saleId, variantId, quantity,
+      unitPriceIQD, unitCostIQDAtSale, lineTotalIQD
+    )
+  VALUES(?, ?, ?, ?, ?, ?)
       `,
         [
           saleId,
@@ -1830,7 +2085,7 @@ export async function createSale(input: SaleInput): Promise<Sale> {
         input.branchId,
         -item.quantity,
         'sale',
-        `Sale #${saleId}`,
+        `Sale #${saleId} `,
         input.cashierId,
       );
     }
@@ -1843,11 +2098,11 @@ export async function createSale(input: SaleInput): Promise<Sale> {
 
     const items = await all<SaleItem>(
       `
-      SELECT *
-      FROM sale_items
+  SELECT *
+    FROM sale_items
       WHERE saleId = ?
-      ORDER BY id ASC
-    `,
+    ORDER BY id ASC
+      `,
       [saleId],
     );
 
@@ -1880,13 +2135,13 @@ interface SaleRow {
 export async function listSalesByDateRange(range: DateRange): Promise<SalesListResponse> {
   const salesRows = await all<SaleRow & { isReturned: number }>(
     `
-    SELECT 
-      s.*,
-      (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
+  SELECT
+  s.*,
+    (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
     FROM sales s
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
     ORDER BY s.saleDate DESC
-  `,
+    `,
     [range.startDate, range.endDate],
   );
 
@@ -1898,17 +2153,17 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
   const placeholders = saleIds.map(() => '?').join(', ');
   const itemsRows = await all<SaleDetailItem>(
     `
-    SELECT
-      si.*,
-      p.name AS productName,
+  SELECT
+  si.*,
+    p.name AS productName,
       pv.color,
       pv.size
     FROM sale_items si
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE si.saleId IN (${placeholders})
+    WHERE si.saleId IN(${placeholders})
     ORDER BY si.saleId ASC, si.id ASC
-  `,
+    `,
     saleIds,
   );
 
@@ -1960,11 +2215,11 @@ export async function getCurrentExchangeRate(
   // Query database
   const row = await get<ExchangeRateRow>(
     `
-    SELECT *
+  SELECT *
     FROM exchange_rates
     ORDER BY datetime(effectiveDate) DESC, id DESC
     LIMIT 1
-  `,
+    `,
   );
 
   const rate = row ? mapExchangeRateRow(row) : null;
@@ -1984,9 +2239,9 @@ export async function updateExchangeRate(
   const effectiveDate = input.effectiveDate ?? new Date().toISOString();
   await run(
     `
-    INSERT INTO exchange_rates (rate, effectiveDate, note)
-    VALUES (?, ?, ?)
-  `,
+    INSERT INTO exchange_rates(rate, effectiveDate, note)
+  VALUES(?, ?, ?)
+    `,
     [input.rate, effectiveDate, input.note ?? null],
   );
 
@@ -2003,8 +2258,8 @@ export async function ensureAdminUser(): Promise<void> {
   if (!branchId) {
     await run(
       `
-      INSERT INTO branches (name, address, phone)
-      VALUES (?, ?, ?)
+      INSERT INTO branches(name, address, phone)
+  VALUES(?, ?, ?)
     `,
       ['EVA Main', 'Baghdad, Iraq', '+964-000-0000'],
     );
@@ -2023,12 +2278,12 @@ export async function ensureAdminUser(): Promise<void> {
     const passwordHash = await hashPassword('admin123');
     await run(
       `
-      INSERT INTO users (username, passwordHash, role, branchId)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO users(username, passwordHash, role, branchId)
+  VALUES(?, ?, ?, ?)
     `,
       ['admin', passwordHash, 'admin', branchId],
     );
-    console.log('[db] Admin user created');
+    log.info('[db] Admin user created');
   }
 }
 
@@ -2038,7 +2293,7 @@ export async function login(username: string, password: string): Promise<LoginRe
     try {
       await ensureAdminUser();
     } catch (err) {
-      console.error('[db] Failed to ensure admin user:', err);
+      log.error('[db] Failed to ensure admin user:', err);
     }
   }
 
@@ -2065,7 +2320,7 @@ export async function login(username: string, password: string): Promise<LoginRe
   if (user.passwordHash.length === 64 && /^[a-f0-9]+$/i.test(user.passwordHash)) {
     const newHash = await hashPassword(password);
     await run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, user.id]);
-    console.log(`[auth] Upgraded password hash for user: ${username}`);
+    log.info(`[auth] Upgraded password hash for user: ${username}`);
   }
 
   const token = crypto.randomBytes(24).toString('hex');
@@ -2112,9 +2367,9 @@ export async function logActivity(
 ): Promise<void> {
   await run(
     `
-    INSERT INTO activity_logs (userId, action, entity, entityId, metadata)
-    VALUES (?, ?, ?, ?, ?)
-  `,
+    INSERT INTO activity_logs(userId, action, entity, entityId, metadata)
+  VALUES(?, ?, ?, ?, ?)
+    `,
     [userId, action, entity ?? null, entityId ?? null, metadata ? JSON.stringify(metadata) : null],
   );
 }
@@ -2125,8 +2380,8 @@ export async function listActivityLogs(limit = 200): Promise<ActivityLogEntry[]>
     SELECT id, userId, action, entity, entityId, createdAt
     FROM activity_logs
     ORDER BY datetime(createdAt) DESC
-    LIMIT ?
-  `,
+  LIMIT ?
+    `,
     [limit],
   );
 }
@@ -2159,14 +2414,14 @@ export async function listUsers(): Promise<User[]> {
     branchName: string | null;
   }>(
     `
-    SELECT 
-      u.id,
-      u.username,
-      u.role,
-      u.branchId,
-      u.isLocked,
-      u.createdAt,
-      b.name as branchName
+    SELECT
+  u.id,
+    u.username,
+    u.role,
+    u.branchId,
+    u.isLocked,
+    u.createdAt,
+    b.name as branchName
     FROM users u
     LEFT JOIN branches b ON u.branchId = b.id
     ORDER BY u.createdAt DESC
@@ -2202,8 +2457,8 @@ export async function createUser(input: UserInput): Promise<User> {
   const passwordHash = await hashPassword(input.password);
   const result = await runWithResult(
     `
-    INSERT INTO users (username, passwordHash, role, branchId)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users(username, passwordHash, role, branchId)
+  VALUES(?, ?, ?, ?)
     `,
     [input.username, passwordHash, input.role, input.branchId ?? null],
   );
@@ -2218,14 +2473,14 @@ export async function createUser(input: UserInput): Promise<User> {
     branchName: string | null;
   }>(
     `
-    SELECT 
-      u.id,
-      u.username,
-      u.role,
-      u.branchId,
-      u.isLocked,
-      u.createdAt,
-      b.name as branchName
+  SELECT
+  u.id,
+    u.username,
+    u.role,
+    u.branchId,
+    u.isLocked,
+    u.createdAt,
+    b.name as branchName
     FROM users u
     LEFT JOIN branches b ON u.branchId = b.id
     WHERE u.id = ?
@@ -2309,7 +2564,7 @@ export async function updateUser(input: UserUpdateInput): Promise<User> {
   }
 
   params.push(input.id);
-  await run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+  await run(`UPDATE users SET ${updates.join(', ')} WHERE id = ? `, params);
 
   const user = await get<{
     id: number;
@@ -2321,14 +2576,14 @@ export async function updateUser(input: UserUpdateInput): Promise<User> {
     branchName: string | null;
   }>(
     `
-    SELECT 
-      u.id,
-      u.username,
-      u.role,
-      u.branchId,
-      u.isLocked,
-      u.createdAt,
-      b.name as branchName
+    SELECT
+  u.id,
+    u.username,
+    u.role,
+    u.branchId,
+    u.isLocked,
+    u.createdAt,
+    b.name as branchName
     FROM users u
     LEFT JOIN branches b ON u.branchId = b.id
     WHERE u.id = ?
@@ -2400,8 +2655,8 @@ export async function createBranch(input: BranchInput): Promise<Branch> {
 
   const result = await runWithResult(
     `
-    INSERT INTO branches (name, address, phone, currency)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO branches(name, address, phone, currency)
+  VALUES(?, ?, ?, ?)
     `,
     [input.name, input.address ?? null, input.phone ?? null, input.currency ?? 'IQD'],
   );
@@ -2479,7 +2734,7 @@ export async function updateBranch(input: BranchUpdateInput): Promise<Branch> {
   }
 
   params.push(input.id);
-  await run(`UPDATE branches SET ${updates.join(', ')} WHERE id = ?`, params);
+  await run(`UPDATE branches SET ${updates.join(', ')} WHERE id = ? `, params);
 
   const branch = await get<{
     id: number;
@@ -2548,7 +2803,7 @@ export async function updateProduct(input: ProductUpdateInput): Promise<Product>
   if (updates.length > 0) {
     updates.push('updatedAt = CURRENT_TIMESTAMP');
     params.push(input.id);
-    await run(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, params);
+    await run(`UPDATE products SET ${updates.join(', ')} WHERE id = ? `, params);
   }
 
   // Return updated product
@@ -2600,7 +2855,7 @@ export async function updateVariant(input: VariantUpdateInput): Promise<void> {
   }
 
   params.push(input.id);
-  await run(`UPDATE product_variants SET ${updates.join(', ')} WHERE id = ?`, params);
+  await run(`UPDATE product_variants SET ${updates.join(', ')} WHERE id = ? `, params);
 }
 
 export async function deleteVariant(variantId: number): Promise<void> {
@@ -2635,16 +2890,16 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
 
     const insert = await runWithResult(
       `
-      INSERT INTO returns (
-        saleId,
-        branchId,
-        customerId,
-        refundAmountIQD,
-        reason,
-        processedBy,
-        type,
-        createdAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO returns(
+    saleId,
+    branchId,
+    customerId,
+    refundAmountIQD,
+    reason,
+    processedBy,
+    type,
+    createdAt
+  ) VALUES(?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.saleId ?? null,
@@ -2689,13 +2944,13 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
 
       await run(
         `
-        INSERT INTO return_items (
-          returnId,
-          saleItemId,
-          variantId,
-          quantity,
-          amountIQD
-        ) VALUES (?, ?, ?, ?, ?)
+        INSERT INTO return_items(
+      returnId,
+      saleItemId,
+      variantId,
+      quantity,
+      amountIQD
+    ) VALUES(?, ?, ?, ?, ?)
       `,
         [returnId, item.saleItemId ?? null, item.variantId, item.quantity, item.amountIQD ?? 0],
       );
@@ -2739,10 +2994,10 @@ export async function getSaleForReturn(saleId: number) {
 export async function fetchReturnById(id: number): Promise<ReturnResponse | null> {
   const row = await get<ReturnRecord>(
     `
-    SELECT *
+  SELECT *
     FROM returns
     WHERE id = ?
-  `,
+    `,
     [id],
   );
 
@@ -2753,7 +3008,7 @@ export async function fetchReturnById(id: number): Promise<ReturnResponse | null
     SELECT *
     FROM return_items
     WHERE returnId = ?
-  `,
+    `,
     [id],
   );
 
@@ -2776,7 +3031,7 @@ export async function listReturns(branchId?: number): Promise<ReturnResponse[]> 
     const items = await all<ReturnItem>(
       `
       SELECT *
-      FROM return_items
+    FROM return_items
       WHERE returnId = ?
     `,
       [row.id],
@@ -2792,9 +3047,9 @@ export async function listReturns(branchId?: number): Promise<ReturnResponse[]> 
 export async function createExpense(input: ExpenseInput): Promise<Expense> {
   const result = await runWithResult(
     `
-    INSERT INTO expenses (branchId, category, amountIQD, expenseDate, note, enteredBy)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
+    INSERT INTO expenses(branchId, category, amountIQD, expenseDate, note, enteredBy)
+  VALUES(?, ?, ?, ?, ?, ?)
+    `,
     [input.branchId, input.category, input.amountIQD, input.expenseDate, input.note ?? null, input.enteredBy ?? null],
   );
 
@@ -2823,7 +3078,7 @@ export async function getExpenseSummary(range: DateRange): Promise<ExpenseSummar
     SELECT IFNULL(SUM(amountIQD), 0) as total
     FROM expenses
     WHERE date(expenseDate) >= date(?) AND date(expenseDate) <= date(?)
-  `,
+    `,
     [range.startDate, range.endDate],
   );
 
@@ -2833,7 +3088,7 @@ export async function getExpenseSummary(range: DateRange): Promise<ExpenseSummar
     FROM expenses
     WHERE date(expenseDate) >= date(?) AND date(expenseDate) <= date(?)
     GROUP BY category
-  `,
+    `,
     [range.startDate, range.endDate],
   );
 
@@ -2853,18 +3108,18 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Sales for date range
   const todaySalesQuery = branchId
     ? `
-      SELECT
-        COUNT(*) as count,
-        IFNULL(SUM(totalIQD), 0) as totalIQD,
-        IFNULL(SUM(profitIQD), 0) as profitIQD
+  SELECT
+  COUNT(*) as count,
+    IFNULL(SUM(totalIQD), 0) as totalIQD,
+    IFNULL(SUM(profitIQD), 0) as profitIQD
       FROM sales
       WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?) AND branchId = ?
     `
     : `
       SELECT
-        COUNT(*) as count,
-        IFNULL(SUM(totalIQD), 0) as totalIQD,
-        IFNULL(SUM(profitIQD), 0) as profitIQD
+  COUNT(*) as count,
+    IFNULL(SUM(totalIQD), 0) as totalIQD,
+    IFNULL(SUM(profitIQD), 0) as profitIQD
       FROM sales
       WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?)
     `;
@@ -2878,16 +3133,16 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Returns for date range (to subtract from sales for NET revenue)
   const todayReturnsQuery = branchId
     ? `
-      SELECT
-        IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
-        IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
+  SELECT
+  IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
+    IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
       WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?) AND branchId = ?
     `
     : `
       SELECT
-        IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
-        IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
+  IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
+    IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
       WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?)
     `;
@@ -2907,8 +3162,26 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   const netSalesIQD = grossSalesIQD - totalReturnsIQD;
   const netProfitIQD = grossProfitIQD - (totalReturnsIQD - totalReturnsCostIQD); // Returns reduce profit by (Refund - Cost)
 
+  // Total items sold (sum of quantities from sale_items)
+  const totalItemsQuery = branchId
+    ? `
+      SELECT IFNULL(SUM(si.quantity), 0) as totalItems
+      FROM sale_items si
+      JOIN sales s ON s.id = si.saleId
+      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?) AND s.branchId = ?
+    `
+    : `
+      SELECT IFNULL(SUM(si.quantity), 0) as totalItems
+      FROM sale_items si
+      JOIN sales s ON s.id = si.saleId
+      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?)
+    `;
+  const totalItemsParams = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
+  const totalItemsRow = await get<{ totalItems: number }>(totalItemsQuery, totalItemsParams);
+
   const todaySales = {
     count: todaySalesRow?.count ?? 0,
+    totalItemsSold: totalItemsRow?.totalItems ?? 0,
     totalIQD: netSalesIQD, // NET sales (after returns)
     profitIQD: netProfitIQD, // NET profit (after returns)
     avgTicket: todaySalesRow?.count && todaySalesRow.count > 0
@@ -2955,15 +3228,15 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Recent sales (last 10) for date range
   const recentSalesQuery = branchId
     ? `
-      SELECT *
-      FROM sales
+  SELECT *
+    FROM sales
       WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?) AND branchId = ?
-      ORDER BY saleDate DESC, id DESC
+    ORDER BY saleDate DESC, id DESC
       LIMIT 10
     `
     : `
-      SELECT *
-      FROM sales
+  SELECT *
+    FROM sales
       WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?)
       ORDER BY saleDate DESC, id DESC
       LIMIT 10
@@ -2979,26 +3252,26 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   // Low stock items
   const lowStockItemsQuery = branchId
     ? `
-      SELECT
-        pv.sku,
-        p.name AS productName,
-        pv.color,
-        pv.size,
-        vs.quantity
+  SELECT
+  pv.sku,
+    p.name AS productName,
+      pv.color,
+      pv.size,
+      vs.quantity
       FROM variant_stock vs
       JOIN product_variants pv ON pv.id = vs.variantId
       JOIN products p ON p.id = pv.productId
       WHERE vs.quantity <= vs.lowStockThreshold AND vs.branchId = ?
-      ORDER BY vs.quantity ASC
+    ORDER BY vs.quantity ASC
       LIMIT 10
     `
     : `
-      SELECT
-        pv.sku,
-        p.name AS productName,
-        pv.color,
-        pv.size,
-        vs.quantity
+  SELECT
+  pv.sku,
+    p.name AS productName,
+      pv.color,
+      pv.size,
+      vs.quantity
       FROM variant_stock vs
       JOIN product_variants pv ON pv.id = vs.variantId
       JOIN products p ON p.id = pv.productId
@@ -3083,10 +3356,10 @@ export async function deleteSale(saleId: number): Promise<void> {
         `
         UPDATE customers
         SET totalVisits = MAX(0, totalVisits - 1),
-            totalSpentIQD = MAX(0, totalSpentIQD - ?),
-            loyaltyPoints = MAX(0, loyaltyPoints - (? / 1000.0))
+    totalSpentIQD = MAX(0, totalSpentIQD - ?),
+    loyaltyPoints = MAX(0, loyaltyPoints - (? / 1000.0))
         WHERE id = ?
-        `,
+    `,
         [sale.totalIQD, sale.totalIQD, sale.customerId]
       );
     }

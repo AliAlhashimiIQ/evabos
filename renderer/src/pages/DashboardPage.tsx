@@ -7,6 +7,8 @@ import './DashboardPage.css';
 
 type DashboardKPIs = import('../types/electron').DashboardKPIs;
 type Sale = import('../types/electron').Sale;
+type PeakHourData = import('../types/electron').PeakHourData;
+type PeakDayData = import('../types/electron').PeakDayData;
 
 type DateRangePreset = 'today' | 'yesterday' | 'last2days' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -20,6 +22,8 @@ const DashboardPage = (): JSX.Element => {
   const [datePreset, setDatePreset] = useState<DateRangePreset>('today');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [peakHoursData, setPeakHoursData] = useState<PeakHourData[]>([]);
+  const [peakDaysData, setPeakDaysData] = useState<PeakDayData[]>([]);
 
   const formatDate = (date: Date): string => {
     // Use UTC date to match SalesHistoryPage logic and database storage
@@ -123,8 +127,16 @@ const DashboardPage = (): JSX.Element => {
       setLoading(true);
       const branchId = user?.branchId ?? undefined;
       const dateRange = getDateRange(datePreset);
-      const data = await window.evaApi.dashboard.getKPIs(token, branchId, dateRange);
+
+      const [data, peakHours, peakDays] = await Promise.all([
+        window.evaApi.dashboard.getKPIs(token, branchId, dateRange),
+        window.evaApi.reports.peakHours(token, { startDate: dateRange.startDate, endDate: dateRange.endDate, branchId }),
+        window.evaApi.reports.peakDays(token, { startDate: dateRange.startDate, endDate: dateRange.endDate, branchId }),
+      ]);
+
       setKpis(data);
+      setPeakHoursData(peakHours);
+      setPeakDaysData(peakDays);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data.');
@@ -233,7 +245,7 @@ const DashboardPage = (): JSX.Element => {
               <div className="Dashboard-kpiLabel">{datePreset === 'today' ? t('todaySales') : t('sales')}</div>
               <div className="Dashboard-kpiValue">{kpis.todaySales.totalIQD.toLocaleString('en-IQ')} IQD</div>
               <div className="Dashboard-kpiSubtext">
-                <strong>{kpis.todaySales.count}</strong> {kpis.todaySales.count === 1 ? t('sale') : t('sales')}
+                <strong>{kpis.todaySales.count}</strong> {kpis.todaySales.count === 1 ? t('sale') : t('sales')} • <strong>{kpis.todaySales.totalItemsSold}</strong> {t('productsSold') || 'products sold'}
               </div>
             </div>
           </div>
@@ -280,6 +292,66 @@ const DashboardPage = (): JSX.Element => {
               <div className="Dashboard-kpiLabel">{t('lowStock')}</div>
               <div className="Dashboard-kpiValue">{kpis.lowStockCount}</div>
               <div className="Dashboard-kpiSubtext">{kpis.lowStockCount > 0 ? t('needAttention') : t('allGood')}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Peak Hours & Peak Days Charts */}
+        <div className="Dashboard-chartsRow">
+          <div className="Dashboard-chartCard">
+            <h3 className="Dashboard-chartTitle">📊 {t('peakHours')}</h3>
+            <div className="Dashboard-chartSummary">
+              {(() => {
+                const totalSales = peakHoursData.reduce((sum, h) => sum + h.saleCount, 0);
+                const totalIQD = peakHoursData.reduce((sum, h) => sum + h.totalSalesIQD, 0);
+                const peakHour = peakHoursData.reduce((max, h) => h.saleCount > max.saleCount ? h : max, peakHoursData[0] || { hour: 0, saleCount: 0 });
+                return (
+                  <div className="Dashboard-chartStats">
+                    <span>🏆 {t('peakHour')}: <strong>{peakHour?.hour || 0}:00</strong> ({peakHour?.saleCount || 0} {t('sales')})</span>
+                    <span>📦 {t('total')}: {totalSales} {t('sales')} | {(totalIQD / 1000).toFixed(0)}K IQD</span>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="Dashboard-barChart">
+              {(() => {
+                const maxSales = Math.max(...peakHoursData.map(h => h.saleCount), 1);
+                return peakHoursData.filter(h => h.hour >= 8 && h.hour <= 22).map((h) => (
+                  <div key={h.hour} className="Dashboard-barItem" title={`${h.hour}:00 - ${h.saleCount} ${t('sales')} (${h.totalSalesIQD.toLocaleString()} IQD)`}>
+                    <div className="Dashboard-bar" style={{ height: `${(h.saleCount / maxSales) * 100}%`, background: h.saleCount === maxSales && h.saleCount > 0 ? '#22c55e' : 'rgba(59,130,246,0.7)' }} />
+                    <span className="Dashboard-barLabel">{h.hour}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+
+          <div className="Dashboard-chartCard">
+            <h3 className="Dashboard-chartTitle">📅 {t('peakDays')}</h3>
+            <div className="Dashboard-chartSummary">
+              {(() => {
+                const totalSales = peakDaysData.reduce((sum, d) => sum + d.saleCount, 0);
+                const totalIQD = peakDaysData.reduce((sum, d) => sum + d.totalSalesIQD, 0);
+                const peakDay = peakDaysData.reduce((max, d) => d.saleCount > max.saleCount ? d : max, peakDaysData[0] || { dayName: '-', saleCount: 0 });
+                return (
+                  <div className="Dashboard-chartStats">
+                    <span>🏆 {t('peakDay')}: <strong>{peakDay?.dayName || '-'}</strong> ({peakDay?.saleCount || 0} {t('sales')})</span>
+                    <span>📦 {t('total')}: {totalSales} {t('sales')} | {(totalIQD / 1000).toFixed(0)}K IQD</span>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="Dashboard-barChart Dashboard-barChart--days">
+              {(() => {
+                const maxSales = Math.max(...peakDaysData.map(d => d.saleCount), 1);
+                return peakDaysData.map((d) => (
+                  <div key={d.dayOfWeek} className="Dashboard-barItem Dashboard-barItem--day" title={`${d.dayName} - ${d.saleCount} ${t('sales')} (${d.totalSalesIQD.toLocaleString()} IQD)`}>
+                    <span className="Dashboard-barValue">{d.saleCount}</span>
+                    <div className="Dashboard-bar" style={{ height: `${(d.saleCount / maxSales) * 100}%`, background: d.saleCount === maxSales && d.saleCount > 0 ? '#22c55e' : 'rgba(168,85,247,0.7)' }} />
+                    <span className="Dashboard-barLabel">{d.dayName}</span>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         </div>

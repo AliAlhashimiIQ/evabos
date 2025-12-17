@@ -710,40 +710,14 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     return null;
   }, [sale, returnData, saleDetail, branchInfo, cashierInfo, user]);
 
-  // Prevent body scroll and layout shift when modal is open
+  // Prevent body scroll when modal is open (simplified to avoid focus issues)
   useEffect(() => {
     if (visible) {
-      const html = document.documentElement;
-      const body = document.body;
-      const root = document.getElementById('root');
-
-      // Store original values
-      const originalBodyOverflow = body.style.overflow;
-      const originalBodyHeight = body.style.height;
-      const originalBodyPosition = body.style.position;
-      const originalHtmlOverflow = html.style.overflow;
-      const originalRootOverflow = root?.style.overflow || '';
-
-      // Lock everything
-      body.style.overflow = 'hidden';
-      body.style.height = '100vh';
-      body.style.position = 'fixed';
-      body.style.width = '100%';
-      html.style.overflow = 'hidden';
-      if (root) {
-        root.style.overflow = 'hidden';
-      }
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
 
       return () => {
-        // Restore original values
-        body.style.overflow = originalBodyOverflow;
-        body.style.height = originalBodyHeight;
-        body.style.position = originalBodyPosition;
-        body.style.width = '';
-        html.style.overflow = originalHtmlOverflow;
-        if (root) {
-          root.style.overflow = originalRootOverflow;
-        }
+        document.body.style.overflow = originalOverflow;
       };
     }
   }, [visible]);

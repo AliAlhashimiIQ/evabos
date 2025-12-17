@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { app } from 'electron';
+import log from 'electron-log';
 
 export interface BackupInfo {
   filename: string;
@@ -39,7 +40,7 @@ export async function ensureBackupDir(): Promise<string> {
   try {
     await fs.mkdir(backupDir, { recursive: true });
   } catch (err) {
-    console.error('Failed to create backup directory:', err);
+    log.error('Failed to create backup directory:', err);
     throw err;
   }
   return backupDir;
@@ -71,7 +72,7 @@ export async function createBackup(): Promise<BackupInfo> {
       createdAt: new Date().toISOString(),
     };
   } catch (err) {
-    console.error('Failed to create backup:', err);
+    log.error('Failed to create backup:', err);
     throw new Error(`Failed to create backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 }
@@ -101,7 +102,7 @@ export async function listBackups(): Promise<BackupInfo[]> {
 
     return backups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (err) {
-    console.error('Failed to list backups:', err);
+    log.error('Failed to list backups:', err);
     return [];
   }
 }
@@ -130,7 +131,7 @@ export async function restoreBackup(backupPath: string): Promise<void> {
     // Clean up pre-restore backup after a short delay (optional)
     // We'll leave it for manual cleanup if needed
   } catch (err) {
-    console.error('Failed to restore backup:', err);
+    log.error('Failed to restore backup:', err);
     throw new Error(`Failed to restore backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 }
@@ -139,7 +140,7 @@ export async function deleteBackup(backupPath: string): Promise<void> {
   try {
     await fs.unlink(backupPath);
   } catch (err) {
-    console.error('Failed to delete backup:', err);
+    log.error('Failed to delete backup:', err);
     throw new Error(`Failed to delete backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 }

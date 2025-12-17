@@ -1,93 +1,237 @@
+.ExpensesPage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Header Section */
 .ExpensesPage-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.ExpensesPage-header button {
+.ExpensesPage-header h1 {
+  margin: 0;
+}
+
+.ExpensesPage-header p {
+  margin: 0.25rem 0 0;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.ExpensesPage-headerActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ExpensesPage-addBtn {
   border: none;
-  border-radius: 0.9rem;
-  padding: 0.75rem 1.3rem;
-  background: linear-gradient(120deg, #14b8a6, #0ea5e9);
-  color: #0f172a;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.2rem;
+  background: linear-gradient(120deg, #f97316, #ec4899);
+  color: white;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
+.ExpensesPage-addBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.ExpensesPage-exportBtn {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.2rem;
+  background: linear-gradient(120deg, #14b8a6, #0ea5e9);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ExpensesPage-exportBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+/* Alert */
 .ExpensesPage-alert {
-  margin-bottom: 1rem;
-  border-radius: 0.9rem;
-  border: 1px solid rgba(248, 113, 113, 0.6);
-  background: rgba(248, 113, 113, 0.12);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.1);
   color: #fecaca;
-  padding: 0.8rem 1rem;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
+.ExpensesPage-alert::before {
+  content: '⚠️';
+}
+
+/* Summary Cards */
 .ExpensesPage-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.85rem;
 }
 
-.ExpensesPage-summary div {
+.ExpensesPage-summary > div {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--bg-input);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ExpensesPage-summary span {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.ExpensesPage-summary strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.ExpensesPage-summaryMain {
+  border-left: 3px solid #10b981;
+}
+
+.ExpensesPage-summaryMain strong {
+  color: #10b981;
+}
+
+/* Filters Section */
+.ExpensesPage-filtersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: var(--bg-input);
   padding: 1rem;
 }
 
+.ExpensesPage-quickFilters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.ExpensesPage-quickFilters button {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ExpensesPage-quickFilters button:hover {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
 .ExpensesPage-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
 .ExpensesPage-filters label {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
 .ExpensesPage-filters input,
 .ExpensesPage-filters select {
-  border-radius: 0.85rem;
+  border-radius: 0.6rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.75rem;
   background: var(--bg-input);
   color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
+.ExpensesPage-filters input:focus,
+.ExpensesPage-filters select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Form Card (Collapsible) */
 .ExpensesPage-formCard {
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: var(--bg-input);
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.ExpensesPage-formCard header {
+  padding: 0.85rem 1.1rem;
+  background: rgba(249, 115, 22, 0.08);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.ExpensesPage-formCard header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .ExpensesPage-formCard form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+  padding: 1.1rem;
 }
 
 .ExpensesPage-formCard label {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
 
 .ExpensesPage-formCard input,
 .ExpensesPage-formCard select,
 .ExpensesPage-formCard textarea {
-  border-radius: 0.85rem;
+  border-radius: 0.6rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.6rem 0.85rem;
+  padding: 0.6rem 0.8rem;
   background: var(--bg-input);
   color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.ExpensesPage-formCard input:focus,
+.ExpensesPage-formCard select:focus,
+.ExpensesPage-formCard textarea:focus {
+  outline: none;
+  border-color: #f97316;
 }
 
 .ExpensesPage-span {
@@ -98,23 +242,65 @@
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
 }
 
-.ExpensesPage-actions button {
+.ExpensesPage-cancelBtn {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.65rem;
+  padding: 0.6rem 1.2rem;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ExpensesPage-cancelBtn:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.ExpensesPage-actions button[type="submit"] {
   border: none;
-  border-radius: 0.9rem;
-  padding: 0.7rem 1.4rem;
+  border-radius: 0.65rem;
+  padding: 0.6rem 1.4rem;
   background: linear-gradient(120deg, #f97316, #ec4899);
-  color: #0f172a;
+  color: white;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
+.ExpensesPage-actions button[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.ExpensesPage-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Expenses List */
 .ExpensesPage-list {
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: var(--bg-input);
-  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.ExpensesPage-list header {
+  padding: 0.85rem 1.1rem;
+  background: rgba(59, 130, 246, 0.06);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.ExpensesPage-list header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .ExpensesPage-list table {
@@ -122,30 +308,92 @@
   border-collapse: collapse;
 }
 
-.ExpensesPage-list th,
-.ExpensesPage-list td {
-  padding: 0.9rem 1rem;
+.ExpensesPage-list th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.ExpensesPage-list th {
-  text-transform: uppercase;
+.ExpensesPage-list td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  font-size: 0.9rem;
+}
+
+.ExpensesPage-list tbody tr:hover {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.ExpensesPage-list tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Category Badge */
+.ExpensesPage-categoryBadge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
   font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  text-align: left;
+  font-weight: 500;
 }
 
-.ExpensesPage-list button {
+/* Amount styling */
+.ExpensesPage-amount {
+  font-weight: 600;
+  color: #f97316;
+}
+
+/* Note styling */
+.ExpensesPage-note {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* Delete button */
+.ExpensesPage-deleteBtn {
   border: none;
-  border-radius: 0.7rem;
-  padding: 0.35rem 0.8rem;
-  background: rgba(248, 113, 113, 0.2);
-  color: #fecaca;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  font-size: 0.8rem;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
+.ExpensesPage-deleteBtn:hover {
+  background: rgba(248, 113, 113, 0.25);
+}
+
+/* Empty state */
 .ExpensesPage-empty {
   text-align: center;
-  padding: 2rem;
-  color: var(--text-secondary);
+  padding: 2.5rem;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .ExpensesPage-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .ExpensesPage-headerActions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ExpensesPage-quickFilters {
+    justify-content: center;
+  }
 }
