@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PosLockOverlay } from './components/PosLockOverlay';
 import { BrowserWarning } from './components/BrowserWarning';
 import { LicenseValidator } from './components/LicenseValidator';
+import { LegalAcceptanceModal } from './components/LegalAcceptanceModal';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
 import PosPage from './pages/PosPage';
@@ -26,6 +27,7 @@ function App(): JSX.Element {
   return (
     <LicenseValidator>
       <BrowserWarning />
+      <LegalAcceptanceModal />
       <PosLockOverlay />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

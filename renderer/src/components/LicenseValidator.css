@@ -1,205 +1,247 @@
-.LicenseValidator-loading {
+.LicenseValidator-loading,
+.LicenseValidator-error {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
   color: #f8fafc;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.LicenseValidator-loading {
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .LicenseValidator-spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(148, 163, 184, 0.3);
-  border-top-color: #3b82f6;
+  border: 4px solid rgba(59, 130, 246, 0.2);
+  border-top: 4px solid #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
 }
 
 @keyframes spin {
-  to {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
     transform: rotate(360deg);
   }
 }
 
-.LicenseValidator-loading p {
-  font-size: 1.1rem;
-  color: rgba(148, 163, 184, 0.8);
-}
-
-.LicenseValidator-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+.LicenseValidator-overlay {
+  width: 100%;
+  max-width: 500px;
   padding: 2rem;
 }
 
-.LicenseValidator-errorContent {
-  max-width: 600px;
-  background: rgba(30, 41, 59, 0.9);
-  border: 2px solid rgba(239, 68, 68, 0.5);
-  border-radius: 1rem;
+.LicenseCard {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
   padding: 2.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.5s ease-out;
 }
 
-.LicenseValidator-errorContent h1 {
-  color: #ef4444;
-  font-size: 2rem;
-  margin-bottom: 1rem;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.LicenseCard-header {
   text-align: center;
+  margin-bottom: 2rem;
 }
 
-.LicenseValidator-errorContent>p {
-  color: #f8fafc;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.LicenseValidator-details {
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.LicenseValidator-details p {
-  color: rgba(148, 163, 184, 0.9);
-  margin-bottom: 0.75rem;
-}
-
-.LicenseValidator-details strong {
-  color: #f8fafc;
-}
-
-.LicenseValidator-details ul {
-  list-style: disc;
-  margin-left: 1.5rem;
-  margin-top: 0.5rem;
+.LicenseCard-icon {
+  font-size: 3rem;
   margin-bottom: 1rem;
-  color: rgba(148, 163, 184, 0.9);
 }
 
-.LicenseValidator-details li {
+.LicenseCard-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.LicenseValidator-loading {
+.LicenseCard-header p {
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.LicenseCard-body {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: #f8fafc;
+  gap: 1.5rem;
 }
 
-.LicenseValidator-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(148, 163, 184, 0.3);
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.LicenseValidator-loading p {
-  font-size: 1.1rem;
-  color: rgba(148, 163, 184, 0.8);
-}
-
-.LicenseValidator-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  padding: 2rem;
-}
-
-.LicenseValidator-errorContent {
-  max-width: 600px;
-  background: rgba(30, 41, 59, 0.9);
-  border: 2px solid rgba(239, 68, 68, 0.5);
-  border-radius: 1rem;
-  padding: 2.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-}
-
-.LicenseValidator-errorContent h1 {
-  color: #ef4444;
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.LicenseValidator-errorContent>p {
-  color: #f8fafc;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.LicenseValidator-details {
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.LicenseValidator-details p {
-  color: rgba(148, 163, 184, 0.9);
-  margin-bottom: 0.75rem;
-}
-
-.LicenseValidator-details strong {
-  color: #f8fafc;
-}
-
-.LicenseValidator-details ul {
-  list-style: disc;
-  margin-left: 1.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-  color: rgba(148, 163, 184, 0.9);
-}
-
-.LicenseValidator-details li {
-  margin-bottom: 0.5rem;
-}
-
-.LicenseValidator-contact {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-  text-align: center;
-  color: #f8fafc !important;
-  font-weight: 500;
-  line-height: 1.6;
-}
-
-.LicenseValidator-message {
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 8px;
+.LicenseCard-alert {
   padding: 1rem;
-  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-.LicenseValidator-message p {
-  margin: 0.5rem 0;
-  color: #dc2626;
-  font-weight: 500;
+.LicenseCard-alert.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.LicenseCard-alert.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.MachineInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.MachineInfo label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.MachineInfo-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.MachineInfo code {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #3b82f6;
+  font-size: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.MachineInfo-row button {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #fff;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.MachineInfo-row button:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.MachineInfo small {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.LicenseInput {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.LicenseInput label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.LicenseInput input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  color: #fff;
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 0.1em;
+  font-family: monospace;
+  transition: all 0.2s;
+}
+
+.LicenseInput input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.ActivateButton {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+}
+
+.ActivateButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.4);
+}
+
+.ActivateButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ActivateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.LicenseCard-footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.LicenseCard-footer a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.LicenseCard-footer a:hover {
+  text-decoration: underline;
 }

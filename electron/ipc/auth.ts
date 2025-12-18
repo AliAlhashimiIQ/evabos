@@ -8,20 +8,21 @@ import {
   lockPos,
   unlockPos,
   listActivityLogs,
+  changePassword,
 } from '../db/database';
 
 let handlersRegistered = false;
 
 export const requireRole =
   (roles: Array<'admin' | 'manager' | 'cashier'>) =>
-  (handler: (event: Electron.IpcMainInvokeEvent, session: ReturnType<typeof getSession>, ...args: any[]) => any) =>
-    async (_event: Electron.IpcMainInvokeEvent, sessionToken: string, ...args: any[]) => {
-      const session = getSession(sessionToken);
-      if (!session || !roles.includes(session.role)) {
-        throw new Error('Unauthorized');
-      }
-      return handler(_event, session, ...args);
-    };
+    (handler: (event: Electron.IpcMainInvokeEvent, session: ReturnType<typeof getSession>, ...args: any[]) => any) =>
+      async (_event: Electron.IpcMainInvokeEvent, sessionToken: string, ...args: any[]) => {
+        const session = getSession(sessionToken);
+        if (!session || !roles.includes(session.role)) {
+          throw new Error('Unauthorized');
+        }
+        return handler(_event, session, ...args);
+      };
 
 export function registerAuthIpc(): void {
   if (handlersRegistered) {
@@ -89,6 +90,14 @@ export function registerAuthIpc(): void {
       throw new Error('Only admin or manager can view activity logs');
     }
     return listActivityLogs(limit);
+  });
+
+  ipcMain.handle('auth:changePassword', async (_event, token: string, currentPassword: string, newPassword: string) => {
+    const session = getSession(token);
+    if (!session) {
+      throw new Error('Unauthorized');
+    }
+    return changePassword(session.userId, currentPassword, newPassword);
   });
 
   handlersRegistered = true;

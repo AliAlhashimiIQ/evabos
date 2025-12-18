@@ -1,6 +1,6 @@
 {
   "name": "eva-pos-desktop",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "EVA POS Desktop Application",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -41,7 +41,8 @@
     "files": [
       "dist-electron/**/*",
       "renderer/dist/**/*",
-      "package.json"
+      "package.json",
+      "legal/**/*"
     ],
     "extraFiles": [],
     "win": {

@@ -58,8 +58,11 @@ import {
   PaginationParams,
   PaginatedResponse,
 } from './types';
+import { encryptCredential, isEncrypted } from './crypto';
 
 sqlite3.verbose();
+
+const isDev = process.env.NODE_ENV === 'development';
 
 type SqlValue = string | number | null;
 
@@ -271,6 +274,7 @@ const createTables = async (): Promise<void> => {
       role TEXT NOT NULL,
       branchId INTEGER,
       isLocked INTEGER DEFAULT 0,
+      requiresPasswordChange INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (branchId) REFERENCES branches(id) ON DELETE SET NULL
     )
@@ -539,10 +543,10 @@ const seedInitialData = async (): Promise<void> => {
     const passwordHash = await hashPassword('admin123');
     await run(
       `
-      INSERT INTO users (username, passwordHash, role, branchId)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO users (username, passwordHash, role, branchId, requiresPasswordChange)
+      VALUES (?, ?, ?, ?, ?)
     `,
-      ['admin', passwordHash, 'admin', branchId],
+      ['admin', passwordHash, 'admin', branchId, 1], // requiresPasswordChange = 1
     );
   }
 
@@ -586,6 +590,32 @@ export async function initDatabase(): Promise<void> {
     }
   } catch (err) {
     log.error('[db] Customer migration failed:', err);
+  }
+
+  // Migration: Add requiresPasswordChange to users if missing
+  try {
+    const userColumns = await all<{ name: string }>('PRAGMA table_info(users)');
+    const hasPasswordChange = userColumns.some((c) => c.name === 'requiresPasswordChange');
+    if (!hasPasswordChange) {
+      await run('ALTER TABLE users ADD COLUMN requiresPasswordChange INTEGER DEFAULT 0');
+      // Force existing admin users to change their password
+      await run('UPDATE users SET requiresPasswordChange = 1 WHERE username = ?', ['admin']);
+      log.info('[db] Added requiresPasswordChange column to users table');
+    }
+  } catch (err) {
+    log.error('[db] User migration failed:', err);
+  }
+
+  // Migration: Encrypt SMTP password if plaintext
+  try {
+    const smtpPassword = await get<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['smtp_password']);
+    if (smtpPassword && smtpPassword.value && !isEncrypted(smtpPassword.value)) {
+      const encrypted = encryptCredential(smtpPassword.value);
+      await run('UPDATE settings SET value = ? WHERE key = ?', [encrypted, 'smtp_password']);
+      log.info('[db] Encrypted existing SMTP password');
+    }
+  } catch (err) {
+    log.error('[db] SMTP encryption migration failed:', err);
   }
 
   await seedInitialData();
@@ -2297,9 +2327,8 @@ export async function login(username: string, password: string): Promise<LoginRe
     }
   }
 
-  const user = await get<{ id: number; passwordHash: string; role: string; branchId: number | null }>(
-    `
-    SELECT id, passwordHash, role, branchId
+  const user = await get<{ id: number; passwordHash: string; role: string; branchId: number | null; requiresPasswordChange: number }>(`
+    SELECT id, passwordHash, role, branchId, IFNULL(requiresPasswordChange, 0) as requiresPasswordChange
     FROM users
     WHERE username = ?
     `,
@@ -2342,6 +2371,7 @@ export async function login(username: string, password: string): Promise<LoginRe
     username,
     role: session.role,
     branchId: session.branchId,
+    requiresPasswordChange: user.requiresPasswordChange === 1,
   };
 }
 
@@ -2351,6 +2381,55 @@ export async function logout(token: string): Promise<void> {
     await logActivity(session.userId, 'logout', 'user', session.userId);
     activeSessions.delete(token);
   }
+}
+
+// Password validation: minimum 8 chars, at least 1 number
+const validatePasswordStrength = (password: string): { valid: boolean; error?: string } => {
+  if (password.length < 8) {
+    return { valid: false, error: 'Password must be at least 8 characters long' };
+  }
+  if (!/\d/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one number' };
+  }
+  return { valid: true };
+};
+
+export async function changePassword(
+  userId: number,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; error?: string }> {
+  // Fetch current password hash
+  const user = await get<{ passwordHash: string }>('SELECT passwordHash FROM users WHERE id = ?', [userId]);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Verify current password
+  const isValid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    return { success: false, error: 'Current password is incorrect' };
+  }
+
+  // Validate new password strength
+  const validation = validatePasswordStrength(newPassword);
+  if (!validation.valid) {
+    return { success: false, error: validation.error };
+  }
+
+  // Ensure new password is different from current
+  const isSame = await verifyPassword(newPassword, user.passwordHash);
+  if (isSame) {
+    return { success: false, error: 'New password must be different from current password' };
+  }
+
+  // Hash and update password
+  const newHash = await hashPassword(newPassword);
+  await run('UPDATE users SET passwordHash = ?, requiresPasswordChange = 0 WHERE id = ?', [newHash, userId]);
+
+  await logActivity(userId, 'password_change', 'user', userId);
+
+  return { success: true };
 }
 
 export function getSession(token?: string | null): UserSession | null {

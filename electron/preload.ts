@@ -27,9 +27,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   getSetting: (key: string) => ipcRenderer.invoke('db:get-setting', key),
   setSetting: (key: string, value: string) => ipcRenderer.invoke('db:set-setting', key, value),
+  getLegalDocument: (type: 'eula' | 'privacy' | 'terms') => ipcRenderer.invoke('legal:get-document', type),
   getAllSettings: () => ipcRenderer.invoke('db:get-all-settings'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   resetFocus: () => ipcRenderer.invoke('app:reset-focus'),
+
+  // Auto Updater
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
+  onUpdateStatus: (callback: (status: string, info?: any) => void) => {
+    // Clean up previous listeners to avoid duplicates if necessary, 
+    // but in a preload context for a React app, usually useEffect handles cleanup.
+    // For simplicity, we just add the listener. The renderer should handle removeListener if needed.
+    const subscription = (_: any, status: string, info?: any) => callback(status, info);
+    ipcRenderer.on('update-status', subscription);
+    return () => ipcRenderer.removeListener('update-status', subscription);
+  },
+  onDownloadProgress: (callback: (progress: any) => void) => {
+    const subscription = (_: any, progress: any) => callback(progress);
+    ipcRenderer.on('update-download-progress', subscription);
+    return () => ipcRenderer.removeListener('update-download-progress', subscription);
+  }
 });
 
 contextBridge.exposeInMainWorld('evaApi', {
@@ -142,6 +159,8 @@ contextBridge.exposeInMainWorld('evaApi', {
     lockPos: (token: string) => ipcRenderer.invoke('auth:lockPos', token),
     unlockPos: (token: string) => ipcRenderer.invoke('auth:unlockPos', token),
     getActivityLogs: (token: string, limit?: number) => ipcRenderer.invoke('auth:getActivityLogs', token, limit),
+    changePassword: (token: string, currentPassword: string, newPassword: string) =>
+      ipcRenderer.invoke('auth:changePassword', token, currentPassword, newPassword),
   },
   backup: {
     create: (token: string) => ipcRenderer.invoke('backup:create', token),
@@ -155,6 +174,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     validate: () => ipcRenderer.invoke('licensing:validate'),
     getMachineId: () => ipcRenderer.invoke('licensing:getMachineId'),
     getUsbInfo: () => ipcRenderer.invoke('licensing:getUsbInfo'),
+    activate: (licenseKey: string) => ipcRenderer.invoke('licensing:activate', licenseKey),
   },
 });
 

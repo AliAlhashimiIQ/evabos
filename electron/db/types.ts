@@ -402,6 +402,7 @@ export interface LoginResponse {
   username: string;
   role: 'admin' | 'manager' | 'cashier';
   branchId?: number | null;
+  requiresPasswordChange: boolean;
 }
 
 export interface User {

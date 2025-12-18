@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import log from 'electron-log';
 import { getSetting, getAdvancedReports, listSaleItems } from './database';
+import { decryptCredential } from './crypto';
 import type { DateRange } from './types';
 
 interface EmailSettings {
@@ -15,12 +16,18 @@ interface EmailSettings {
 }
 
 export async function getEmailSettings(): Promise<EmailSettings> {
+  // Get raw password from database (may be encrypted or plaintext)
+  const rawPassword = (await getSetting('email_smtp_password')) || '';
+
+  // Decrypt if encrypted, or return as-is if plaintext (for backwards compatibility)
+  const smtpPassword = decryptCredential(rawPassword);
+
   const settings: EmailSettings = {
     smtpHost: (await getSetting('email_smtp_host')) || 'smtp.gmail.com',
     smtpPort: parseInt((await getSetting('email_smtp_port')) || '587', 10),
     smtpSecure: (await getSetting('email_smtp_secure')) === 'true',
     smtpUser: (await getSetting('email_smtp_user')) || '',
-    smtpPassword: (await getSetting('email_smtp_password')) || '',
+    smtpPassword,
     emailRecipient: (await getSetting('email_recipient')) || '',
     emailEnabled: (await getSetting('email_enabled')) === 'true',
     sendTime: (await getSetting('email_send_time')) || '20:00',
@@ -72,8 +79,9 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
         pass: settings.smtpPassword,
       },
       tls: {
-        // Allow self-signed certificates (for networks with SSL inspection)
-        rejectUnauthorized: false,
+        // Validate TLS certificates for security
+        // If users have corporate SSL inspection, they may need to configure their CA cert
+        rejectUnauthorized: true,
       },
     });
 

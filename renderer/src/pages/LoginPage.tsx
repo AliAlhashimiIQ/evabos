@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { PasswordChangeModal } from '../components/PasswordChangeModal';
 import './Pages.css';
 import './LoginPage.css';
+
+interface PendingLogin {
+  token: string;
+  username: string;
+}
 
 const LoginPage = (): JSX.Element => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    if (user && !pendingLogin) {
       navigate('/pos', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, pendingLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +36,21 @@ const LoginPage = (): JSX.Element => {
     setError(null);
 
     try {
-      const success = await login(username, password);
-      if (success) {
-        navigate('/pos', { replace: true });
+      // Direct API call to check for requiresPasswordChange
+      const response = await window.evaApi.auth.login(username, password);
+      if (response) {
+        if (response.requiresPasswordChange) {
+          // User needs to change password - show modal
+          setPendingLogin({ token: response.token, username: response.username });
+        } else {
+          // Normal login flow
+          const success = await login(username, password);
+          if (success) {
+            navigate('/pos', { replace: true });
+          } else {
+            setError('Login failed');
+          }
+        }
       } else {
         setError('Invalid username or password');
       }
@@ -42,8 +61,39 @@ const LoginPage = (): JSX.Element => {
     }
   };
 
+  const handlePasswordChangeSuccess = async () => {
+    // Password changed successfully, complete login
+    setPendingLogin(null);
+    const success = await login(username, password);
+    if (success) {
+      navigate('/pos', { replace: true });
+    }
+  };
+
+  const handleLogout = async () => {
+    if (pendingLogin) {
+      // Logout the pending session
+      try {
+        await window.evaApi.auth.logout(pendingLogin.token);
+      } catch {
+        // Ignore errors
+      }
+    }
+    setPendingLogin(null);
+    setUsername('');
+    setPassword('');
+  };
+
   return (
     <div className="Page LoginPage">
+      {pendingLogin && (
+        <PasswordChangeModal
+          token={pendingLogin.token}
+          username={pendingLogin.username}
+          onSuccess={handlePasswordChangeSuccess}
+          onLogout={handleLogout}
+        />
+      )}
       <div className="LoginPage-container">
         <div className="LoginPage-header">
           <h1>EVA POS</h1>
@@ -97,3 +147,4 @@ const LoginPage = (): JSX.Element => {
 };
 
 export default LoginPage;
+

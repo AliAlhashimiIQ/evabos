@@ -65,8 +65,15 @@ interface ReceiptPayload {
   cashierName?: string;
   paymentMethod?: string;
   saleDate: string;
+  // Customization fields
+  storeName?: string;
+  logoBase64?: string;
+  showLogo?: boolean;
+  showBarcode?: boolean;
+  showCashier?: boolean;
+  showCustomer?: boolean;
 }
-const STORE_FOOTER = 'لا يوجد تبديل ولا يوجد استرجاع';
+const DEFAULT_STORE_FOOTER = 'لا يوجد تبديل ولا يوجد استرجاع';
 
 const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): string => `
 <!DOCTYPE html>
@@ -160,7 +167,8 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   </head>
   <body>
     <div class="header">
-      <div class="store-name">EVA CLOTHING</div>
+      ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="text-align: center; margin-bottom: 10px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" /></div>` : ''}
+      <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
       <div class="store-info">
         ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
         ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
@@ -176,9 +184,9 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   hour: '2-digit',
   minute: '2-digit'
 })}</p>
-        ${payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
+        ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
       </div>
-      ${barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
+      ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
     </div>
     <table>
       <thead>
@@ -388,7 +396,8 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       <body>
         <div class="header">
           <div class="header-left">
-            <div class="store-name">EVA CLOTHING</div>
+            ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="margin-bottom: 15px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 200px; max-height: 100px; object-fit: contain;" /></div>` : ''}
+            <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
             <div class="store-info">
               ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
               ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
@@ -404,10 +413,10 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   hour: '2-digit',
   minute: '2-digit'
 })}</p>
-              ${payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
+              ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
             </div>
           </div>
-          ${barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
+          ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
         </div>
         <table>
           <thead>
@@ -449,10 +458,10 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     .join('')}
           </tbody>
         </table>
-        ${payload.paymentMethod || payload.cashierName ? `
+        ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
       <div class="payment-section">
         ${payload.paymentMethod ? `<p><strong>💳 Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
-        ${payload.cashierName ? `<p><strong>👤 Cashier:</strong> ${payload.cashierName}</p>` : ''}
+        ${payload.showCashier && payload.cashierName ? `<p><strong>👤 Cashier:</strong> ${payload.cashierName}</p>` : ''}
       </div>
     ` : ''}
         <div class="footer">${payload.footer}</div>
@@ -582,6 +591,56 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
   const [cashierInfo, setCashierInfo] = useState<{ username: string } | null>(null);
   const [isAutoPrinting, setIsAutoPrinting] = useState(false);
 
+  // Custom Receipt Settings
+  const [customSettings, setCustomSettings] = useState<{
+    storeName: string;
+    footerText: string;
+    showLogo: boolean;
+    logoBase64: string;
+    showBarcode: boolean;
+    showCashier: boolean;
+    showCustomer: boolean;
+  }>({
+    storeName: 'EVA CLOTHING',
+    footerText: DEFAULT_STORE_FOOTER,
+    showLogo: false,
+    logoBase64: '',
+    showBarcode: true,
+    showCashier: true,
+    showCustomer: true,
+  });
+
+  // Fetch custom settings
+  useEffect(() => {
+    if (!visible || !window.electronAPI) return;
+
+    const loadSettings = async () => {
+      try {
+        const storeName = await window.electronAPI.getSetting('receipt_store_name');
+        const footerText = await window.electronAPI.getSetting('receipt_footer_text');
+        const showLogo = await window.electronAPI.getSetting('receipt_show_logo');
+        const logoBase64 = await window.electronAPI.getSetting('receipt_logo_base64');
+        const showBarcode = await window.electronAPI.getSetting('receipt_show_barcode');
+        const showCashier = await window.electronAPI.getSetting('receipt_show_cashier');
+        const showCustomer = await window.electronAPI.getSetting('receipt_show_customer');
+
+        setCustomSettings({
+          storeName: storeName || 'EVA CLOTHING',
+          footerText: footerText || DEFAULT_STORE_FOOTER,
+          showLogo: showLogo === 'true',
+          logoBase64: logoBase64 || '',
+          showBarcode: showBarcode !== 'false',
+          showCashier: showCashier !== 'false',
+          showCustomer: showCustomer !== 'false',
+        });
+      } catch (err) {
+        console.error('Failed to load custom receipt settings:', err);
+      }
+    };
+
+    loadSettings();
+  }, [visible]);
+
   // Fetch sale detail if sale doesn't have product names
   useEffect(() => {
     if (!visible || !sale || !token || !window.evaApi) {
@@ -675,7 +734,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
           ...(sale.discountIQD > 0 ? [{ label: 'الخصم', value: sale.discountIQD }] : []),
           { label: 'المجموع الكلي', value: sale.totalIQD },
         ],
-        footer: STORE_FOOTER,
+        footer: customSettings.footerText,
         barcodeValue: `SALE${sale.id} `,
         customer: sale.customerId ? `Customer #${sale.customerId} ` : undefined,
         branchName: branchInfo?.name,
@@ -684,6 +743,13 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         cashierName: cashierInfo?.username || user?.username,
         paymentMethod: sale.paymentMethod || undefined,
         saleDate: sale.saleDate,
+        // Customization
+        storeName: customSettings.storeName,
+        logoBase64: customSettings.logoBase64,
+        showLogo: customSettings.showLogo,
+        showBarcode: customSettings.showBarcode,
+        showCashier: customSettings.showCashier,
+        showCustomer: customSettings.showCustomer,
       };
     }
     if (returnData) {
@@ -697,7 +763,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
           priceIQD: item.amountIQD / Math.max(item.quantity, 1),
         })),
         totals: [{ label: 'Refund', value: returnData.totalIQD }],
-        footer: 'Items returned/exchanged.',
+        footer: customSettings.footerText,
         barcodeValue: `RETURN${returnData.id} `,
         customer: returnData.customerName,
         branchName: branchInfo?.name,
@@ -705,6 +771,13 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         branchPhone: branchInfo?.phone || undefined,
         cashierName: user?.username,
         saleDate: new Date().toISOString(),
+        // Customization
+        storeName: customSettings.storeName,
+        logoBase64: customSettings.logoBase64,
+        showLogo: customSettings.showLogo,
+        showBarcode: customSettings.showBarcode,
+        showCashier: customSettings.showCashier,
+        showCustomer: customSettings.showCustomer,
       };
     }
     return null;

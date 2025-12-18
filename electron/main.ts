@@ -1,8 +1,10 @@
 import { app, BrowserWindow, ipcMain, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import * as path from 'path';
-import { readFileSync } from 'fs';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import sqlite3 from 'sqlite3';
 import {
   initDatabase,
   getSetting,
@@ -98,7 +100,7 @@ async function createWindow(): Promise<void> {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Required for ES modules with file:// protocol
+      // webSecurity is true by default - do NOT disable it
     },
   });
 
@@ -156,6 +158,33 @@ const registerIpcHandlers = (): void => {
     return getSetting(key);
   });
 
+  ipcMain.handle('app:check-for-updates', async () => {
+    if (!isDev) {
+      return autoUpdater.checkForUpdates();
+    }
+    return { status: 'dev-mode', message: 'Updates not available in dev mode' };
+  });
+
+  // Forward auto-updater events to renderer
+  autoUpdater.on('checking-for-update', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', 'checking');
+  });
+  autoUpdater.on('update-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', 'available', info);
+  });
+  autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', 'not-available', info);
+  });
+  autoUpdater.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', 'error', err.message);
+  });
+  autoUpdater.on('download-progress', (progressObj) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-download-progress', progressObj);
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', 'downloaded', info);
+  });
+
   ipcMain.handle('db:set-setting', async (_event, key: string, value: string) => {
     await setSetting(key, value);
     return true;
@@ -178,6 +207,20 @@ const registerIpcHandlers = (): void => {
           mainWindow.focus();
         }
       }, 100);
+    }
+  });
+
+  ipcMain.handle('legal:get-document', async (_event, type: 'eula' | 'privacy' | 'terms') => {
+    try {
+      const fileName = type === 'eula' ? 'EULA.md' : (type === 'privacy' ? 'PRIVACY_POLICY.md' : 'TERMS_OF_SERVICE.md');
+      const filePath = path.join(app.getAppPath(), 'legal', fileName);
+      if (fs.existsSync(filePath)) {
+        return fs.readFileSync(filePath, 'utf8');
+      }
+      return 'Document not found.';
+    } catch (err) {
+      log.error('[legal] Failed to read legal doc:', err);
+      return 'Error loading document.';
     }
   });
 
@@ -317,7 +360,7 @@ app.whenReady().then(async () => {
       const filePath = path.join(app.getAppPath(), url);
 
       try {
-        const data = readFileSync(filePath);
+        const data = fs.readFileSync(filePath);
         const ext = path.extname(filePath).toLowerCase();
         let mimeType = 'text/plain';
 

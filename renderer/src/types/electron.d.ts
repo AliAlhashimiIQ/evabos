@@ -2,9 +2,15 @@ export interface ElectronAPI {
   platform: string;
   getSetting: (key: string) => Promise<string | null>;
   setSetting: (key: string, value: string) => Promise<boolean>;
+  getLegalDocument: (type: 'eula' | 'privacy' | 'terms') => Promise<string>;
   getAllSettings: () => Promise<Array<{ key: string; value: string }>>;
   relaunch: () => Promise<void>;
   resetFocus: () => Promise<void>;
+
+  // Auto Updater
+  checkForUpdates: () => Promise<any>;
+  onUpdateStatus: (callback: (status: string, info?: any) => void) => () => void;
+  onDownloadProgress: (callback: (progress: any) => void) => () => void;
 }
 
 export interface Product {
@@ -469,6 +475,7 @@ export interface EvaApi {
     lockPos: (token: string) => Promise<PosLockStatus>;
     unlockPos: (token: string) => Promise<PosLockStatus>;
     getActivityLogs: (token: string, limit?: number) => Promise<ActivityLogEntry[]>;
+    changePassword: (token: string, currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   };
   backup: {
     create: (token: string) => Promise<BackupInfo>;
@@ -497,9 +504,10 @@ export interface EvaApi {
     getKPIs: (token: string, branchId?: number, dateRange?: { startDate: string; endDate: string }) => Promise<DashboardKPIs>;
   };
   licensing: {
-    validate: () => Promise<{ valid: boolean; reason?: string; isUsb?: boolean }>;
+    validate: () => Promise<{ valid: boolean; reason?: string; isUsb?: boolean; expiresAt?: string }>;
     getMachineId: () => Promise<string>;
     getUsbInfo: () => Promise<{ isUsb: boolean; serial: string | null }>;
+    activate: (licenseKey: string) => Promise<{ success: boolean; error?: string }>;
   };
   email: {
     getSettings: (token: string) => Promise<{
@@ -630,6 +638,7 @@ export interface LoginResponse {
   username: string;
   role: 'admin' | 'manager' | 'cashier';
   branchId?: number | null;
+  requiresPasswordChange: boolean;
 }
 
 export interface CurrentUser {

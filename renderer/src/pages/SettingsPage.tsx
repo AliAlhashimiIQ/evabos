@@ -40,9 +40,26 @@ const SettingsPage = (): JSX.Element => {
   const [emailTesting, setEmailTesting] = useState(false);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
 
+  // Receipt Settings
+  const [receiptStoreName, setReceiptStoreName] = useState('EVA CLOTHING');
+  const [receiptFooterText, setReceiptFooterText] = useState('لا يوجد تبديل ولا يوجد استرجاع');
+  const [receiptShowLogo, setReceiptShowLogo] = useState(false);
+  const [receiptLogoBase64, setReceiptLogoBase64] = useState('');
+  const [receiptShowBarcode, setReceiptShowBarcode] = useState(true);
+  const [receiptShowCashier, setReceiptShowCashier] = useState(true);
+  const [receiptShowCustomer, setReceiptShowCustomer] = useState(true);
+  const [receiptSaving, setReceiptSaving] = useState(false);
+  const [receiptMessage, setReceiptMessage] = useState<string | null>(null);
+
+  // Update Settings
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [downloadProgress, setDownloadProgress] = useState<any>(null);
+
   useEffect(() => {
     loadExchangeRate();
     loadEmailSettings();
+    loadReceiptSettings();
   }, []);
 
   const loadExchangeRate = async () => {
@@ -71,6 +88,113 @@ const SettingsPage = (): JSX.Element => {
     } catch (err) {
       console.error('Failed to load email settings:', err);
     }
+  };
+
+  const loadReceiptSettings = async () => {
+    if (!window.electronAPI) return;
+    try {
+      const storeName = await window.electronAPI.getSetting('receipt_store_name');
+      const footerText = await window.electronAPI.getSetting('receipt_footer_text');
+      const showLogo = await window.electronAPI.getSetting('receipt_show_logo');
+      const logoBase64 = await window.electronAPI.getSetting('receipt_logo_base64');
+      const showBarcode = await window.electronAPI.getSetting('receipt_show_barcode');
+      const showCashier = await window.electronAPI.getSetting('receipt_show_cashier');
+      const showCustomer = await window.electronAPI.getSetting('receipt_show_customer');
+
+      if (storeName) setReceiptStoreName(storeName);
+      if (footerText) setReceiptFooterText(footerText);
+      if (showLogo) setReceiptShowLogo(showLogo === 'true');
+      if (logoBase64) setReceiptLogoBase64(logoBase64);
+      if (showBarcode) setReceiptShowBarcode(showBarcode !== 'false'); // Default true
+      if (showCashier) setReceiptShowCashier(showCashier !== 'false'); // Default true
+      if (showCustomer) setReceiptShowCustomer(showCustomer === 'true');
+    } catch (err) {
+      console.error('Failed to load receipt settings:', err);
+    }
+  };
+
+  const handleCheckForUpdates = () => {
+    if (!window.electronAPI) return;
+    setUpdateStatus('checking');
+    setUpdateInfo(null);
+    window.electronAPI.checkForUpdates().catch(err => {
+      setUpdateStatus('error');
+      setUpdateInfo(err.message);
+    });
+  };
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const removeStatusListener = window.electronAPI.onUpdateStatus((status, info) => {
+      console.log('[Update] Status:', status, info);
+      setUpdateStatus(status);
+      if (info) setUpdateInfo(info);
+    });
+
+    const removeProgressListener = window.electronAPI.onDownloadProgress((progress) => {
+      setUpdateStatus('downloading');
+      setDownloadProgress(progress);
+    });
+
+    return () => {
+      removeStatusListener();
+      removeProgressListener();
+    };
+  }, []);
+
+  const handleResetDatabase = async () => {
+    if (!token) return;
+    const confirmed = await confirmDialog(
+      'Are you sure you want to reset the database? This action cannot be undone and will delete all data.'
+    );
+
+    if (confirmed && window.evaApi) {
+      try {
+        await window.evaApi.settings.reset(token);
+        window.location.reload();
+      } catch (err) {
+        console.error('Failed to reset database:', err);
+        alert('Failed to reset database');
+      }
+    }
+  };
+
+  const handleSaveReceiptSettings = async () => {
+    if (!window.electronAPI) return;
+    try {
+      setReceiptSaving(true);
+      setReceiptMessage(null);
+      await window.electronAPI.setSetting('receipt_store_name', receiptStoreName);
+      await window.electronAPI.setSetting('receipt_footer_text', receiptFooterText);
+      await window.electronAPI.setSetting('receipt_show_logo', receiptShowLogo ? 'true' : 'false');
+      await window.electronAPI.setSetting('receipt_logo_base64', receiptLogoBase64);
+      await window.electronAPI.setSetting('receipt_show_barcode', receiptShowBarcode ? 'true' : 'false');
+      await window.electronAPI.setSetting('receipt_show_cashier', receiptShowCashier ? 'true' : 'false');
+      await window.electronAPI.setSetting('receipt_show_customer', receiptShowCustomer ? 'true' : 'false');
+      setReceiptMessage('✅ ' + (t('receiptSettingsSaved') || 'Receipt settings saved successfully!'));
+      setTimeout(() => setReceiptMessage(null), 3000);
+    } catch (err) {
+      setReceiptMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setReceiptSaving(false);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) { // 500KB limit
+      alert('Logo file is too large. Please use an image smaller than 500KB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReceiptLogoBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveEmailSettings = async () => {
@@ -426,6 +550,198 @@ const SettingsPage = (): JSX.Element => {
 
               <div className="SettingsPage-emailHelp">
                 <small>💡 {t('gmailNote') || 'For Gmail: Use an App Password from myaccount.google.com > Security > App Passwords'}</small>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Receipt Settings */}
+        {hasRole(['admin', 'manager']) && (
+          <div className="SettingsPage-section">
+            <h2>🧾 {t('receiptSettings') || 'Receipt Settings'}</h2>
+            <p>{t('customizeReceipts') || 'Customize how your sales receipts look'}</p>
+
+            <div className="SettingsPage-receiptForm">
+              <div className="SettingsPage-emailRow">
+                <label>{t('storeNameOnReceipt') || 'Store Name on Receipt'}</label>
+                <input
+                  type="text"
+                  value={receiptStoreName}
+                  onChange={(e) => setReceiptStoreName(e.target.value)}
+                  placeholder="EVA CLOTHING"
+                />
+              </div>
+
+              <div className="SettingsPage-emailRow">
+                <label>{t('footerText') || 'Footer Text (Terms & Conditions)'}</label>
+                <textarea
+                  value={receiptFooterText}
+                  onChange={(e) => setReceiptFooterText(e.target.value)}
+                  placeholder="لا يوجد تبديل ولا يوجد استرجاع"
+                  rows={3}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid rgba(148, 163, 184, 0.25)' }}
+                />
+              </div>
+
+              <div className="SettingsPage-receiptOptions">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={receiptShowLogo}
+                    onChange={(e) => setReceiptShowLogo(e.target.checked)}
+                  />
+                  {t('showLogo') || 'Show Logo'}
+                </label>
+
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={receiptShowBarcode}
+                    onChange={(e) => setReceiptShowBarcode(e.target.checked)}
+                  />
+                  {t('showBarcode') || 'Show Barcode'}
+                </label>
+
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={receiptShowCashier}
+                    onChange={(e) => setReceiptShowCashier(e.target.checked)}
+                  />
+                  {t('showCashier') || 'Show Cashier Name'}
+                </label>
+
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={receiptShowCustomer}
+                    onChange={(e) => setReceiptShowCustomer(e.target.checked)}
+                  />
+                  {t('showCustomer') || 'Show Customer Name'}
+                </label>
+              </div>
+
+              {receiptShowLogo && (
+                <div className="SettingsPage-logoUpload">
+                  <label>{t('uploadLogo') || 'Upload Logo'}</label>
+                  <div className="logo-controls">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      id="logo-upload-input"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      className="SettingsPage-testEmailButton"
+                      onClick={() => document.getElementById('logo-upload-input')?.click()}
+                      style={{ marginBottom: '1rem' }}
+                    >
+                      📁 {t('uploadLogo') || 'Upload Logo'}
+                    </button>
+                    {receiptLogoBase64 && (
+                      <div className="logo-preview-container">
+                        <p>{t('logoPreview') || 'Logo Preview'}:</p>
+                        <img src={receiptLogoBase64} alt="Logo Preview" className="receipt-logo-preview" />
+                        <button
+                          className="SettingsPage-resetButton"
+                          onClick={() => setReceiptLogoBase64('')}
+                          style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', marginTop: '0.5rem' }}
+                        >
+                          🗑️ {t('remove') || 'Remove'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="SettingsPage-section">
+                <h2>Database & Maintenance</h2>
+                <div className="SettingsPage-card">
+                  <div className="SettingsPage-field">
+                    <label>Database Reset</label>
+                    <div className="SettingsPage-actions">
+                      <button
+                        className="SettingsPage-button danger"
+                        onClick={handleResetDatabase}
+                      >
+                        ⚠️ Reset Database (Delete All Data)
+                      </button>
+                    </div>
+                    <p className="SettingsPage-hint">
+                      This will delete all sales, products, and customers. It cannot be undone.
+                    </p>
+                  </div>
+
+                  <div className="SettingsPage-divider" />
+
+                  <div className="SettingsPage-field">
+                    <label>Software Update</label>
+                    <div className="SettingsPage-actions">
+                      <button
+                        className="SettingsPage-button primary"
+                        onClick={handleCheckForUpdates}
+                        disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                      >
+                        {updateStatus === 'checking' ? 'Checking...' : 'Check for Updates'}
+                      </button>
+                    </div>
+
+                    {updateStatus && (
+                      <div className="UpdateStatus-container" style={{ marginTop: '10px' }}>
+                        {updateStatus === 'checking' && <p>Checking GitHub for releases...</p>}
+                        {updateStatus === 'available' && (
+                          <div className="UpdateStatus-available">
+                            <p>✅ <b>Update Available!</b> Version {updateInfo?.version}</p>
+                            <p>Downloading automatically...</p>
+                          </div>
+                        )}
+                        {updateStatus === 'not-available' && <p>✅ You are on the latest version.</p>}
+                        {updateStatus === 'downloading' && (
+                          <div className="UpdateStatus-progress">
+                            <p>⬇️ Downloading update... {Math.round(downloadProgress?.percent || 0)}%</p>
+                            <div style={{ background: '#eee', height: '8px', borderRadius: '4px', width: '100%', marginTop: '5px' }}>
+                              <div style={{
+                                background: '#4CAF50',
+                                height: '100%',
+                                borderRadius: '4px',
+                                width: `${downloadProgress?.percent || 0}%`,
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                          </div>
+                        )}
+                        {updateStatus === 'downloaded' && (
+                          <div className="UpdateStatus-ready">
+                            <p>🚀 <b>Update Ready!</b> Restart the app to install.</p>
+                          </div>
+                        )}
+                        {updateStatus === 'error' && (
+                          <p style={{ color: 'red' }}>❌ Error: {String(updateInfo)}</p>
+                        )}
+                        {updateStatus === 'dev-mode' && (
+                          <p style={{ color: '#888', fontStyle: 'italic' }}>
+                            Updates are disabled in Development Mode. Build the app to test updates.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {receiptMessage && (
+                <div className="SettingsPage-emailMessage">{receiptMessage}</div>
+              )}
+
+              <div className="SettingsPage-emailActions">
+                <button
+                  className="SettingsPage-saveEmailButton"
+                  onClick={handleSaveReceiptSettings}
+                  disabled={receiptSaving}
+                >
+                  💾 {receiptSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                </button>
               </div>
             </div>
           </div>
