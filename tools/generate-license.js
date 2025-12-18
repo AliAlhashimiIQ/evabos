@@ -1,7 +1,17 @@
 /**
  * License Key Generator for EVA POS
  * 
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  ⚠️  CONFIDENTIAL - DO NOT DISTRIBUTE THIS FILE WITH THE APPLICATION  ⚠️  ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ * 
+ * This script is for the software vendor ONLY. It should:
+ * - Be kept in a PRIVATE location (not in the shipped app)
+ * - Never be committed to public repositories
+ * - Be listed in .gitignore for public repos
+ * 
  * Run this script to generate license keys for customers:
+ *   set EVA_LICENSE_SECRET=your-secret-here
  *   node generate-license.js <machineId> [expiryDate]
  * 
  * Examples:
@@ -10,17 +20,28 @@
  *   node generate-license.js abc123 lifetime  # Lifetime license
  * 
  * To get a customer's machine ID:
- * 1. Have them run the app and go to Settings
+ * 1. Have them run the app and go to License/Settings
  * 2. They'll see their Machine ID displayed
  * 3. Use that Machine ID to generate their license
- * 
- * IMPORTANT: Keep this script PRIVATE. Do not distribute it with the app!
  */
 
 const crypto = require('crypto');
 
-// MUST MATCH the secret in licensing.ts - DO NOT SHARE
-const LICENSE_SECRET = 'qXp9zRv2Wk5mN8b7G4hJ1fL3sT6yU0xI'; // Generated secure key
+// Read license secret from environment variable for security
+// Set it before running: set EVA_LICENSE_SECRET=qXp9zRv2Wk5mN8b7G4hJ1fL3sT6yU0xI
+const LICENSE_SECRET = process.env.EVA_LICENSE_SECRET;
+
+if (!LICENSE_SECRET) {
+    console.error('❌ ERROR: EVA_LICENSE_SECRET environment variable is not set.');
+    console.error('');
+    console.error('Set it before running this script:');
+    console.error('  Windows (CMD):    set EVA_LICENSE_SECRET=your-secret-key');
+    console.error('  Windows (PS):     $env:EVA_LICENSE_SECRET="your-secret-key"');
+    console.error('  Linux/Mac:        export EVA_LICENSE_SECRET=your-secret-key');
+    console.error('');
+    console.error('The secret must match what is in electron/ipc/licensing.ts');
+    process.exit(1);
+}
 
 function generateLicenseKey(machineId, expiryDate = 'lifetime', features = ['full']) {
     const payload = {

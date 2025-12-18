@@ -656,50 +656,50 @@ const SettingsPage = (): JSX.Element => {
                 </div>
               )}
               <div className="SettingsPage-section">
-                <h2>Database & Maintenance</h2>
+                <h2>{t('databaseMaintenance') || 'Database & Maintenance'}</h2>
                 <div className="SettingsPage-card">
                   <div className="SettingsPage-field">
-                    <label>Database Reset</label>
+                    <label>{t('databaseReset') || 'Database Reset'}</label>
                     <div className="SettingsPage-actions">
                       <button
                         className="SettingsPage-button danger"
                         onClick={handleResetDatabase}
                       >
-                        ⚠️ Reset Database (Delete All Data)
+                        {t('resetDatabaseButton') || '⚠️ Reset Database (Delete All Data)'}
                       </button>
                     </div>
                     <p className="SettingsPage-hint">
-                      This will delete all sales, products, and customers. It cannot be undone.
+                      {t('resetDatabaseHint') || 'This will delete all sales, products, and customers. It cannot be undone.'}
                     </p>
                   </div>
 
                   <div className="SettingsPage-divider" />
 
                   <div className="SettingsPage-field">
-                    <label>Software Update</label>
+                    <label>{t('softwareUpdate') || 'Software Update'}</label>
                     <div className="SettingsPage-actions">
                       <button
                         className="SettingsPage-button primary"
                         onClick={handleCheckForUpdates}
                         disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
                       >
-                        {updateStatus === 'checking' ? 'Checking...' : 'Check for Updates'}
+                        {updateStatus === 'checking' ? (t('checkingUpdates') || 'Checking...') : (t('checkForUpdates') || 'Check for Updates')}
                       </button>
                     </div>
 
                     {updateStatus && (
                       <div className="UpdateStatus-container" style={{ marginTop: '10px' }}>
-                        {updateStatus === 'checking' && <p>Checking GitHub for releases...</p>}
+                        {updateStatus === 'checking' && <p>{t('checkingUpdates') || 'Checking GitHub for releases...'}</p>}
                         {updateStatus === 'available' && (
                           <div className="UpdateStatus-available">
-                            <p>✅ <b>Update Available!</b> Version {updateInfo?.version}</p>
-                            <p>Downloading automatically...</p>
+                            <p dangerouslySetInnerHTML={{ __html: t('updateAvailable', { version: updateInfo?.version }) || `✅ <b>Update Available!</b> Version ${updateInfo?.version}` }} />
+                            <p>{t('downloadingAuto') || 'Downloading automatically...'}</p>
                           </div>
                         )}
-                        {updateStatus === 'not-available' && <p>✅ You are on the latest version.</p>}
+                        {updateStatus === 'not-available' && <p>{t('latestVersion') || '✅ You are on the latest version.'}</p>}
                         {updateStatus === 'downloading' && (
                           <div className="UpdateStatus-progress">
-                            <p>⬇️ Downloading update... {Math.round(downloadProgress?.percent || 0)}%</p>
+                            <p>{t('downloadingUpdate', { percent: Math.round(downloadProgress?.percent || 0) }) || `⬇️ Downloading update... ${Math.round(downloadProgress?.percent || 0)}%`}</p>
                             <div style={{ background: '#eee', height: '8px', borderRadius: '4px', width: '100%', marginTop: '5px' }}>
                               <div style={{
                                 background: '#4CAF50',
@@ -713,15 +713,22 @@ const SettingsPage = (): JSX.Element => {
                         )}
                         {updateStatus === 'downloaded' && (
                           <div className="UpdateStatus-ready">
-                            <p>🚀 <b>Update Ready!</b> Restart the app to install.</p>
+                            <p dangerouslySetInnerHTML={{ __html: t('updateReady') || '🚀 <b>Update Ready!</b> Restart the app to install.' }} />
+                            <button
+                              className="SettingsPage-button primary"
+                              style={{ marginTop: '10px', backgroundColor: '#4CAF50' }}
+                              onClick={() => window.electronAPI?.quitAndInstall()}
+                            >
+                              {t('restartNow') || '🔄 Restart Now'}
+                            </button>
                           </div>
                         )}
                         {updateStatus === 'error' && (
-                          <p style={{ color: 'red' }}>❌ Error: {String(updateInfo)}</p>
+                          <p style={{ color: 'red' }}>{t('updateError', { error: String(updateInfo) }) || `❌ Error: ${String(updateInfo)}`}</p>
                         )}
                         {updateStatus === 'dev-mode' && (
                           <p style={{ color: '#888', fontStyle: 'italic' }}>
-                            Updates are disabled in Development Mode. Build the app to test updates.
+                            {t('devModeUpdate') || 'Updates are disabled in Development Mode. Build the app to test updates.'}
                           </p>
                         )}
                       </div>

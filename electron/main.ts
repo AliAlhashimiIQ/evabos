@@ -199,6 +199,10 @@ const registerIpcHandlers = (): void => {
     app.exit(0);
   });
 
+  ipcMain.handle('app:quit-and-install', () => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+
   ipcMain.handle('app:reset-focus', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.blur();

@@ -584,6 +584,23 @@ const translations = {
     failedToCreateBackup: 'Failed to create backup.',
     failedToRestoreBackup: 'Failed to restore backup.',
     failedToDeleteBackup: 'Failed to delete backup.',
+
+    // Settings Page
+    databaseMaintenance: 'Database & Maintenance',
+    databaseReset: 'Database Reset',
+    resetDatabaseButton: '⚠️ Reset Database (Delete All Data)',
+    resetDatabaseHint: 'This will delete all sales, products, and customers. It cannot be undone.',
+    softwareUpdate: 'Software Update',
+    checkForUpdates: 'Check for Updates',
+    checkingUpdates: 'Checking GitHub for releases...',
+    updateAvailable: '✅ Update Available! Version {version}',
+    downloadingAuto: 'Downloading automatically...',
+    latestVersion: '✅ You are on the latest version.',
+    downloadingUpdate: '⬇️ Downloading update... {percent}%',
+    updateReady: '🚀 Update Ready! Restart the app to install.',
+    restartNow: '🔄 Restart Now',
+    updateError: '❌ Error: {error}',
+    devModeUpdate: 'Updates are disabled in Development Mode. Build the app to test updates.',
   },
 
   ar: {
@@ -1164,6 +1181,23 @@ const translations = {
     noBarcode: 'لا يوجد باركود',
     manageVendorRelationships: 'إدارة علاقات الموردين وتفاصيل الاتصال.',
     status: 'الحالة',
+
+    // Settings Page
+    databaseMaintenance: 'قاعدة البيانات والصيانة',
+    databaseReset: 'إعادة تعيين قاعدة البيانات',
+    resetDatabaseButton: '⚠️ إعادة تعيين قاعدة البيانات (حذف جميع البيانات)',
+    resetDatabaseHint: 'سيؤدي هذا إلى حذف جميع المبيعات والمنتجات والعملاء. لا يمكن التراجع عن هذا الإجراء.',
+    softwareUpdate: 'تحديث البرنامج',
+    checkForUpdates: 'التحقق من وجود تحديثات',
+    checkingUpdates: 'جاري التحقق من التحديثات...',
+    updateAvailable: '✅ يتوفر تحديث! الإصدار {version}',
+    downloadingAuto: 'جاري التنزيل تلقائياً...',
+    latestVersion: '✅ أنت تستخدم أحدث إصدار.',
+    downloadingUpdate: '⬇️ جاري تنزيل التحديث... {percent}%',
+    updateReady: '🚀 التحديث جاهز! أعد تشغيل التطبيق للتثبيت.',
+    restartNow: '🔄 إعادة التشغيل الآن',
+    updateError: '❌ خطأ: {error}',
+    devModeUpdate: 'التحديثات معطلة في وضع التطوير. قم ببناء التطبيق لاختبار التحديثات.',
   },
 };
 

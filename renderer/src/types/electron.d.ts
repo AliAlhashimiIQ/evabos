@@ -11,6 +11,7 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<any>;
   onUpdateStatus: (callback: (status: string, info?: any) => void) => () => void;
   onDownloadProgress: (callback: (progress: any) => void) => () => void;
+  quitAndInstall: () => Promise<void>;
 }
 
 export interface Product {

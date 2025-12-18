@@ -7,8 +7,16 @@ import { getSetting, setSetting } from '../db/database';
 
 let handlersRegistered = false;
 
-// License encryption secret - DO NOT SHARE THIS
-const LICENSE_SECRET = 'qXp9zRv2Wk5mN8b7G4hJ1fL3sT6yU0xI'; // Generated secure key
+// ============================================================================
+// LICENSE SECRET - Obfuscated to prevent easy extraction from decompiled code
+// The actual secret is derived at runtime from these components.
+// For the license generator tool, see tools/generate-license.js
+// ============================================================================
+const _k1 = 'vxH/OXFe';
+const _k2 = '6jiiB5/q';
+const _k3 = 'umKTE8u8';
+const _k4 = '4m+OiuOy';
+const getLicenseSecret = (): string => [_k1, _k2, _k3, _k4].join('');
 
 // Get machine fingerprint (hardware ID)
 function getMachineFingerprint(): string {
@@ -87,7 +95,7 @@ function decodeLicenseKey(licenseKey: string): DecodeResult {
     }
 
     // Derive key from secret
-    const key = crypto.scryptSync(LICENSE_SECRET, 'salt', 32);
+    const key = crypto.scryptSync(getLicenseSecret(), 'salt', 32);
 
     // First 32 hex chars are 16-byte IV
     const iv = Buffer.from(cleanKey.substring(0, 32), 'hex');
@@ -108,32 +116,11 @@ function decodeLicenseKey(licenseKey: string): DecodeResult {
   }
 }
 
-/**
- * Generate a license key (USE THIS ON YOUR LICENSE SERVER)
- * This function is included for reference - DO NOT expose it to users
- */
-export function generateLicenseKey(machineId: string, expiryDate: string = 'lifetime', features: string[] = ['full']): string {
-  const payload: LicensePayload = {
-    machineId,
-    expiryDate,
-    features,
-    activatedAt: new Date().toISOString(),
-  };
-
-  const key = crypto.scryptSync(LICENSE_SECRET, 'salt', 32);
-  const iv = crypto.randomBytes(16); // Correct 16 bytes for AES-256-CBC
-
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-  let encrypted = cipher.update(JSON.stringify(payload), 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-
-  // Format: EVA-XXXX-XXXX...
-  const fullKey = iv.toString('hex') + encrypted;
-  const formattedChunks = fullKey.match(/.{1,4}/g) || [];
-  const formatted = `EVA-${formattedChunks.join('-')}`.toUpperCase();
-
-  return formatted;
-}
+// ============================================================================
+// SECURITY NOTE: License key generation has been REMOVED from client code.
+// Use the separate tools/generate-license.js script (NOT shipped with app)
+// to generate license keys for customers.
+// ============================================================================
 
 // Validate license
 async function validateLicense(): Promise<{ valid: boolean; reason?: string; isUsb?: boolean; expiresAt?: string }> {

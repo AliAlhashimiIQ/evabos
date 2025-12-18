@@ -46,7 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const subscription = (_: any, progress: any) => callback(progress);
     ipcRenderer.on('update-download-progress', subscription);
     return () => ipcRenderer.removeListener('update-download-progress', subscription);
-  }
+  },
+  quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install')
 });
 
 contextBridge.exposeInMainWorld('evaApi', {
