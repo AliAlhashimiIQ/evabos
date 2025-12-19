@@ -30,11 +30,15 @@ const getDbPath = (): string => {
   // IMPORTANT: This MUST match the logic in database.ts resolveDbPath()
   // Check if running as a Portable App (electron-builder sets this env var)
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
-    return path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'eva-pos.db');
+    const portablePath = path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'eva-pos.db');
+    log.info('[backup] Using PORTABLE database path:', portablePath);
+    return portablePath;
   }
 
   // Standard Install (NSIS) & Development: Use UserData (Persists across updates)
-  return path.join(app.getPath('userData'), 'eva-pos.db');
+  const userDataPath = path.join(app.getPath('userData'), 'eva-pos.db');
+  log.info('[backup] Using userData database path:', userDataPath);
+  return userDataPath;
 };
 
 export async function ensureBackupDir(): Promise<string> {
