@@ -82,6 +82,43 @@ const resolveDbPath = (): string => {
 
   // Standard Install (NSIS) & Development: Use UserData (Persists across updates)
   const userDataPath = path.join(app.getPath('userData'), 'eva-pos.db');
+
+  // MIGRATION: Check if old database exists next to exe (from previous versions)
+  // and copy it to the new userData location if the new one doesn't exist
+  if (app.isPackaged) {
+    const fs = require('fs');
+    const oldDbPath = path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
+
+    // Only migrate if old DB exists AND new DB doesn't exist
+    if (fs.existsSync(oldDbPath) && !fs.existsSync(userDataPath)) {
+      try {
+        log.info('[db] MIGRATION: Found old database at:', oldDbPath);
+        log.info('[db] MIGRATION: Copying to new location:', userDataPath);
+
+        // Ensure userData directory exists
+        const userDataDir = path.dirname(userDataPath);
+        if (!fs.existsSync(userDataDir)) {
+          fs.mkdirSync(userDataDir, { recursive: true });
+        }
+
+        // Copy old DB to new location
+        fs.copyFileSync(oldDbPath, userDataPath);
+        log.info('[db] MIGRATION: Successfully migrated database to userData!');
+
+        // Optionally rename old DB to mark it as migrated (don't delete in case something goes wrong)
+        try {
+          fs.renameSync(oldDbPath, oldDbPath + '.migrated');
+          log.info('[db] MIGRATION: Renamed old database to .migrated');
+        } catch (renameErr) {
+          log.warn('[db] MIGRATION: Could not rename old database (may be in use)');
+        }
+      } catch (migrationErr) {
+        log.error('[db] MIGRATION: Failed to migrate database:', migrationErr);
+        // Continue with new DB anyway
+      }
+    }
+  }
+
   log.info('[db] Using userData database path:', userDataPath);
   return userDataPath;
 };
