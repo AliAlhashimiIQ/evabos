@@ -27,11 +27,13 @@ const getDbPath = (): string => {
     throw new Error('App not ready');
   }
 
-  // For portable/USB mode: Store DB next to the executable
-  if (app.isPackaged) {
-    return path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
+  // IMPORTANT: This MUST match the logic in database.ts resolveDbPath()
+  // Check if running as a Portable App (electron-builder sets this env var)
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    return path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'eva-pos.db');
   }
 
+  // Standard Install (NSIS) & Development: Use UserData (Persists across updates)
   return path.join(app.getPath('userData'), 'eva-pos.db');
 };
 
