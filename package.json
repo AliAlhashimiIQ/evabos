@@ -1,6 +1,6 @@
 {
   "name": "eva-pos-desktop",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "productName": "EVA-POS",
   "description": "EVA POS Desktop Application",
   "main": "dist-electron/main.js",

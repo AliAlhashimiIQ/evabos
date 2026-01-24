@@ -18,6 +18,9 @@ interface LabelSettings {
   customText2: string;
   customText3: string;
   fieldOrder: string[];
+  // Fake discount feature
+  showFakeDiscount: boolean;
+  fakeDiscountPercent: number;
 }
 
 const defaultSettings: LabelSettings = {
@@ -35,6 +38,9 @@ const defaultSettings: LabelSettings = {
   customText2: '',
   customText3: '',
   fieldOrder: ['productName', 'variant', 'barcode', 'sku', 'price'],
+  // Fake discount defaults
+  showFakeDiscount: false,
+  fakeDiscountPercent: 30,
 };
 
 
@@ -165,6 +171,34 @@ const LabelSettingsSection = (): JSX.Element => {
               />
               <span>{t('price')}</span>
             </label>
+          </div>
+
+          {/* Fake Discount Feature */}
+          <div className="LabelSettings-group">
+            <h3>🏷️ {t('fakeDiscount') || 'عرض السعر القديم'}</h3>
+            <p className="LabelSettings-hint">{t('fakeDiscountHint') || 'أظهر سعر "أصلي" مشطوب لإعطاء انطباع التخفيض'}</p>
+            <label className="LabelSettings-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.showFakeDiscount}
+                onChange={(e) => updateSetting('showFakeDiscount', e.target.checked)}
+              />
+              <span>{t('enableFakeDiscount') || 'تفعيل السعر القديم'}</span>
+            </label>
+            {settings.showFakeDiscount && (
+              <label>
+                {t('discountPercent') || 'نسبة الزيادة (أعلى من السعر الحالي)'}
+                <NumberInput
+                  min="5"
+                  max="80"
+                  value={settings.fakeDiscountPercent}
+                  onChange={(e) => updateSetting('fakeDiscountPercent', parseInt(e.target.value) || 30)}
+                />
+                <span className="LabelSettings-hint" style={{ marginTop: '4px', display: 'block' }}>
+                  {t('discountExample') || 'مثال: إذا السعر 65,000 ونسبة الزيادة 30%، سيظهر ~85,000 مشطوب'}
+                </span>
+              </label>
+            )}
           </div>
 
           {/* Barcode Settings */}

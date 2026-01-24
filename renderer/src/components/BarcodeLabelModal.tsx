@@ -27,6 +27,9 @@ interface LabelSettings {
   customText2: string;
   customText3: string;
   fieldOrder: string[];
+  // Fake discount feature
+  showFakeDiscount: boolean;
+  fakeDiscountPercent: number;
 }
 
 const defaultSettings: LabelSettings = {
@@ -44,6 +47,9 @@ const defaultSettings: LabelSettings = {
   customText2: '',
   customText3: '',
   fieldOrder: ['productName', 'variant', 'barcode', 'sku', 'price'],
+  // Fake discount defaults
+  showFakeDiscount: false,
+  fakeDiscountPercent: 30,
 };
 
 const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps): JSX.Element | null => {
@@ -169,6 +175,11 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
 
     const barcodeDataUrl = barcodeCanvasRef.current.toDataURL('image/png');
 
+    // Calculate fake original price if enabled
+    const fakeOriginalPrice = settings.showFakeDiscount && product.salePriceIQD
+      ? Math.round(product.salePriceIQD * (1 + settings.fakeDiscountPercent / 100) / 5000) * 5000
+      : null;
+
     return `
 <!DOCTYPE html>
 <html>
@@ -191,7 +202,6 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         justify-content: center;
         align-items: center;
         text-align: center;
-        /* border: 1px solid #ddd; */ /* Removed border for print */
       }
       .label-name {
         font-size: ${settings.fontSize}px;
@@ -204,11 +214,25 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .label-price-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 2px;
+      }
+      .label-price-original {
+        font-size: ${settings.fontSize * 0.9}px;
+        font-weight: normal;
+        color: #666;
+        text-decoration: line-through;
+        line-height: 1.2;
+      }
       .label-price {
         font-size: ${settings.fontSize * 1.2}px;
         font-weight: 900;
         color: #000;
-        margin-bottom: 2px;
         line-height: 1.2;
       }
       .label-store {
@@ -240,7 +264,12 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
   </head>
   <body>
     ${settings.showProductName && product.productName ? `<div class="label-name">${product.productName}</div>` : ''}
-    ${settings.showPrice && product.salePriceIQD ? `<div class="label-price">${product.salePriceIQD.toLocaleString('en-IQ')} د.ع</div>` : ''}
+    ${settings.showPrice && product.salePriceIQD ? `
+      <div class="label-price-container">
+        ${fakeOriginalPrice ? `<span class="label-price-original">${fakeOriginalPrice.toLocaleString('en-IQ')}</span>` : ''}
+        <span class="label-price">${product.salePriceIQD.toLocaleString('en-IQ')} د.ع</span>
+      </div>
+    ` : ''}
     ${settings.showSku && product.sku ? `<div class="label-store">SKU: ${product.sku}</div>` : ''}
     ${settings.customText3 ? `<div class="label-store">${settings.customText3}</div>` : ''}
     <div class="label-barcode">
@@ -393,13 +422,32 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                   )}
                   {settings.showPrice && product.salePriceIQD && (
                     <div style={{
-                      fontSize: `${settings.fontSize * 1.2}px`,
-                      fontWeight: '900',
-                      color: '#000',
-                      lineHeight: '1.2',
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
                       marginBottom: '2px',
                     }}>
-                      {product.salePriceIQD.toLocaleString('en-IQ')} د.ع
+                      {settings.showFakeDiscount && (
+                        <span style={{
+                          fontSize: `${settings.fontSize * 0.9}px`,
+                          fontWeight: 'normal',
+                          color: '#666',
+                          textDecoration: 'line-through',
+                          lineHeight: '1.2',
+                        }}>
+                          {Math.round(product.salePriceIQD * (1 + settings.fakeDiscountPercent / 100) / 5000) * 5000}
+                        </span>
+                      )}
+                      <span style={{
+                        fontSize: `${settings.fontSize * 1.2}px`,
+                        fontWeight: '900',
+                        color: '#000',
+                        lineHeight: '1.2',
+                      }}>
+                        {product.salePriceIQD.toLocaleString('en-IQ')} د.ع
+                      </span>
                     </div>
                   )}
                   {settings.showSku && product.sku && (
