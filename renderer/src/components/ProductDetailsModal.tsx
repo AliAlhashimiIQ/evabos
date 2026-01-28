@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X, Tag } from 'lucide-react';
 import BarcodeLabelModal from './BarcodeLabelModal';
 import './ProductDetailsModal.css';
 
@@ -40,7 +41,7 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
           <div className="ProductDetailsModal-header">
             <h2>Product Details</h2>
             <button className="ProductDetailsModal-close" onClick={onClose}>
-              ✕
+              <X size={20} />
             </button>
           </div>
 
@@ -154,7 +155,7 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
                 className="ProductDetailsModal-printLabelButton"
                 onClick={() => setShowLabelModal(true)}
               >
-                🏷️ Print Label
+                <Tag size={18} /> Print Label
               </button>
             )}
             <button className="ProductDetailsModal-closeButton" onClick={onClose}>

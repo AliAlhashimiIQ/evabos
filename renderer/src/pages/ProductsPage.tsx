@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { FileDown, Plus, X } from 'lucide-react';
 import ProductForm from '../components/ProductForm';
 import ProductVariantTable from '../components/ProductVariantTable';
 import InventoryAdjustModal from '../components/InventoryAdjustModal';
@@ -202,10 +203,10 @@ const ProductsPage = (): JSX.Element => {
         </div>
         <div className="ProductsPage-actions">
           <button className="ProductsPage-importButton" onClick={() => setIsImportModalOpen(true)}>
-            📥 {t('importExcel')}
+            <FileDown size={18} /> {t('importExcel')}
           </button>
           <button className="ProductsPage-addButton" onClick={() => setIsModalOpen(true)}>
-            + {t('addProduct')}
+            <Plus size={18} /> {t('addProduct')}
           </button>
         </div>
       </div>
@@ -273,7 +274,7 @@ const ProductsPage = (): JSX.Element => {
 
         {(searchQuery || selectedSupplier || minPrice || maxPrice || showDeactivated) && (
           <button className="ProductsPage-clearFilters" onClick={clearFilters}>
-            ✕ {t('clearFilters') || 'Clear'}
+            <X size={16} /> {t('clearFilters') || 'Clear'}
           </button>
         )}
       </div>
@@ -312,7 +313,7 @@ const ProductsPage = (): JSX.Element => {
               <div className="ProductsPage-modalHeader">
                 <h2>{t('addProduct')}</h2>
                 <button className="ProductsPage-closeButton" onClick={() => setIsModalOpen(false)}>
-                  ✕
+                  <X size={20} />
                 </button>
               </div>
               <ProductForm onSubmit={handleCreateProduct} onCancel={() => setIsModalOpen(false)} loading={isSubmitting} />
@@ -380,7 +381,7 @@ const ProductsPage = (): JSX.Element => {
             <div className="ProductsPage-modalHeader">
               <h2>{t('editProduct')}</h2>
               <button className="ProductsPage-closeButton" onClick={() => setEditProduct(null)}>
-                ✕
+                <X size={20} />
               </button>
             </div>
             <div className="ProductsPage-editForm">

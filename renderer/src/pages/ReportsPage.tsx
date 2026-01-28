@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { utils, writeFile } from 'xlsx';
+import {
+  FileDown,
+  Printer,
+  Play,
+  Calendar,
+  History,
+  BarChart,
+  BarChart2,
+  BarChart3,
+  CalendarDays,
+  CalendarRange,
+  X,
+  TrendingDown,
+  Factory,
+  Package,
+  Loader2,
+  Check
+} from 'lucide-react';
 import './Pages.css';
 import './ReportsPage.css';
 
@@ -397,9 +415,11 @@ const ReportsPage = (): JSX.Element => {
         </div>
         <div className="Reports-actions">
           <button onClick={exportToExcel} disabled={!reports}>
-            {t('exportToExcel')}
+            <FileDown size={18} /> {t('exportToExcel')}
           </button>
-          <button onClick={printReport}>{t('print')}</button>
+          <button onClick={printReport}>
+            <Printer size={18} /> {t('print')}
+          </button>
         </div>
       </div>
 
@@ -407,35 +427,35 @@ const ReportsPage = (): JSX.Element => {
         <button onClick={() => {
           const today = new Date();
           setRange({ startDate: formatDateInput(today), endDate: formatDateInput(today) });
-        }}>{t('today')}</button>
+        }}><Calendar size={14} /> {t('today')}</button>
         <button onClick={() => {
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
           setRange({ startDate: formatDateInput(yesterday), endDate: formatDateInput(yesterday) });
-        }}>{t('yesterday')}</button>
+        }}><History size={14} /> {t('yesterday')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date();
           start.setDate(today.getDate() - 6);
           setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
-        }}>{t('last7days')}</button>
+        }}><BarChart size={14} /> {t('last7days')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date();
           start.setDate(today.getDate() - 29);
           setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
-        }}>{t('last30days')}</button>
+        }}><BarChart2 size={14} /> {t('last30days')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date(today.getFullYear(), today.getMonth(), 1);
           setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
-        }}>{t('thisMonth')}</button>
+        }}><CalendarDays size={14} /> {t('thisMonth')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
           const end = new Date(today.getFullYear(), today.getMonth(), 0);
           setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
-        }}>{t('lastMonth')}</button>
+        }}><CalendarRange size={14} /> {t('lastMonth')}</button>
       </section>
 
       <section className="Reports-filters">
@@ -456,7 +476,7 @@ const ReportsPage = (): JSX.Element => {
           />
         </label>
         <button className="Reports-button" onClick={loadReports} disabled={loading}>
-          {loading ? t('loading') : t('runReport')}
+          {loading ? <><Loader2 size={16} className="spin" /> {t('loading')}</> : <><Play size={16} /> {t('runReport')}</>}
         </button>
       </section>
 
@@ -721,7 +741,7 @@ const ReportsPage = (): JSX.Element => {
                     onClick={() => setSelectedSuppliers(new Set())}
                     style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '4px 8px', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: '4px', color: '#f87171', cursor: 'pointer' }}
                   >
-                    ✕ {t('clearSelection') || 'Clear Selection'} ({selectedSuppliers.size})
+                    <X size={14} /> {t('clearSelection') || 'Clear Selection'} ({selectedSuppliers.size})
                   </button>
                 )}
               </header>
@@ -729,7 +749,7 @@ const ReportsPage = (): JSX.Element => {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}>✓</th>
+                      <th style={{ width: '40px' }}><Check size={16} /></th>
                       <th>{t('supplier')}</th>
                       <th>{t('quantity')}</th>
                       <th>{t('valueUSD')}</th>
@@ -789,7 +809,7 @@ const ReportsPage = (): JSX.Element => {
                         fontWeight: 'bold',
                         borderTop: '2px solid #22c55e'
                       }}>
-                        <td>📊</td>
+                        <td><BarChart3 size={16} /></td>
                         <td style={{ color: '#22c55e' }}>
                           {t('selectedTotal') || 'Selected Total'} ({selectedSuppliers.size} {selectedSuppliers.size === 1 ? t('supplier') : t('suppliers') || 'suppliers'})
                         </td>
@@ -837,7 +857,7 @@ const ReportsPage = (): JSX.Element => {
           <section className="Reports-grid">
             <article>
               <header>
-                <h3>📉 {t('leastProfitableItems')}</h3>
+                <h3><TrendingDown size={20} /> {t('leastProfitableItems')}</h3>
               </header>
               {leastProfitableItems.length > 0 ? (
                 <table>
@@ -873,7 +893,7 @@ const ReportsPage = (): JSX.Element => {
 
             <article>
               <header>
-                <h3>🏭 {t('leastProfitableSuppliers')}</h3>
+                <h3><Factory size={20} /> {t('leastProfitableSuppliers')}</h3>
               </header>
               {leastProfitableSuppliers.length > 0 ? (
                 <table>
@@ -910,7 +930,7 @@ const ReportsPage = (): JSX.Element => {
           <section className="Reports-grid">
             <article style={{ gridColumn: '1 / -1' }}>
               <header>
-                <h3>📦 {t('inventoryAging')}</h3>
+                <h3><Package size={20} /> {t('inventoryAging')}</h3>
               </header>
               {inventoryAging.length > 0 ? (
                 <table>

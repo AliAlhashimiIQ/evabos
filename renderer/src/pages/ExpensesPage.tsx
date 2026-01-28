@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { X, Plus, FileDown, ClipboardList, Trash2 } from 'lucide-react';
 import './Pages.css';
 import './ExpensesPage.css';
 import NumberInput from '../components/NumberInput';
@@ -171,10 +172,10 @@ const ExpensesPage = (): JSX.Element => {
         </div>
         <div className="ExpensesPage-headerActions">
           <button className="ExpensesPage-addBtn" onClick={() => setShowAddForm(!showAddForm)}>
-            {showAddForm ? '✕' : '+'} {showAddForm ? t('cancel') : t('addExpense')}
+            {showAddForm ? <X size={18} /> : <Plus size={18} />} {showAddForm ? t('cancel') : t('addExpense')}
           </button>
           <button className="ExpensesPage-exportBtn" onClick={exportToCSV}>
-            📥 {t('exportToCSV')}
+            <FileDown size={18} /> {t('exportToCSV')}
           </button>
         </div>
       </div>
@@ -185,7 +186,7 @@ const ExpensesPage = (): JSX.Element => {
       {showAddForm && (
         <section className="ExpensesPage-formCard">
           <header>
-            <h3>➕ {t('addExpense')}</h3>
+            <h3><Plus size={20} /> {t('addExpense')}</h3>
           </header>
           <form onSubmit={handleSubmit}>
             <label>
@@ -296,7 +297,7 @@ const ExpensesPage = (): JSX.Element => {
       {/* Expenses List */}
       <section className="ExpensesPage-list">
         <header>
-          <h3>📋 {t('expenses')} ({filteredExpenses.length})</h3>
+          <h3><ClipboardList size={20} /> {t('expenses')} ({filteredExpenses.length})</h3>
         </header>
         {loading ? (
           <div className="ExpensesPage-empty">{t('loadingExpenses')}</div>
@@ -324,7 +325,7 @@ const ExpensesPage = (): JSX.Element => {
                   <td className="ExpensesPage-note">{expense.note ?? '—'}</td>
                   <td>
                     <button className="ExpensesPage-deleteBtn" onClick={() => handleDelete(expense.id)}>
-                      🗑️ {t('delete')}
+                      <Trash2 size={16} /> {t('delete')}
                     </button>
                   </td>
                 </tr>

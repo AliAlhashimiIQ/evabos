@@ -1,4 +1,5 @@
 import { useLanguage } from '../contexts/LanguageContext';
+import { Eye, Tag, Pencil, Trash2 } from 'lucide-react';
 import './ProductVariantTable.css';
 
 type Product = import('../types/electron').Product;
@@ -79,7 +80,7 @@ const ProductVariantTable = ({
                       onClick={() => onViewDetails(variant)}
                       title={t('viewDetails') || 'View Details'}
                     >
-                      👁️
+                      <Eye size={16} />
                     </button>
                   )}
                   {onPrintLabel && variant.barcode && (
@@ -88,7 +89,7 @@ const ProductVariantTable = ({
                       onClick={() => onPrintLabel(variant)}
                       title={t('printLabel')}
                     >
-                      🏷️
+                      <Tag size={16} />
                     </button>
                   )}
                   {onAction && (
@@ -102,7 +103,7 @@ const ProductVariantTable = ({
                       onClick={() => onEdit(variant)}
                       title={t('edit')}
                     >
-                      ✏️
+                      <Pencil size={16} />
                     </button>
                   )}
                   {onDelete && (
@@ -111,7 +112,7 @@ const ProductVariantTable = ({
                       onClick={() => onDelete(variant)}
                       title={t('delete')}
                     >
-                      🗑️
+                      <Trash2 size={16} />
                     </button>
                   )}
                 </div>

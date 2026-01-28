@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import './Pages.css';
 import './SuppliersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -109,7 +110,7 @@ const SuppliersPage = (): JSX.Element => {
           <p>{t('manageVendorRelationships')}</p>
         </div>
         <button className="SuppliersPage-addButton" onClick={() => setIsModalOpen(true)}>
-          + {t('newSupplier')}
+          <Plus size={18} /> {t('newSupplier')}
         </button>
       </div>
 
@@ -154,7 +155,7 @@ const SuppliersPage = (): JSX.Element => {
                       title={t('edit')}
                       style={{ marginRight: '0.5rem' }}
                     >
-                      ✏️
+                      <Pencil size={16} />
                     </button>
                     <button
                       className="icon-button delete-icon"
@@ -171,7 +172,7 @@ const SuppliersPage = (): JSX.Element => {
                       }}
                       title={t('delete')}
                     >
-                      🗑️
+                      <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
@@ -186,7 +187,7 @@ const SuppliersPage = (): JSX.Element => {
           <div className="SuppliersPage-modal">
             <header>
               <h3>{editingSupplier ? t('editSupplier') : t('createSupplier')}</h3>
-              <button onClick={handleCloseModal}>✕</button>
+              <button onClick={handleCloseModal}><X size={20} /></button>
             </header>
             <form onSubmit={handleSubmit} className="SuppliersPage-form">
               <label>

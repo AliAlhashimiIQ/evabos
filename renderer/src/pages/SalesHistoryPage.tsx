@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Printer, Trash2, RotateCcw } from 'lucide-react';
 import PrintingModal from '../components/PrintingModal';
 import './Pages.css';
 import './SalesHistoryPage.css';
@@ -201,21 +202,21 @@ const SalesHistoryPage = (): JSX.Element => {
       <div className="Page SalesHistory">
         <div className="Page-header">
           <button className="SalesHistory-back" onClick={() => navigate('/sales')}>
-            ← {t('backToSalesList')}
+            <ArrowLeft size={16} /> {t('backToSalesList')}
           </button>
           <h1>{t('sale')} #{selectedSale.id}</h1>
           <button
             className="SalesHistory-print"
             onClick={() => handlePrintSale(selectedSale)}
           >
-            🖨️ {t('printReceipt')}
+            <Printer size={18} /> {t('printReceipt')}
           </button>
           <button
             className="SalesHistory-delete"
             onClick={() => handleDeleteSale(selectedSale.id)}
             style={{ marginLeft: '10px', backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
           >
-            🗑️ {t('delete')}
+            <Trash2 size={18} /> {t('delete')}
           </button>
         </div>
 
@@ -346,7 +347,7 @@ const SalesHistoryPage = (): JSX.Element => {
             disabled={sales.length === 0}
             style={{ marginLeft: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
           >
-            🖨️ {t('printReport')}
+            <Printer size={18} /> {t('printReport')}
           </button>
         </div>
 
@@ -397,7 +398,7 @@ const SalesHistoryPage = (): JSX.Element => {
                               {' '}x{item.quantity}
                               {returnedQty > 0 && (
                                 <span className="SalesHistory-returned-badge">
-                                  ↩ {returnedQty} {t('returned')}
+                                  <RotateCcw size={12} /> {returnedQty} {t('returned')}
                                 </span>
                               )}
                             </div>

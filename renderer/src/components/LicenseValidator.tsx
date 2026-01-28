@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ShieldCheck, Copy } from 'lucide-react';
 import './LicenseValidator.css';
 
 interface LicenseStatus {
@@ -85,7 +86,7 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
         <div className="LicenseValidator-overlay">
           <div className="LicenseCard">
             <div className="LicenseCard-header">
-              <div className="LicenseCard-icon">🛡️</div>
+              <div className="LicenseCard-icon"><ShieldCheck size={48} /></div>
               <h1>Product Activation</h1>
               <p>Please activate your copy of EVA POS to continue.</p>
             </div>
@@ -98,7 +99,7 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
                 <label>Your Machine ID</label>
                 <div className="MachineInfo-row">
                   <code>{machineId}</code>
-                  <button type="button" onClick={copyMachineId} title="Copy ID">📋</button>
+                  <button type="button" onClick={copyMachineId} title="Copy ID"><Copy size={16} /></button>
                 </div>
                 <small>Send this ID to your provider to receive your license key.</small>
               </div>

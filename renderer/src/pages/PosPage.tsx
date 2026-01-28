@@ -2,6 +2,20 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import {
+  Search,
+  Loader2,
+  Package,
+  Trash2,
+  RotateCcw,
+  X,
+  CheckCircle2,
+  XCircle,
+  DollarSign,
+  Banknote,
+  Plus,
+  Minus
+} from 'lucide-react';
 import './Pages.css';
 import './PosPage.css';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
@@ -550,13 +564,13 @@ const PosPage = (): JSX.Element => {
       if (variant) {
         // Check stock before adding
         if (variant.stockOnHand <= 0) {
-          setScannerMessage(`❌ "${variant.productName}" ${t('outOfStock')}`);
+          setScannerMessage(`"${variant.productName}" ${t('outOfStock')}`);
         } else {
           addToCart(variant);
-          setScannerMessage(`✅ ${t('added')} ${variant.productName}`);
+          setScannerMessage(`${t('added')} ${variant.productName}`);
         }
       } else {
-        setScannerMessage(`❌ ${t('noMatchFor')} ${value}`);
+        setScannerMessage(`${t('noMatchFor')} ${value}`);
       }
 
       // Keep the timeout as a backup for React render cycles
@@ -624,7 +638,7 @@ const PosPage = (): JSX.Element => {
 
                   handleScan(trimmedValue);
                 } else {
-                  setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
+                  setScannerMessage(t('pleaseEnterBarcode'));
                   setTimeout(() => setScannerMessage(null), 2000);
                 }
               }
@@ -640,13 +654,13 @@ const PosPage = (): JSX.Element => {
               if (currentValue.trim().length >= 3) {
                 handleScan(currentValue.trim());
               } else {
-                setScannerMessage(`❌ ${t('pleaseEnterBarcode')}`);
+                setScannerMessage(t('pleaseEnterBarcode'));
                 setTimeout(() => setScannerMessage(null), 2000);
               }
             }}
             title={t('scan')}
           >
-            🔍 {t('scan')}
+            <Search size={18} /> {t('scan')}
           </button>
         </div>
         {scannerMessage && <div className="Pos-scannerMessage">{scannerMessage}</div>}
@@ -670,7 +684,15 @@ const PosPage = (): JSX.Element => {
               }}
               title={t('productsLoadedTitle', { count: products.length })}
             >
-              {isLoadingMore ? `⏳ ${t('loading')}` : `📦 ${t('loadMoreCount', { count: products.length })}`}
+              {isLoadingMore ? (
+                <>
+                  <Loader2 size={16} className="spin" /> {t('loading')}
+                </>
+              ) : (
+                <>
+                  <Package size={16} /> {t('loadMoreCount', { count: products.length })}
+                </>
+              )}
             </button>
           </div>
         )}
@@ -700,11 +722,11 @@ const PosPage = (): JSX.Element => {
                 }}
                 title={t('clearCart')}
               >
-                🗑️ {t('clear')}
+                <Trash2 size={18} /> {t('clear')}
               </button>
             )}
             <button className="Pos-returnsButton" onClick={() => navigate('/returns')} title={t('processReturns')}>
-              🔄 {t('returns')}
+              <RotateCcw size={18} /> {t('returns')}
             </button>
           </div>
         </header>
@@ -739,9 +761,9 @@ const PosPage = (): JSX.Element => {
           </div>
         </div>
 
-        {globalError && <div className="Pos-alert Pos-alert--error">{globalError}</div>}
-        {profileError && <div className="Pos-alert Pos-alert--error">{profileError}</div>}
-        {profileSuccess && <div className="Pos-alert Pos-alert--success">{profileSuccess}</div>}
+        {globalError && <div className="Pos-alert Pos-alert--error"><XCircle size={18} /> {globalError}</div>}
+        {profileError && <div className="Pos-alert Pos-alert--error"><XCircle size={18} /> {profileError}</div>}
+        {profileSuccess && <div className="Pos-alert Pos-alert--success"><CheckCircle2 size={18} /> {profileSuccess}</div>}
 
         <div className="Pos-cartTableWrapper">
           {cart.length === 0 ? (
@@ -772,16 +794,16 @@ const PosPage = (): JSX.Element => {
                     </td>
                     <td>
                       <div className="Pos-qtyControls">
-                        <button onClick={() => updateQuantity(item.product.id, -1)}>-</button>
+                        <button onClick={() => updateQuantity(item.product.id, -1)}><Minus size={14} /></button>
                         <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, 1)}>+</button>
+                        <button onClick={() => updateQuantity(item.product.id, 1)}><Plus size={14} /></button>
                       </div>
                     </td>
                     <td>{item.product.salePriceIQD.toLocaleString('en-IQ')}</td>
                     <td className="Pos-lineTotal">{(item.product.salePriceIQD * item.quantity).toLocaleString('en-IQ')}</td>
                     <td>
                       <button className="Pos-deleteButton" onClick={() => removeItem(item.product.id)} title={t('removeItem')}>
-                        ×
+                        <X size={16} />
                       </button>
                     </td>
                   </tr>
@@ -820,7 +842,7 @@ const PosPage = (): JSX.Element => {
                     }}
                     title={t('clear')}
                   >
-                    ✕
+                    <X size={14} />
                   </button>
                 )}
                 {showCustomerDropdown && (
@@ -884,7 +906,7 @@ const PosPage = (): JSX.Element => {
                   }
                   title={t('discountByFinalPrice') || 'Enter final price customer will pay'}
                 >
-                  💰 {t('finalPrice') || 'Final Price'}
+                  <DollarSign size={16} /> {t('finalPrice') || 'Final Price'}
                 </button>
                 <button
                   type="button"
@@ -914,7 +936,7 @@ const PosPage = (): JSX.Element => {
                   }
                   title={t('discountByAmount')}
                 >
-                  💵 {t('amount')}
+                  <Banknote size={16} /> {t('amount')}
                 </button>
               </div>
               <div className="Pos-discountInput">
@@ -949,7 +971,7 @@ const PosPage = (): JSX.Element => {
                     }
                     title={t('clearDiscount')}
                   >
-                    ×
+                    <X size={14} />
                   </button>
                 )}
               </div>
@@ -998,7 +1020,7 @@ const PosPage = (): JSX.Element => {
             </div>
             {user?.role === 'admin' && (
               <div className="Pos-summaryRow Pos-profit">
-                <span>💰 {t('estimatedProfit')}</span>
+                <span><DollarSign size={16} /> {t('estimatedProfit')}</span>
                 <strong>{profitIQD.toLocaleString('en-IQ')} IQD</strong>
               </div>
             )}
@@ -1018,9 +1040,13 @@ const PosPage = (): JSX.Element => {
           title={cart.length === 0 ? t('addItemsFirst') : t('completeSaleEnter')}
         >
           {isSubmitting ? (
-            <>⏳ {t('processing')}</>
+            <>
+              <Loader2 size={20} className="spin" /> {t('processing')}
+            </>
           ) : (
-            <>✅ {t('completeSale')} ({totalIQD.toLocaleString('en-IQ')} IQD)</>
+            <>
+              <CheckCircle2 size={20} /> {t('completeSale')} ({totalIQD.toLocaleString('en-IQ')} IQD)
+            </>
           )}
         </button>
       </section >

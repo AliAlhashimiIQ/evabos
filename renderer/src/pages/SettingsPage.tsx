@@ -2,6 +2,28 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import {
+  Palette,
+  Moon,
+  Sun,
+  Globe,
+  RefreshCw,
+  Calculator,
+  Mail,
+  Save,
+  Send,
+  Lightbulb,
+  Receipt,
+  Upload,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  RefreshCcw,
+  XCircle,
+  Loader2,
+  Check
+} from 'lucide-react';
 import LabelSettingsSection from '../components/LabelSettingsSection';
 import NumberInput from '../components/NumberInput';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -172,10 +194,10 @@ const SettingsPage = (): JSX.Element => {
       await window.electronAPI.setSetting('receipt_show_barcode', receiptShowBarcode ? 'true' : 'false');
       await window.electronAPI.setSetting('receipt_show_cashier', receiptShowCashier ? 'true' : 'false');
       await window.electronAPI.setSetting('receipt_show_customer', receiptShowCustomer ? 'true' : 'false');
-      setReceiptMessage('✅ ' + (t('receiptSettingsSaved') || 'Receipt settings saved successfully!'));
+      setReceiptMessage(t('receiptSettingsSaved') || 'Receipt settings saved successfully!');
       setTimeout(() => setReceiptMessage(null), 3000);
     } catch (err) {
-      setReceiptMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+      setReceiptMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setReceiptSaving(false);
     }
@@ -212,9 +234,9 @@ const SettingsPage = (): JSX.Element => {
         emailEnabled: emailEnabled,
         sendTime: emailSendTime,
       });
-      setEmailMessage('✅ ' + (t('emailSettingsSaved') || 'Email settings saved successfully!'));
+      setEmailMessage(t('emailSettingsSaved') || 'Email settings saved successfully!');
     } catch (err) {
-      setEmailMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+      setEmailMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setEmailSaving(false);
     }
@@ -227,12 +249,12 @@ const SettingsPage = (): JSX.Element => {
       setEmailMessage(null);
       const result = await window.evaApi.email.sendTest(token) as { success: boolean; error?: string };
       if (result.success) {
-        setEmailMessage('✅ ' + (t('testEmailSuccess') || 'Test email sent! Check your inbox.'));
+        setEmailMessage(t('testEmailSuccess') || 'Test email sent! Check your inbox.');
       } else {
-        setEmailMessage('⚠️ ' + (result.error || t('testEmailFailed') || 'Email not sent. Please check settings.'));
+        setEmailMessage(result.error || t('testEmailFailed') || 'Email not sent. Please check settings.');
       }
     } catch (err) {
-      setEmailMessage('❌ Error: ' + (err instanceof Error ? err.message : String(err)));
+      setEmailMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setEmailTesting(false);
     }
@@ -296,7 +318,7 @@ const SettingsPage = (): JSX.Element => {
       <div className="SettingsPage-content">
         {/* Theme Settings */}
         <div className="SettingsPage-section">
-          <h2>🎨 {t('theme')}</h2>
+          <h2><Palette size={24} /> {t('theme')}</h2>
           <p>{t('selectTheme')}</p>
 
           <div className="SettingsPage-themeOptions">
@@ -304,7 +326,7 @@ const SettingsPage = (): JSX.Element => {
               className={`SettingsPage-themeButton ${theme === 'dark' ? 'active' : ''}`}
               onClick={() => setTheme('dark')}
             >
-              <span className="theme-icon">🌙</span>
+              <span className="theme-icon"><Moon size={20} /></span>
               <div>
                 <div className="label">{t('darkMode')}</div>
                 <div className="sublabel">{t('darkModeDesc')}</div>
@@ -316,7 +338,7 @@ const SettingsPage = (): JSX.Element => {
               className={`SettingsPage-themeButton ${theme === 'light' ? 'active' : ''}`}
               onClick={() => setTheme('light')}
             >
-              <span className="theme-icon">☀️</span>
+              <span className="theme-icon"><Sun size={20} /></span>
               <div>
                 <div className="label">{t('lightMode')}</div>
                 <div className="sublabel">{t('lightModeDesc')}</div>
@@ -328,7 +350,7 @@ const SettingsPage = (): JSX.Element => {
 
         {/* Language Settings */}
         <div className="SettingsPage-section">
-          <h2>🌐 {t('language')}</h2>
+          <h2><Globe size={24} /> {t('language')}</h2>
           <p>{t('selectLanguage')}</p>
 
           <div className="SettingsPage-languageOptions">
@@ -336,24 +358,24 @@ const SettingsPage = (): JSX.Element => {
               className={`SettingsPage-langButton ${language === 'en' ? 'active' : ''}`}
               onClick={() => setLanguage('en')}
             >
-              <span className="flag">🇬🇧</span>
+              <span className="flag"><Globe size={20} /></span>
               <div>
                 <div className="label">{t('english')}</div>
                 <div className="sublabel">{t('englishLanguage')}</div>
               </div>
-              {language === 'en' && <span className="check">✓</span>}
+              {language === 'en' && <span className="check"><Check size={16} /></span>}
             </button>
 
             <button
               className={`SettingsPage-langButton ${language === 'ar' ? 'active' : ''}`}
               onClick={() => setLanguage('ar')}
             >
-              <span className="flag">🇸🇦</span>
+              <span className="flag"><Globe size={20} /></span>
               <div>
                 <div className="label">{t('arabic')}</div>
                 <div className="sublabel">{t('arabicLanguage')}</div>
               </div>
-              {language === 'ar' && <span className="check">✓</span>}
+              {language === 'ar' && <span className="check"><Check size={16} /></span>}
             </button>
           </div>
         </div>
@@ -361,7 +383,7 @@ const SettingsPage = (): JSX.Element => {
         {/* Exchange Rate */}
         {hasRole(['admin', 'manager']) && (
           <div className="SettingsPage-section">
-            <h2>💱 {t('exchangeRate')}</h2>
+            <h2><RefreshCw size={24} /> {t('exchangeRate')}</h2>
             <p>{t('setExchangeRate')}</p>
 
             <div className="SettingsPage-exchangeRate">
@@ -398,7 +420,7 @@ const SettingsPage = (): JSX.Element => {
 
         {/* Margin Calculator */}
         <div className="SettingsPage-section">
-          <h2>📊 {t('profitMarginCalculator')}</h2>
+          <h2><Calculator size={24} /> {t('profitMarginCalculator')}</h2>
           <p>{t('calculateProfitMargins')}</p>
 
           <div className="SettingsPage-calculator">
@@ -450,7 +472,7 @@ const SettingsPage = (): JSX.Element => {
         {/* Email Reports - Configuration Section */}
         {hasRole(['admin']) && (
           <div className="SettingsPage-section">
-            <h2>📧 {t('emailReports') || 'Email Reports'}</h2>
+            <h2><Mail size={24} /> {t('emailReports') || 'Email Reports'}</h2>
             <p>{t('emailReportsDesc') || 'Configure daily Arabic email reports with sales summary, profits, and items sold.'}</p>
 
             <div className="SettingsPage-emailForm">
@@ -528,7 +550,10 @@ const SettingsPage = (): JSX.Element => {
               </div>
 
               {emailMessage && (
-                <div className="SettingsPage-emailMessage">{emailMessage}</div>
+                <div className={`SettingsPage-emailMessage ${emailMessage.includes('Error') || emailMessage.includes('Failed') ? 'error' : 'success'}`}>
+                  {emailMessage.includes('Error') || emailMessage.includes('Failed') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+                  {emailMessage}
+                </div>
               )}
 
               <div className="SettingsPage-emailActions">
@@ -537,19 +562,21 @@ const SettingsPage = (): JSX.Element => {
                   onClick={handleSaveEmailSettings}
                   disabled={emailSaving}
                 >
-                  💾 {emailSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                  {emailSaving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
+                  {emailSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
                 </button>
                 <button
                   className="SettingsPage-testEmailButton"
                   onClick={handleTestEmail}
                   disabled={emailTesting || !emailUser || !emailRecipient}
                 >
-                  🚀 {emailTesting ? (t('sending') || 'Sending...') : (t('sendTestEmail') || 'Send Test Email')}
+                  {emailTesting ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
+                  {emailTesting ? (t('sending') || 'Sending...') : (t('sendTestEmail') || 'Send Test Email')}
                 </button>
               </div>
 
               <div className="SettingsPage-emailHelp">
-                <small>💡 {t('gmailNote') || 'For Gmail: Use an App Password from myaccount.google.com > Security > App Passwords'}</small>
+                <small><Lightbulb size={14} /> {t('gmailNote') || 'For Gmail: Use an App Password from myaccount.google.com > Security > App Passwords'}</small>
               </div>
             </div>
           </div>
@@ -558,7 +585,7 @@ const SettingsPage = (): JSX.Element => {
         {/* Receipt Settings */}
         {hasRole(['admin', 'manager']) && (
           <div className="SettingsPage-section">
-            <h2>🧾 {t('receiptSettings') || 'Receipt Settings'}</h2>
+            <h2><Receipt size={24} /> {t('receiptSettings') || 'Receipt Settings'}</h2>
             <p>{t('customizeReceipts') || 'Customize how your sales receipts look'}</p>
 
             <div className="SettingsPage-receiptForm">
@@ -637,7 +664,7 @@ const SettingsPage = (): JSX.Element => {
                       onClick={() => document.getElementById('logo-upload-input')?.click()}
                       style={{ marginBottom: '1rem' }}
                     >
-                      📁 {t('uploadLogo') || 'Upload Logo'}
+                      <Upload size={18} /> {t('uploadLogo') || 'Upload Logo'}
                     </button>
                     {receiptLogoBase64 && (
                       <div className="logo-preview-container">
@@ -648,7 +675,7 @@ const SettingsPage = (): JSX.Element => {
                           onClick={() => setReceiptLogoBase64('')}
                           style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', marginTop: '0.5rem' }}
                         >
-                          🗑️ {t('remove') || 'Remove'}
+                          <Trash2 size={14} /> {t('remove') || 'Remove'}
                         </button>
                       </div>
                     )}
@@ -665,7 +692,7 @@ const SettingsPage = (): JSX.Element => {
                         className="SettingsPage-button danger"
                         onClick={handleResetDatabase}
                       >
-                        {t('resetDatabaseButton') || '⚠️ Reset Database (Delete All Data)'}
+                        <AlertTriangle size={18} /> {t('resetDatabaseButton') || 'Reset Database (Delete All Data)'}
                       </button>
                     </div>
                     <p className="SettingsPage-hint">
@@ -683,6 +710,7 @@ const SettingsPage = (): JSX.Element => {
                         onClick={handleCheckForUpdates}
                         disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
                       >
+                        {updateStatus === 'checking' ? <Loader2 size={18} className="spin" /> : <RefreshCcw size={18} />}
                         {updateStatus === 'checking' ? (t('checkingUpdates') || 'Checking...') : (t('checkForUpdates') || 'Check for Updates')}
                       </button>
                     </div>
@@ -692,14 +720,14 @@ const SettingsPage = (): JSX.Element => {
                         {updateStatus === 'checking' && <p>{t('checkingUpdates') || 'Checking GitHub for releases...'}</p>}
                         {updateStatus === 'available' && (
                           <div className="UpdateStatus-available">
-                            <p dangerouslySetInnerHTML={{ __html: t('updateAvailable', { version: updateInfo?.version }) || `✅ <b>Update Available!</b> Version ${updateInfo?.version}` }} />
+                            <p><CheckCircle2 size={16} /> <b>{t('updateAvailableTitle') || 'Update Available!'}</b> {t('version')}: {updateInfo?.version}</p>
                             <p>{t('downloadingAuto') || 'Downloading automatically...'}</p>
                           </div>
                         )}
-                        {updateStatus === 'not-available' && <p>{t('latestVersion') || '✅ You are on the latest version.'}</p>}
+                        {updateStatus === 'not-available' && <p><CheckCircle2 size={16} /> {t('latestVersion') || 'You are on the latest version.'}</p>}
                         {updateStatus === 'downloading' && (
                           <div className="UpdateStatus-progress">
-                            <p>{t('downloadingUpdate', { percent: Math.round(downloadProgress?.percent || 0) }) || `⬇️ Downloading update... ${Math.round(downloadProgress?.percent || 0)}%`}</p>
+                            <p><Download size={16} /> {t('downloadingUpdate', { percent: Math.round(downloadProgress?.percent || 0) }) || `Downloading update... ${Math.round(downloadProgress?.percent || 0)}%`}</p>
                             <div style={{ background: '#eee', height: '8px', borderRadius: '4px', width: '100%', marginTop: '5px' }}>
                               <div style={{
                                 background: '#4CAF50',
@@ -713,18 +741,18 @@ const SettingsPage = (): JSX.Element => {
                         )}
                         {updateStatus === 'downloaded' && (
                           <div className="UpdateStatus-ready">
-                            <p dangerouslySetInnerHTML={{ __html: t('updateReady') || '🚀 <b>Update Ready!</b> Restart the app to install.' }} />
+                            <p><Send size={16} /> <b>{t('updateReadyTitle') || 'Update Ready!'}</b> {t('restartToInstall') || 'Restart the app to install.'}</p>
                             <button
                               className="SettingsPage-button primary"
                               style={{ marginTop: '10px', backgroundColor: '#4CAF50' }}
                               onClick={() => window.electronAPI?.quitAndInstall()}
                             >
-                              {t('restartNow') || '🔄 Restart Now'}
+                              <RefreshCcw size={18} /> {t('restartNow') || 'Restart Now'}
                             </button>
                           </div>
                         )}
                         {updateStatus === 'error' && (
-                          <p style={{ color: 'red' }}>{t('updateError', { error: String(updateInfo) }) || `❌ Error: ${String(updateInfo)}`}</p>
+                          <p style={{ color: 'red' }}><XCircle size={16} /> {t('updateError', { error: String(updateInfo) }) || `Error: ${String(updateInfo)}`}</p>
                         )}
                         {updateStatus === 'dev-mode' && (
                           <p style={{ color: '#888', fontStyle: 'italic' }}>
@@ -738,7 +766,10 @@ const SettingsPage = (): JSX.Element => {
               </div>
 
               {receiptMessage && (
-                <div className="SettingsPage-emailMessage">{receiptMessage}</div>
+                <div className={`SettingsPage-emailMessage ${receiptMessage.includes('Error') ? 'error' : 'success'}`}>
+                  {receiptMessage.includes('Error') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+                  {receiptMessage}
+                </div>
               )}
 
               <div className="SettingsPage-emailActions">
@@ -747,7 +778,8 @@ const SettingsPage = (): JSX.Element => {
                   onClick={handleSaveReceiptSettings}
                   disabled={receiptSaving}
                 >
-                  💾 {receiptSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                  {receiptSaving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
+                  {receiptSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
                 </button>
               </div>
             </div>
@@ -760,7 +792,7 @@ const SettingsPage = (): JSX.Element => {
         {/* System Reset */}
         {hasRole(['admin']) && (
           <div className="SettingsPage-section">
-            <h2>⚠️ {t('dangerZone') || 'Danger Zone'}</h2>
+            <h2><AlertTriangle size={24} /> {t('dangerZone') || 'Danger Zone'}</h2>
             <p>{t('systemResetDesc') || 'Reset the system to factory defaults. This will delete all data.'}</p>
 
             <div className="SettingsPage-dangerZone">
@@ -781,7 +813,7 @@ const SettingsPage = (): JSX.Element => {
                   }
                 }}
               >
-                🗑️ {t('formatSystem') || 'Format System / Reset Everything'}
+                <Trash2 size={18} /> {t('formatSystem') || 'Format System / Reset Everything'}
               </button>
             </div>
           </div>

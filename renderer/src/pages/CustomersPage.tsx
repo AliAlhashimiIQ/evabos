@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Plus, Ticket, X, Check, Printer } from 'lucide-react';
 import './Pages.css';
 import './CustomersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -120,7 +121,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
 </head>
 <body>
 <div class="store-name">EVA CLOTHING</div>
-<div class="voucher-title">🎁 قسيمة خصم</div>
+<div class="voucher-title">قسيمة خصم</div>
 <div class="customer-name">العميل: <strong>${customer.name}</strong></div>
 <div class="discount">${discount}% خصم</div>
 <div class="validity">صالحة لمدة ${validityDays} يوم<br />تنتهي في: ${expiryFormatted}</div>
@@ -164,8 +165,8 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                     />
-                    <button onClick={() => setModalOpen(true)}>+ {t('newCustomer')}</button>
-                    <button onClick={() => setVoucherModalOpen(true)}>🎫 {t('createVoucher')}</button>
+                    <button onClick={() => setModalOpen(true)}><Plus size={18} /> {t('newCustomer')}</button>
+                    <button onClick={() => setVoucherModalOpen(true)}><Ticket size={18} /> {t('createVoucher')}</button>
                 </div>
             </div>
 
@@ -295,7 +296,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                     <div className="CustomersPage-modal">
                         <header>
                             <h3>{t('addCustomer')}</h3>
-                            <button onClick={() => setModalOpen(false)}>✕</button>
+                            <button onClick={() => setModalOpen(false)}><X size={20} /></button>
                         </header>
                         <form onSubmit={handleSubmit}>
                             <label>
@@ -341,8 +342,8 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                 <div className="CustomersPage-modalOverlay">
                     <div className="CustomersPage-modal" style={{ maxWidth: '450px' }}>
                         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h2 style={{ margin: 0 }}>🎫 {t('createVoucher')}</h2>
-                            <button type="button" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888' }}>×</button>
+                            <h2 style={{ margin: 0 }}><Ticket size={24} /> {t('createVoucher')}</h2>
+                            <button type="button" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888' }}><X size={24} /></button>
                         </header>
 
                         <div style={{ marginBottom: '1rem' }}>
@@ -363,8 +364,8 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                         </div>
 
                         {voucherCustomerId && (
-                            <div style={{ padding: '0.5rem 1rem', background: 'rgba(34,197,94,0.1)', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(34,197,94,0.3)' }}>
-                                ✓ {t('selected')}: <strong>{customers.find(c => c.id === voucherCustomerId)?.name}</strong>
+                            <div style={{ padding: '0.5rem 1rem', background: 'rgba(34,197,94,0.1)', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Check size={16} /> {t('selected')}: <strong>{customers.find(c => c.id === voucherCustomerId)?.name}</strong>
                             </div>
                         )}
 
@@ -397,7 +398,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                         setError(t('failedToPrintVoucher') || 'Failed to print voucher');
                                     }
                                 }
-                            }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', background: voucherCustomerId ? '#22c55e' : '#555', color: '#fff', cursor: voucherCustomerId ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>🖨️ {t('printVoucher')}</button>
+                            }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', background: voucherCustomerId ? '#22c55e' : '#555', color: '#fff', cursor: voucherCustomerId ? 'pointer' : 'not-allowed', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Printer size={18} /> {t('printVoucher')}</button>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Tag, Save, Loader2 } from 'lucide-react';
 import './LabelSettingsSection.css';
 import NumberInput from './NumberInput';
 
@@ -91,7 +92,7 @@ const LabelSettingsSection = (): JSX.Element => {
   if (loading) {
     return (
       <div className="SettingsPage-section">
-        <h2>🏷️ {t('labelSettings')}</h2>
+        <h2><Tag size={24} /> {t('labelSettings')}</h2>
         <p>{t('loading')}</p>
       </div>
     );
@@ -99,7 +100,7 @@ const LabelSettingsSection = (): JSX.Element => {
 
   return (
     <div className="SettingsPage-section">
-      <h2>🏷️ {t('labelSettings')}</h2>
+      <h2><Tag size={24} /> {t('labelSettings')}</h2>
       <p>{t('customizeBarcodeLabels')}</p>
 
       <div className="LabelSettings-content">
@@ -175,7 +176,7 @@ const LabelSettingsSection = (): JSX.Element => {
 
           {/* Fake Discount Feature */}
           <div className="LabelSettings-group">
-            <h3>🏷️ {t('fakeDiscount') || 'عرض السعر القديم'}</h3>
+            <h3><Tag size={20} /> {t('fakeDiscount') || 'عرض السعر القديم'}</h3>
             <p className="LabelSettings-hint">{t('fakeDiscountHint') || 'أظهر سعر "أصلي" مشطوب لإعطاء انطباع التخفيض'}</p>
             <label className="LabelSettings-checkbox">
               <input
@@ -257,7 +258,8 @@ const LabelSettingsSection = (): JSX.Element => {
 
           <div className="LabelSettings-actions">
             <button onClick={saveSettings} disabled={saving} className="LabelSettings-saveButton">
-              {saving ? t('saving') : `💾 ${t('saveLabelSettings')}`}
+              {saving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
+              {saving ? t('saving') : t('saveLabelSettings')}
             </button>
           </div>
         </div>

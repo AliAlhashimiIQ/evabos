@@ -1,4 +1,24 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Receipt,
+  Package,
+  Truck,
+  ShoppingBag,
+  Users,
+  RotateCcw,
+  Wallet,
+  BarChart3,
+  UserCog,
+  Store,
+  History,
+  Database,
+  Settings,
+  LogOut,
+  Lock,
+  Unlock
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './MainLayout.css';
@@ -10,29 +30,29 @@ const MainLayout = (): JSX.Element => {
 
   // Cashiers can only see: POS, Products, Returns, Customers
   const cashierNavItems = [
-    { to: '/pos', label: t('pointOfSale') },
-    { to: '/products', label: t('products') },
-    { to: '/returns', label: t('returns') },
-    { to: '/customers', label: t('customers') },
+    { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
+    { to: '/products', label: t('products'), icon: Package },
+    { to: '/returns', label: t('returns'), icon: RotateCcw },
+    { to: '/customers', label: t('customers'), icon: Users },
   ];
 
   // Admin and Manager can see all pages
   const adminNavItems = [
-    { to: '/dashboard', label: t('dashboard') },
-    { to: '/pos', label: t('pointOfSale') },
-    { to: '/sales', label: t('sales') },
-    { to: '/products', label: t('products') },
-    { to: '/suppliers', label: t('suppliers') },
-    { to: '/purchase-orders', label: t('purchasing') },
-    { to: '/customers', label: t('customers') },
-    { to: '/returns', label: t('returns') },
-    { to: '/expenses', label: t('expenses') },
-    { to: '/reports', label: t('reports') },
-    { to: '/users', label: t('users') },
-    { to: '/branches', label: t('branches') },
-    { to: '/activity-logs', label: t('activityLogs') },
-    { to: '/backup', label: t('backup') },
-    { to: '/settings', label: t('settings') },
+    { to: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
+    { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
+    { to: '/sales', label: t('sales'), icon: Receipt },
+    { to: '/products', label: t('products'), icon: Package },
+    { to: '/suppliers', label: t('suppliers'), icon: Truck },
+    { to: '/purchase-orders', label: t('purchasing'), icon: ShoppingBag },
+    { to: '/customers', label: t('customers'), icon: Users },
+    { to: '/returns', label: t('returns'), icon: RotateCcw },
+    { to: '/expenses', label: t('expenses'), icon: Wallet },
+    { to: '/reports', label: t('reports'), icon: BarChart3 },
+    { to: '/users', label: t('users'), icon: UserCog },
+    { to: '/branches', label: t('branches'), icon: Store },
+    { to: '/activity-logs', label: t('activityLogs'), icon: History },
+    { to: '/backup', label: t('backup'), icon: Database },
+    { to: '/settings', label: t('settings'), icon: Settings },
   ];
 
   const navItems = hasRole(['admin', 'manager']) ? adminNavItems : cashierNavItems;
@@ -53,11 +73,15 @@ const MainLayout = (): JSX.Element => {
   return (
     <div className="Layout">
       <aside className="Layout-sidebar">
-        <div className="Layout-brand">{t('appName')}</div>
-        <nav>
+        <div className="Layout-brand">
+          <Store size={24} className="Layout-brandIcon" />
+          <span>{t('appName')}</span>
+        </div>
+        <nav className="Layout-nav">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className="Layout-navLink">
-              {item.label}
+              <item.icon size={20} className="Layout-navIcon" />
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -69,6 +93,7 @@ const MainLayout = (): JSX.Element => {
             </div>
           )}
           <button onClick={handleLogout} className="Layout-logoutButton">
+            <LogOut size={18} />
             {t('logout')}
           </button>
         </div>
@@ -87,7 +112,17 @@ const MainLayout = (): JSX.Element => {
                 className={`Layout-lockButton ${posLocked ? 'Layout-lockButton--locked' : ''}`}
                 title={posLocked ? t('unlockPOS') : t('lockPOS')}
               >
-                {posLocked ? `🔒 ${t('locked')}` : `🔓 ${t('unlocked')}`}
+                {posLocked ? (
+                  <>
+                    <Lock size={18} />
+                    <span>{t('locked')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={18} />
+                    <span>{t('unlocked')}</span>
+                  </>
+                )}
               </button>
             )}
           </div>

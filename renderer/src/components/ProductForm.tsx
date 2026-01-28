@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import NumberInput from './NumberInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Calculator } from 'lucide-react';
 type Supplier = import('../types/electron').Supplier;
 type ProductInput = import('../types/electron').ProductInput;
 import './ProductForm.css';
@@ -223,7 +224,7 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
       {profitInfo && (
         <div className="ProductForm-profitMargin">
           <div className="ProductForm-profitMargin-header">
-            <span className="ProductForm-profitMargin-icon">📊</span>
+            <span className="ProductForm-profitMargin-icon"><Calculator size={18} /></span>
             <span className="ProductForm-profitMargin-title">{t('profitMarginCalculator')}</span>
           </div>
           <div className="ProductForm-profitMargin-content">
