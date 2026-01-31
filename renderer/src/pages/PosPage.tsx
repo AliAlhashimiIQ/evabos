@@ -22,6 +22,7 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useShortcutKeys } from '../hooks/useShortcutKeys';
 import PrintingModal from '../components/PrintingModal';
 import NumberInput from '../components/NumberInput';
+import CalculatorInput from '../components/CalculatorInput';
 import { confirmDialog } from '../utils/confirmDialog';
 
 type Product = import('../types/electron').Product;
@@ -940,25 +941,39 @@ const PosPage = (): JSX.Element => {
                 </button>
               </div>
               <div className="Pos-discountInput">
-                <NumberInput
-                  min="0"
-                  max={discountMode === 'percent' ? 100 : discountMode === 'finalPrice' ? subtotalIQD : undefined}
-                  value={discountValue}
-                  onChange={(event) =>
-                    updateCurrentProfile((profile) => ({
-                      ...profile,
-                      discountValue: Number(event.target.value) || 0,
-                      isManualDiscount: true, // Mark as manually entered
-                    }))
-                  }
-                  placeholder={
-                    discountMode === 'percent'
-                      ? '0-100'
-                      : discountMode === 'finalPrice'
-                        ? t('enterFinalPrice')
+                {discountMode === 'finalPrice' ? (
+                  <CalculatorInput
+                    min={0}
+                    max={subtotalIQD}
+                    value={discountValue}
+                    onChange={(value) =>
+                      updateCurrentProfile((profile) => ({
+                        ...profile,
+                        discountValue: value,
+                        isManualDiscount: true, // Mark as manually entered
+                      }))
+                    }
+                    placeholder={t('enterFinalPrice') || 'e.g. 40+50+45'}
+                  />
+                ) : (
+                  <NumberInput
+                    min="0"
+                    max={discountMode === 'percent' ? 100 : undefined}
+                    value={discountValue}
+                    onChange={(event) =>
+                      updateCurrentProfile((profile) => ({
+                        ...profile,
+                        discountValue: Number(event.target.value) || 0,
+                        isManualDiscount: true, // Mark as manually entered
+                      }))
+                    }
+                    placeholder={
+                      discountMode === 'percent'
+                        ? '0-100'
                         : t('amount')
-                  }
-                />
+                    }
+                  />
+                )}
                 {discountValue > 0 && (
                   <button
                     className="Pos-clearDiscount"
@@ -1007,7 +1022,7 @@ const PosPage = (): JSX.Element => {
                   {discountMode === 'percent'
                     ? `${discountValue}%`
                     : discountMode === 'finalPrice'
-                      ? t('finalPrice')
+                      ? `${subtotalIQD > 0 ? ((discountIQD / subtotalIQD) * 100).toFixed(1) : 0}%`
                       : t('amount')}
                   )
                 </span>
