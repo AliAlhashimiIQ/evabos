@@ -57,6 +57,9 @@ import {
   DashboardKPIs,
   PaginationParams,
   PaginatedResponse,
+  OnlineOrder,
+  OnlineOrderInput,
+  OnlineOrderItem,
 } from './types';
 import { encryptCredential, isEncrypted } from './crypto';
 
@@ -546,6 +549,45 @@ const createTables = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS online_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      branchId INTEGER NOT NULL,
+      cashierId INTEGER NOT NULL,
+      customerId INTEGER,
+      customerName TEXT,
+      customerPhone TEXT,
+      source TEXT NOT NULL DEFAULT 'other',
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      subtotalIQD REAL NOT NULL DEFAULT 0,
+      discountIQD REAL NOT NULL DEFAULT 0,
+      totalIQD REAL NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      confirmedAt TEXT,
+      rejectedAt TEXT,
+      rejectionReason TEXT,
+      saleId INTEGER,
+      FOREIGN KEY (branchId) REFERENCES branches(id),
+      FOREIGN KEY (cashierId) REFERENCES users(id),
+      FOREIGN KEY (customerId) REFERENCES customers(id),
+      FOREIGN KEY (saleId) REFERENCES sales(id)
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS online_order_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      orderId INTEGER NOT NULL,
+      variantId INTEGER NOT NULL,
+      quantity REAL NOT NULL,
+      unitPriceIQD REAL NOT NULL,
+      lineTotalIQD REAL NOT NULL,
+      FOREIGN KEY (orderId) REFERENCES online_orders(id) ON DELETE CASCADE,
+      FOREIGN KEY (variantId) REFERENCES product_variants(id)
     )
   `);
 };
@@ -3530,4 +3572,213 @@ export async function resetDatabase(): Promise<void> {
     await run('ROLLBACK');
     throw err;
   }
+}
+
+// ─── Online Orders ─────────────────────────────────────────────────────────────
+
+function mapOnlineOrderRow(row: any, itemRows: any[]): OnlineOrder {
+  return {
+    id: row.id,
+    branchId: row.branchId,
+    cashierId: row.cashierId,
+    customerId: row.customerId ?? null,
+    customerName: row.customerName ?? row.customerNameFromDb ?? null,
+    customerPhone: row.customerPhone ?? null,
+    source: row.source,
+    note: row.note ?? null,
+    status: row.status,
+    subtotalIQD: row.subtotalIQD,
+    discountIQD: row.discountIQD,
+    totalIQD: row.totalIQD,
+    createdAt: row.createdAt,
+    confirmedAt: row.confirmedAt ?? null,
+    rejectedAt: row.rejectedAt ?? null,
+    rejectionReason: row.rejectionReason ?? null,
+    saleId: row.saleId ?? null,
+    items: itemRows.map((r) => ({
+      id: r.id,
+      orderId: r.orderId,
+      variantId: r.variantId,
+      productName: r.productName,
+      color: r.color ?? null,
+      size: r.size ?? null,
+      sku: r.sku,
+      quantity: r.quantity,
+      unitPriceIQD: r.unitPriceIQD,
+      lineTotalIQD: r.lineTotalIQD,
+    })),
+  };
+}
+
+async function fetchOnlineOrderItems(orderId: number): Promise<any[]> {
+  return all<any>(
+    `SELECT oi.*,
+            p.name AS productName,
+            pv.color,
+            pv.size,
+            pv.sku
+     FROM online_order_items oi
+     JOIN product_variants pv ON pv.id = oi.variantId
+     JOIN products p ON p.id = pv.productId
+     WHERE oi.orderId = ?`,
+    [orderId],
+  );
+}
+
+export async function getOnlineOrderById(orderId: number): Promise<OnlineOrder | null> {
+  const row = await get<any>(
+    `SELECT o.*, c.name AS customerNameFromDb
+     FROM online_orders o
+     LEFT JOIN customers c ON c.id = o.customerId
+     WHERE o.id = ?`,
+    [orderId],
+  );
+  if (!row) return null;
+  const itemRows = await fetchOnlineOrderItems(orderId);
+  return mapOnlineOrderRow(row, itemRows);
+}
+
+export async function listOnlineOrders(status?: string): Promise<OnlineOrder[]> {
+  const rows = await all<any>(
+    `SELECT o.*, c.name AS customerNameFromDb
+     FROM online_orders o
+     LEFT JOIN customers c ON c.id = o.customerId
+     ${status ? 'WHERE o.status = ?' : ''}
+     ORDER BY o.createdAt DESC`,
+    status ? [status] : [],
+  );
+
+  const orders: OnlineOrder[] = [];
+  for (const row of rows) {
+    const itemRows = await fetchOnlineOrderItems(row.id);
+    orders.push(mapOnlineOrderRow(row, itemRows));
+  }
+  return orders;
+}
+
+export async function createOnlineOrder(
+  input: OnlineOrderInput,
+  cashierId: number,
+): Promise<OnlineOrder> {
+  const result = await runWithResult(
+    `INSERT INTO online_orders
+      (branchId, cashierId, customerId, customerName, customerPhone, source, note,
+       status, subtotalIQD, discountIQD, totalIQD, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
+    [
+      input.branchId,
+      cashierId,
+      input.customerId ?? null,
+      input.customerName ?? null,
+      input.customerPhone ?? null,
+      input.source,
+      input.note ?? null,
+      input.subtotalIQD,
+      input.discountIQD,
+      input.totalIQD,
+    ],
+  );
+  const orderId = result.lastID;
+
+  for (const item of input.items) {
+    await run(
+      `INSERT INTO online_order_items (orderId, variantId, quantity, unitPriceIQD, lineTotalIQD)
+       VALUES (?, ?, ?, ?, ?)`,
+      [orderId, item.variantId, item.quantity, item.unitPriceIQD, item.lineTotalIQD],
+    );
+  }
+
+  return (await getOnlineOrderById(orderId))!;
+}
+
+export async function confirmOnlineOrder(
+  orderId: number,
+  userId: number,
+  exchangeRate: number,
+): Promise<OnlineOrder> {
+  const order = await getOnlineOrderById(orderId);
+  if (!order) throw new Error('Online order not found');
+  if (order.status !== 'pending') throw new Error('Order is not pending');
+
+  // Use current exchange rate if not provided (fallback to DB)
+  let rate = exchangeRate;
+  if (!rate || rate <= 0) {
+    const rateRow = await getCurrentExchangeRate();
+    rate = rateRow.currentRate?.rate ?? 1500;
+  }
+
+  // Calculate profit: for each item, look up avgCostUSD → convert to IQD
+  let totalCostIQD = 0;
+  const itemCosts: Array<{ variantId: number; unitCostIQD: number }> = [];
+
+  for (const item of order.items) {
+    const variant = await get<{ avgCostUSD: number }>(
+      'SELECT avgCostUSD FROM product_variants WHERE id = ?',
+      [item.variantId],
+    );
+    const unitCostIQD = (variant?.avgCostUSD ?? 0) * rate;
+    totalCostIQD += unitCostIQD * item.quantity;
+    itemCosts.push({ variantId: item.variantId, unitCostIQD });
+  }
+
+  const profitIQD = order.totalIQD - totalCostIQD;
+
+  // Create a real sale with correct profitIQD
+  const saleResult = await runWithResult(
+    `INSERT INTO sales (branchId, cashierId, customerId, saleDate, subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD)
+     VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 'online', ?)`,
+    [
+      order.branchId,
+      userId,
+      order.customerId ?? null,
+      order.subtotalIQD,
+      order.discountIQD,
+      order.totalIQD,
+      profitIQD,
+    ],
+  );
+  const saleId = saleResult.lastID;
+
+  for (const item of order.items) {
+    const costEntry = itemCosts.find((c) => c.variantId === item.variantId);
+    const unitCostIQDAtSale = costEntry?.unitCostIQD ?? null;
+
+    await run(
+      `INSERT INTO sale_items (saleId, variantId, quantity, unitPriceIQD, unitCostIQDAtSale, lineTotalIQD)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [saleId, item.variantId, item.quantity, item.unitPriceIQD, unitCostIQDAtSale, item.lineTotalIQD],
+    );
+    // Deduct stock
+    await run(
+      `UPDATE variant_stock SET quantity = quantity - ?
+       WHERE variantId = ? AND branchId = ?`,
+      [item.quantity, item.variantId, order.branchId],
+    );
+  }
+
+  await run(
+    `UPDATE online_orders SET status = 'confirmed', confirmedAt = CURRENT_TIMESTAMP, saleId = ? WHERE id = ?`,
+    [saleId, orderId],
+  );
+
+  await logActivity(userId, 'confirm', 'online_order', orderId);
+  return (await getOnlineOrderById(orderId))!;
+}
+
+export async function rejectOnlineOrder(
+  orderId: number,
+  userId: number,
+  reason?: string,
+): Promise<OnlineOrder> {
+  const order = await getOnlineOrderById(orderId);
+  if (!order) throw new Error('Online order not found');
+  if (order.status !== 'pending') throw new Error('Order is not pending');
+
+  await run(
+    `UPDATE online_orders SET status = 'rejected', rejectedAt = CURRENT_TIMESTAMP, rejectionReason = ? WHERE id = ?`,
+    [reason ?? null, orderId],
+  );
+
+  await logActivity(userId, 'reject', 'online_order', orderId);
+  return (await getOnlineOrderById(orderId))!;
 }

@@ -29,6 +29,7 @@ import { registerDashboardIpc } from './ipc/dashboard';
 import { registerLicensingIpc } from './ipc/licensing';
 import { registerSettingsIpc } from './ipc/settings';
 import { registerEmailIpc } from './ipc/email';
+import { registerOnlineOrdersIpc } from './ipc/onlineOrders';
 import { createBackup } from './db/backup';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -402,6 +403,7 @@ app.whenReady().then(async () => {
   registerLicensingIpc();
   registerSettingsIpc();
   registerEmailIpc();
+  registerOnlineOrdersIpc();
   scheduleDailyBackup();
   scheduleDailyEmailReport();
   await createWindow();

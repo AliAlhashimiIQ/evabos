@@ -21,6 +21,7 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import BranchesPage from './pages/BranchesPage';
 import SalesHistoryPage from './pages/SalesHistoryPage';
+import OnlineOrdersPage from './pages/OnlineOrdersPage';
 import './App.css';
 
 function App(): JSX.Element {
@@ -44,6 +45,7 @@ function App(): JSX.Element {
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/returns" element={<ReturnsPage />} />
           <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/online-orders" element={<OnlineOrdersPage />} />
 
           {/* Admin/Manager-only routes */}
           <Route

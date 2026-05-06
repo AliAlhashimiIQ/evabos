@@ -1,8 +1,28 @@
 import nodemailer from 'nodemailer';
 import log from 'electron-log';
+import fs from 'fs';
+import path from 'path';
+import { app } from 'electron';
 import { getSetting, getAdvancedReports, listSaleItems } from './database';
 import { decryptCredential } from './crypto';
 import type { DateRange } from './types';
+
+/** Find the most recent .db backup file from the EVA_POS/Backups folder */
+function findLatestBackup(): { path: string; name: string } | null {
+  try {
+    const backupDir = path.join(app.getPath('documents'), 'EVA_POS', 'Backups');
+    if (!fs.existsSync(backupDir)) return null;
+    const files = fs.readdirSync(backupDir)
+      .filter((f) => f.endsWith('.db'))
+      .sort(); // ISO timestamp names sort chronologically
+    if (files.length === 0) return null;
+    const latest = files[files.length - 1];
+    return { path: path.join(backupDir, latest), name: latest };
+  } catch (err) {
+    log.warn('[email] Could not find backup file:', err);
+    return null;
+  }
+}
 
 interface EmailSettings {
   smtpHost: string;
@@ -79,11 +99,25 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
         pass: settings.smtpPassword,
       },
       tls: {
-        // Validate TLS certificates for security
-        // If users have corporate SSL inspection, they may need to configure their CA cert
-        rejectUnauthorized: true,
+        // Fix for 'self signed certificate in certificate chain' errors
+        // often caused by local firewalls or antiviruses intercepting SSL
+        rejectUnauthorized: false,
       },
     });
+
+    // Attach latest backup if it exists
+    const latestBackup = findLatestBackup();
+    const attachments: Array<{ filename: string; path: string; contentType: string }> = [];
+    if (latestBackup) {
+      attachments.push({
+        filename: `eva-pos-backup-${todayStr}.db`,
+        path: latestBackup.path,
+        contentType: 'application/octet-stream',
+      });
+      log.info('[email] Attaching backup:', latestBackup.name);
+    } else {
+      log.warn('[email] No backup found to attach');
+    }
 
     // Send email
     await transporter.sendMail({
@@ -91,6 +125,7 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
       to: settings.emailRecipient,
       subject: `📊 EVA POS - ملخص يومي - ${formatArabicDate(today)}`,
       html,
+      attachments,
     });
 
     log.info('[email] Daily report sent successfully');

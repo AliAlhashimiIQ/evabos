@@ -18,6 +18,7 @@ import type {
   UserUpdateInput,
   BranchInput,
   BranchUpdateInput,
+  OnlineOrderInput,
 } from './db/types';
 
 // Expose protected methods that allow the renderer process to use
@@ -176,6 +177,13 @@ contextBridge.exposeInMainWorld('evaApi', {
     getMachineId: () => ipcRenderer.invoke('licensing:getMachineId'),
     getUsbInfo: () => ipcRenderer.invoke('licensing:getUsbInfo'),
     activate: (licenseKey: string) => ipcRenderer.invoke('licensing:activate', licenseKey),
+  },
+  onlineOrders: {
+    list: (token: string, status?: string) => ipcRenderer.invoke('onlineOrders:list', token, status),
+    create: (token: string, data: OnlineOrderInput) => ipcRenderer.invoke('onlineOrders:create', token, data),
+    confirm: (token: string, orderId: number, exchangeRate: number) => ipcRenderer.invoke('onlineOrders:confirm', token, orderId, exchangeRate),
+    reject: (token: string, orderId: number, reason?: string) => ipcRenderer.invoke('onlineOrders:reject', token, orderId, reason),
+    getById: (token: string, orderId: number) => ipcRenderer.invoke('onlineOrders:getById', token, orderId),
   },
 });
 

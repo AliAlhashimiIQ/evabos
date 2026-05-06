@@ -1,23 +1,24 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Receipt,
-  Package,
-  Truck,
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Receipt, 
+  Package, 
+  Truck, 
   ShoppingBag,
-  Users,
-  RotateCcw,
-  Wallet,
-  BarChart3,
-  UserCog,
-  Store,
-  History,
-  Database,
+  Users, 
+  RotateCcw, 
+  Wallet, 
+  BarChart3, 
+  UserCog, 
+  Store, 
+  History, 
+  Database, 
   Settings,
   LogOut,
   Lock,
-  Unlock
+  Unlock,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -32,6 +33,7 @@ const MainLayout = (): JSX.Element => {
   const cashierNavItems = [
     { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
     { to: '/products', label: t('products'), icon: Package },
+    { to: '/online-orders', label: 'الطلبات أونلاين', icon: Globe },
     { to: '/returns', label: t('returns'), icon: RotateCcw },
     { to: '/customers', label: t('customers'), icon: Users },
   ];
@@ -41,6 +43,7 @@ const MainLayout = (): JSX.Element => {
     { to: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
     { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
     { to: '/sales', label: t('sales'), icon: Receipt },
+    { to: '/online-orders', label: 'الطلبات أونلاين', icon: Globe },
     { to: '/products', label: t('products'), icon: Package },
     { to: '/suppliers', label: t('suppliers'), icon: Truck },
     { to: '/purchase-orders', label: t('purchasing'), icon: ShoppingBag },

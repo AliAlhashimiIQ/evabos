@@ -663,10 +663,69 @@ export interface ActivityLogEntry {
   createdAt: string;
 }
 
+// ─── Online Orders ─────────────────────────────────────────────────────────────
+
+export type OnlineOrderStatus = 'pending' | 'confirmed' | 'rejected';
+export type OnlineOrderSource = 'instagram' | 'tiktok' | 'whatsapp' | 'phone' | 'other';
+
+export interface OnlineOrderItem {
+  id: number;
+  orderId: number;
+  variantId: number;
+  productName: string;
+  color?: string | null;
+  size?: string | null;
+  sku: string;
+  quantity: number;
+  unitPriceIQD: number;
+  lineTotalIQD: number;
+}
+
+export interface OnlineOrder {
+  id: number;
+  branchId: number;
+  cashierId: number;
+  customerId?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  source: OnlineOrderSource;
+  note?: string | null;
+  status: OnlineOrderStatus;
+  subtotalIQD: number;
+  discountIQD: number;
+  totalIQD: number;
+  createdAt: string;
+  confirmedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  saleId?: number | null;
+  items: OnlineOrderItem[];
+}
+
+export interface OnlineOrderItemInput {
+  variantId: number;
+  quantity: number;
+  unitPriceIQD: number;
+  lineTotalIQD: number;
+}
+
+export interface OnlineOrderInput {
+  branchId: number;
+  customerId?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  source: OnlineOrderSource;
+  note?: string | null;
+  subtotalIQD: number;
+  discountIQD: number;
+  totalIQD: number;
+  items: OnlineOrderItemInput[];
+}
+
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
-    evaApi: EvaApi;
+    evaApi: any;
   }
 }
 
