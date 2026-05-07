@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { FileDown, Plus, X } from 'lucide-react';
+import { FileDown, Plus, X, Tag } from 'lucide-react';
 import ProductForm from '../components/ProductForm';
 import ProductVariantTable from '../components/ProductVariantTable';
 import InventoryAdjustModal from '../components/InventoryAdjustModal';
 import ExcelImportModal from '../components/ExcelImportModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 import BarcodeLabelModal from '../components/BarcodeLabelModal';
+import BulkEditSeasonModal from '../components/BulkEditSeasonModal';
 import './Pages.css';
 import './ProductsPage.css';
 import NumberInput from '../components/NumberInput';
+import PortalModal from '../components/PortalModal';
 import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 
 type Product = import('../types/electron').Product;
 type ProductInput = import('../types/electron').ProductInput;
@@ -31,8 +34,11 @@ const ProductsPage = (): JSX.Element => {
   const [printLabelProduct, setPrintLabelProduct] = useState<Product | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState('');
+  const [editSeason, setEditSeason] = useState('');
   const [editPrice, setEditPrice] = useState<number>(0);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,7 +138,7 @@ const ProductsPage = (): JSX.Element => {
 
   const handleDeleteVariant = async (variant: Product) => {
     if (!window.evaApi || !token) return;
-    if (!confirmDialog(t('areYouSureDelete', { name: variant.productName, sku: variant.sku }))) {
+    if (!(await confirmDialog({ message: t('areYouSureDelete', { name: variant.productName, sku: variant.sku }), variant: 'danger', confirmText: t('delete') }))) {
       return;
     }
     try {
@@ -142,8 +148,8 @@ const ProductsPage = (): JSX.Element => {
       const errorMessage = err instanceof Error ? err.message : String(err);
       // Check for constraint violation or generic error
       if (errorMessage.includes('constraint') || errorMessage.includes('foreign key') || errorMessage.includes('Cannot delete variant')) {
-        if (confirmDialog(t('deleteConstraintDeactivate', { name: variant.productName }) ||
-          `Cannot delete "${variant.productName}" because it has sales history.\n\nWould you like to deactivate (archive) it instead?`)) {
+        if (await confirmDialog({ message: t('deleteConstraintDeactivate', { name: variant.productName }) ||
+          `Cannot delete "${variant.productName}" because it has sales history.\n\nWould you like to deactivate (archive) it instead?` })) {
           try {
             await window.evaApi.products.updateVariant(token, {
               id: variant.id,
@@ -164,6 +170,7 @@ const ProductsPage = (): JSX.Element => {
   const openEditModal = (product: Product) => {
     setEditProduct(product);
     setEditName(product.productName);
+    setEditSeason(product.season ?? '');
     setEditPrice(product.salePriceIQD);
   };
 
@@ -173,10 +180,11 @@ const ProductsPage = (): JSX.Element => {
     try {
       setIsEditSubmitting(true);
 
-      // Update product name
+      // Update product name and season
       await window.evaApi.products.update(token, {
         id: editProduct.productId,
         name: editName,
+        season: editSeason,
       });
 
       // Update variant price
@@ -194,6 +202,26 @@ const ProductsPage = (): JSX.Element => {
     }
   };
 
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === filteredProducts.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredProducts.map((p) => p.id));
+    }
+  };
+
+  const handleBulkComplete = async () => {
+    setIsBulkEditOpen(false);
+    setSelectedIds([]);
+    await fetchProducts();
+  };
+
   return (
     <div className="Page Page--transparent">
       <div className="ProductsPage-header">
@@ -202,6 +230,14 @@ const ProductsPage = (): JSX.Element => {
           <p>{t('manageCatalog')}</p>
         </div>
         <div className="ProductsPage-actions">
+          {selectedIds.length > 0 && (
+            <button
+              className="ProductsPage-bulkButton"
+              onClick={() => setIsBulkEditOpen(true)}
+            >
+              <Tag size={18} /> {t('bulkUpdate')} ({selectedIds.length})
+            </button>
+          )}
           <button className="ProductsPage-importButton" onClick={() => setIsImportModalOpen(true)}>
             <FileDown size={18} /> {t('importExcel')}
           </button>
@@ -279,15 +315,24 @@ const ProductsPage = (): JSX.Element => {
         )}
       </div>
 
+      <datalist id="edit-seasons-list">
+        {Array.from(new Set(products.map((p) => p.season).filter(Boolean))).map((s) => (
+          <option key={s} value={s!} />
+        ))}
+      </datalist>
+
       {error && <div className="ProductsPage-alert">{error}</div>}
 
       <div className="ProductsPage-tableWrapper">
         {loading ? (
-          <div className="ProductsPage-empty">{t('loadingProducts')}</div>
+          <SkeletonTable rows={6} cols={5} />
         ) : (
           <ProductVariantTable
             products={filteredProducts}
             actionLabel={t('adjustStock')}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onToggleSelectAll={handleToggleSelectAll}
             onAction={(variantId) => {
               const variant = products.find((p) => p.id === variantId);
               if (variant) {
@@ -308,8 +353,8 @@ const ProductsPage = (): JSX.Element => {
 
       {
         isModalOpen && (
-          <div className="ProductsPage-modalOverlay">
-            <div className="ProductsPage-modal">
+          <PortalModal onClose={() => setIsModalOpen(false)}>
+            <div className="ProductsPage-modal" style={{ width: 'min(640px, 90vw)' }}>
               <div className="ProductsPage-modalHeader">
                 <h2>{t('addProduct')}</h2>
                 <button className="ProductsPage-closeButton" onClick={() => setIsModalOpen(false)}>
@@ -318,7 +363,7 @@ const ProductsPage = (): JSX.Element => {
               </div>
               <ProductForm onSubmit={handleCreateProduct} onCancel={() => setIsModalOpen(false)} loading={isSubmitting} />
             </div>
-          </div>
+          </PortalModal>
         )
       }
 
@@ -376,8 +421,8 @@ const ProductsPage = (): JSX.Element => {
       }
 
       {editProduct && (
-        <div className="ProductsPage-modalOverlay">
-          <div className="ProductsPage-modal ProductsPage-editModal">
+        <PortalModal onClose={() => setEditProduct(null)}>
+          <div className="ProductsPage-modal ProductsPage-editModal" style={{ width: 'min(400px, 90vw)' }}>
             <div className="ProductsPage-modalHeader">
               <h2>{t('editProduct')}</h2>
               <button className="ProductsPage-closeButton" onClick={() => setEditProduct(null)}>
@@ -391,6 +436,15 @@ const ProductsPage = (): JSX.Element => {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
+                />
+              </label>
+              <label>
+                {t('season')}
+                <input
+                  type="text"
+                  list="edit-seasons-list"
+                  value={editSeason}
+                  onChange={(e) => setEditSeason(e.target.value)}
                 />
               </label>
               <label>
@@ -415,9 +469,17 @@ const ProductsPage = (): JSX.Element => {
               </div>
             </div>
           </div>
-        </div>
+        </PortalModal>
       )}
-    </div >
+      {isBulkEditOpen && (
+        <BulkEditSeasonModal
+          productIds={Array.from(new Set(products.filter(p => selectedIds.includes(p.id)).map(p => p.productId)))}
+          onClose={() => setIsBulkEditOpen(false)}
+          onComplete={handleBulkComplete}
+          existingSeasons={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
+        />
+      )}
+    </div>
   );
 };
 

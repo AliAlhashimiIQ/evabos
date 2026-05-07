@@ -167,9 +167,11 @@ const SettingsPage = (): JSX.Element => {
 
   const handleResetDatabase = async () => {
     if (!token) return;
-    const confirmed = await confirmDialog(
-      'Are you sure you want to reset the database? This action cannot be undone and will delete all data.'
-    );
+    const confirmed = await confirmDialog({
+      message: 'Are you sure you want to reset the database? This action cannot be undone and will delete all data.',
+      variant: 'danger',
+      confirmText: 'Reset Database',
+    });
 
     if (confirmed && window.evaApi) {
       try {
@@ -799,8 +801,8 @@ const SettingsPage = (): JSX.Element => {
               <button
                 className="SettingsPage-resetButton"
                 onClick={async () => {
-                  if (confirmDialog('WARNING: This will delete ALL sales, products, customers, and expenses. This action CANNOT be undone.\n\nAre you sure you want to proceed?')) {
-                    if (confirmDialog('Double Check: Are you absolutely sure? All data will be lost forever.')) {
+                  if (await confirmDialog({ message: 'WARNING: This will delete ALL sales, products, customers, and expenses. This action CANNOT be undone.\n\nAre you sure you want to proceed?', variant: 'danger', confirmText: 'Yes, Delete Everything' })) {
+                    if (await confirmDialog({ message: 'Double Check: Are you absolutely sure? All data will be lost forever.', variant: 'danger', confirmText: 'I am sure' })) {
                       if (!window.evaApi || !token) return;
                       try {
                         await window.evaApi.settings.reset(token);

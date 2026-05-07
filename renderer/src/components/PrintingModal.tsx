@@ -77,26 +77,40 @@ const DEFAULT_STORE_FOOTER = 'لا يوجد تبديل ولا يوجد استر�
 
 const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): string => `
 <!DOCTYPE html>
-<html>
+<html dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        @page { margin: 0; size: auto; }
-      }
       body { 
         font-family: 'Courier New', Courier, monospace;
         width: 100%;
         max-width: 72mm;
-        margin: 0; 
-        padding: 0; 
+        margin: 0 auto; 
         font-size: 14px;
         line-height: 1.2;
         background: #ffffff;
         color: #000000;
         font-weight: bold;
+      }
+      @media screen {
+        body {
+          margin: 20px auto;
+          padding: 15px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          border-radius: 4px;
+          min-height: 400px;
+        }
+      }
+      @media print {
+        body { 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact; 
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+        }
+        @page { margin: 0; size: auto; }
       }
       .header { 
         text-align: center; 
@@ -130,7 +144,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         margin-bottom: 10px; 
       }
       th { 
-        text-align: left; 
+        text-align: right; 
         border-bottom: 2px solid #000; 
         padding: 5px 0; 
         font-weight: 900;
@@ -154,7 +168,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       .footer { 
         margin-top: 20px; 
         padding-top: 10px;
-        padding-bottom: 150px; /* Increased to ensure clearance */ 
+        padding-bottom: 50px; 
         border-top: 2px solid #000; 
         text-align: center; 
         width: 100%;
@@ -191,22 +205,22 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     <table>
       <thead>
         <tr>
-          <th>Item</th>
-          <th style="text-align: center;">Qty</th>
-          <th style="text-align: right;">Price</th>
-          <th style="text-align: right;">Total</th>
+          <th style="width: 45%; text-align: right;">Item</th>
+          <th style="width: 15%; text-align: center;">Qty</th>
+          <th style="width: 20%; text-align: left;">Price</th>
+          <th style="width: 20%; text-align: left;">Total</th>
         </tr>
       </thead>
       <tbody>
         ${payload.items.map(item => `
           <tr>
-            <td>
+            <td style="text-align: right; padding-left: 5px;">
               <div>${item.name}</div>
               ${item.variant ? `<div style="font-size: 12px; font-weight: normal;">${item.variant}</div>` : ''}
             </td>
             <td style="text-align: center;">${item.quantity}</td>
-            <td style="text-align: right;">${item.priceIQD.toLocaleString('en-IQ')}</td>
-            <td style="text-align: right;">${(item.priceIQD * item.quantity).toLocaleString('en-IQ')}</td>
+            <td style="text-align: left;">${item.priceIQD.toLocaleString('en-IQ')}</td>
+            <td style="text-align: left;">${(item.priceIQD * item.quantity).toLocaleString('en-IQ')}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -215,8 +229,8 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       <tbody>
         ${payload.totals.map(total => `
           <tr>
-            <td>${total.label}</td>
-            <td style="text-align: right;">${total.value.toLocaleString('en-IQ')} IQD</td>
+            <td style="text-align: right;">${total.label}</td>
+            <td style="text-align: left;">${total.value.toLocaleString('en-IQ')} IQD</td>
           </tr>
         `).join('')}
       </tbody>
@@ -232,206 +246,204 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
 `;
 
 const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): string => `
-  < !DOCTYPE html >
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <style>
-          * {margin: 0; padding: 0; box-sizing: border-box; }
-          @media print {
-            body {-webkit - print - color - adjust: exact; print-color-adjust: exact; }
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       }
-          body {
-            font - family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          margin: 30px 40px;
-          color: #1a1a1a;
-          background: #ffffff;
-          line-height: 1.6;
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 30px 40px;
+        color: #1a1a1a;
+        background: #ffffff;
+        line-height: 1.6;
       }
-          .header {
-            display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 3px solid #2c3e50;
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #2c3e50;
       }
-          .header-left {
-            flex: 1;
+      .header-left {
+        flex: 1;
       }
-          .store-name {
-            font - size: 28px;
-          font-weight: 700;
-          margin-bottom: 10px;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          color: #2c3e50;
+      .store-name {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #2c3e50;
       }
-          .store-info {
-            font - size: 13px;
-          color: #555;
-          line-height: 1.8;
-          margin-bottom: 15px;
+      .store-info {
+        font-size: 13px;
+        color: #555;
+        line-height: 1.8;
+        margin-bottom: 15px;
       }
-          .sale-header {
-            margin - top: 15px;
-          padding-top: 15px;
-          border-top: 1px solid #e0e0e0;
+      .sale-header {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e0e0e0;
       }
-          .sale-header h2 {
-            font - size: 20px;
-          margin-bottom: 6px;
-          color: #2c3e50;
-          font-weight: 600;
+      .sale-header h2 {
+        font-size: 20px;
+        margin-bottom: 6px;
+        color: #2c3e50;
+        font-weight: 600;
       }
-          .sale-header p {
-            font - size: 13px;
-          color: #666;
-          margin: 3px 0;
+      .sale-header p {
+        font-size: 13px;
+        color: #666;
+        margin: 3px 0;
       }
-          table {
-            width: 100%;
-          border-collapse: collapse;
-          margin-top: 25px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
-          th, td {
-            border: 1px solid #e0e0e0;
-          padding: 12px;
-          font-size: 13px;
-          text-align: left;
+      th, td {
+        border: 1px solid #e0e0e0;
+        padding: 12px;
+        font-size: 13px;
+        text-align: left;
       }
-          th {
-            background: linear-gradient(to bottom, #2c3e50, #34495e);
-          color: #ffffff;
-          font-weight: 600;
-          text-transform: uppercase;
-          font-size: 12px;
-          letter-spacing: 0.5px;
+      th {
+        background: linear-gradient(to bottom, #2c3e50, #34495e);
+        color: #ffffff;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
       }
-          tbody tr {
-            transition: background 0.2s;
+      tbody tr {
+        transition: background 0.2s;
       }
-          tbody tr:nth-child(even) {
-            background: #f8f9fa;
+      tbody tr:nth-child(even) {
+        background: #f8f9fa;
       }
-          tbody tr:hover {
-            background: #e8f4f8;
+      tbody tr:hover {
+        background: #e8f4f8;
       }
-          tbody td {
-            color: #333;
+      tbody td {
+        color: #333;
       }
-          tbody td strong {
-            color: #2c3e50;
+      tbody td strong {
+        color: #2c3e50;
       }
-          .totals {
-            margin - top: 25px;
-          width: 320px;
-          margin-left: auto;
-          border: 1px solid #e0e0e0;
-          border-radius: 4px;
-          overflow: hidden;
+      .totals {
+        margin-top: 25px;
+        width: 320px;
+        margin-left: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
       }
-          .totals tr {
-            background: #f8f9fa;
+      .totals tr {
+        background: #f8f9fa;
       }
-          .totals td {
-            border: none;
-          padding: 8px 12px;
-          font-size: 13px;
+      .totals td {
+        border: none;
+        padding: 8px 12px;
+        font-size: 13px;
       }
-          .totals tr:last-child {
-            background: #2c3e50;
-          color: #ffffff;
+      .totals tr:last-child {
+        background: #2c3e50;
+        color: #ffffff;
       }
-          .totals tr:last-child td {
-            border - top: 2px solid #1a252f;
-          font-weight: 700;
-          font-size: 16px;
-          padding-top: 12px;
-          padding-bottom: 12px;
-          }
-          .payment-section {
-            margin - top: 25px;
-          padding: 15px 20px;
-          background: linear-gradient(135deg, #f0f2f5 0%, #e8ecef 100%);
-          border-radius: 6px;
-          border-left: 4px solid #2c3e50;
-          }
-          .payment-section p {
-            margin: 6px 0;
-          font-size: 13px;
-          color: #2c3e50;
+      .totals tr:last-child td {
+        border-top: 2px solid #1a252f;
+        font-weight: 700;
+        font-size: 16px;
+        padding-top: 12px;
+        padding-bottom: 12px;
       }
-          .payment-section strong {
-            color: #1a1a1a;
+      .payment-section {
+        margin-top: 25px;
+        padding: 15px 20px;
+        background: linear-gradient(135deg, #f0f2f5 0%, #e8ecef 100%);
+        border-radius: 6px;
+        border-left: 4px solid #2c3e50;
       }
-          .qr {
-            margin - top: 20px;
-          text-align: right;
-          padding: 15px;
-          background: #f8f9fa;
-          border-radius: 6px;
-          display: inline-block;
-          }
-          .qr img {
-            border: 2px solid #e0e0e0;
-          border-radius: 4px;
-          padding: 5px;
-          background: #ffffff;
+      .payment-section p {
+        margin: 6px 0;
+        font-size: 13px;
+        color: #2c3e50;
       }
-          .footer {
-            margin - top: 30px;
-          padding-top: 20px;
-          border-top: 2px solid #e0e0e0;
-          text-align: center;
-          width: 100%;
-          display: block;
-          font-size: 14px;
-          font-weight: bold;
-          color: #000;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="header-left">
-            ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="margin-bottom: 15px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 200px; max-height: 100px; object-fit: contain;" /></div>` : ''}
-            <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
-            <div class="store-info">
-              ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
-              ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
-              ${payload.branchPhone ? `<div>📞 Tel: ${payload.branchPhone}</div>` : ''}
-            </div>
-            <div class="sale-header">
-              <h2>${payload.title}</h2>
-              <p><strong>${payload.subtitle}</strong></p>
-              <p>📅 Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}</p>
-              ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
-            </div>
-          </div>
-          ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
+      .payment-section strong {
+        color: #1a1a1a;
+      }
+      .qr {
+        margin-top: 20px;
+        text-align: right;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        display: inline-block;
+      }
+      .qr img {
+        border: 2px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 5px;
+        background: #ffffff;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+        text-align: center;
+        width: 100%;
+        display: block;
+        font-size: 14px;
+        font-weight: bold;
+        color: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-left">
+        ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="margin-bottom: 15px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 200px; max-height: 100px; object-fit: contain;" /></div>` : ''}
+        <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
+        <div class="store-info">
+          ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
+          ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
+          ${payload.branchPhone ? `<div>📞 Tel: ${payload.branchPhone}</div>` : ''}
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Variant</th>
-              <th style="text-align: center;">Qty</th>
-              <th style="text-align: right;">Unit Price</th>
-              <th style="text-align: right;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${payload.items
-    .map(
-      (item) => `
+        <div class="sale-header">
+          <h2>${payload.title}</h2>
+          <p><strong>${payload.subtitle}</strong></p>
+          <p>📅 Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</p>
+          ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
+        </div>
+      </div>
+      ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Variant</th>
+          <th style="text-align: center;">Qty</th>
+          <th style="text-align: right;">Unit Price</th>
+          <th style="text-align: right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${payload.items.map(item => `
           <tr>
             <td><strong>${item.name}</strong></td>
             <td style="color: #666;">${item.variant ?? 'N/A'}</td>
@@ -439,32 +451,26 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
             <td style="text-align: right;">${item.priceIQD.toLocaleString('en-IQ')} IQD</td>
             <td style="text-align: right;"><strong>${(item.priceIQD * item.quantity).toLocaleString('en-IQ')} IQD</strong></td>
           </tr>
-        `,
-    )
-    .join('')}
-          </tbody>
-        </table>
-        <table class="totals">
-          <tbody>
-            ${payload.totals
-    .map(
-      (total) => `
+        `).join('')}
+      </tbody>
+    </table>
+    <table class="totals">
+      <tbody>
+        ${payload.totals.map(total => `
           <tr>
             <td>${total.label}</td>
             <td style="text-align:right;">${total.value.toLocaleString('en-IQ')} IQD</td>
           </tr>
-        `,
-    )
-    .join('')}
-          </tbody>
-        </table>
-        ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
+        `).join('')}
+      </tbody>
+    </table>
+    ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
       <div class="payment-section">
         ${payload.paymentMethod ? `<p><strong>💳 Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
         ${payload.showCashier && payload.cashierName ? `<p><strong>👤 Cashier:</strong> ${payload.cashierName}</p>` : ''}
       </div>
     ` : ''}
-        <div class="footer">${payload.footer}</div>
+    <div class="footer">${payload.footer}</div>
   </body>
 </html>
 `;
@@ -935,7 +941,13 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
             </select>
           </label>
         </div>
-        <div className="PrintingModal-preview" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        <div className="PrintingModal-preview">
+          <iframe 
+            srcDoc={previewHtml} 
+            title="Receipt Preview"
+            style={{ width: '100%', height: '100%', minHeight: '400px', border: 'none', background: '#fff', borderRadius: '0.5rem' }}
+          />
+        </div>
         <div className="PrintingModal-actions">
           <button className="ghost" onClick={onClose}>
             Close

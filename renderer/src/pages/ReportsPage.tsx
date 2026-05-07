@@ -18,7 +18,8 @@ import {
   Factory,
   Package,
   Loader2,
-  Check
+  Check,
+  Database
 } from 'lucide-react';
 import './Pages.css';
 import './ReportsPage.css';
@@ -39,6 +40,7 @@ const ReportsPage = (): JSX.Element => {
   const [range, setRange] = useState({
     startDate: formatDateInput(defaultStart),
     endDate: formatDateInput(new Date()),
+    season: '',
   });
   const [reports, setReports] = useState<AdvancedReports | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ const ReportsPage = (): JSX.Element => {
       setError(null);
 
       const [response, leastItems, leastSuppliers, aging] = await Promise.all([
-        window.evaApi.reports.advanced(token, range),
+        window.evaApi.reports.advanced(token, { ...range, season: range.season || null }),
         window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.inventoryAging(token, { limit: 50 }),
@@ -456,6 +458,11 @@ const ReportsPage = (): JSX.Element => {
           const end = new Date(today.getFullYear(), today.getMonth(), 0);
           setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
         }}><CalendarRange size={14} /> {t('lastMonth')}</button>
+        <button onClick={() => {
+          const end = new Date();
+          const start = new Date(2000, 0, 1);
+          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
+        }}><Database size={14} /> {t('allTime')}</button>
       </section>
 
       <section className="Reports-filters">
@@ -473,6 +480,16 @@ const ReportsPage = (): JSX.Element => {
             type="date"
             value={range.endDate}
             onChange={(event) => setRange((prev) => ({ ...prev, endDate: event.target.value }))}
+          />
+        </label>
+        <label>
+          {t('season')}
+          <input
+            type="text"
+            list="reports-seasons"
+            placeholder={t('allSeasons')}
+            value={range.season || ''}
+            onChange={(event) => setRange((prev) => ({ ...prev, season: event.target.value }))}
           />
         </label>
         <button className="Reports-button" onClick={loadReports} disabled={loading}>

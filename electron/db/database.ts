@@ -354,6 +354,7 @@ const createTables = async (): Promise<void> => {
       name TEXT NOT NULL,
       baseCode TEXT,
       category TEXT,
+      season TEXT,
       description TEXT,
       defaultSupplierId INTEGER,
       isActive INTEGER DEFAULT 1,
@@ -659,6 +660,12 @@ export async function initDatabase(): Promise<void> {
       await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0');
       log.info('[db] Added totalCostIQD column to returns table');
     }
+
+    const productCols = await all<{ name: string }>('PRAGMA table_info(products)');
+    if (!productCols.some((c) => c.name === 'season')) {
+      await run('ALTER TABLE products ADD COLUMN season TEXT');
+      log.info('[db] Added season column to products table');
+    }
   } catch (err) {
     log.error('[db] Migration failed:', err);
   }
@@ -756,6 +763,7 @@ interface ProductVariantRow {
   productId: number;
   productName: string;
   category?: string | null;
+  season?: string | null;
   baseCode?: string | null;
   supplierName?: string | null;
   size?: string | null;
@@ -777,6 +785,7 @@ const mapVariantRow = (row: ProductVariantRow): Product => ({
   productName: row.productName,
   baseCode: row.baseCode,
   category: row.category,
+  season: row.season,
   supplierName: row.supplierName,
   size: row.size,
   color: row.color,
@@ -984,6 +993,7 @@ export async function listProducts(
       pv.productId,
       p.name AS productName,
       p.category,
+      p.season,
       p.baseCode,
       s.name AS supplierName,
       pv.size,
@@ -1134,6 +1144,9 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     [range.startDate, range.endDate],
   );
 
+  const seasonFilter = range.season ? ' AND p.season = ? ' : '';
+  const seasonParam = range.season ? [range.season] : [];
+
   const bestSellingItems = await all<NamedMetric>(
     `
     SELECT
@@ -1145,11 +1158,12 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
     GROUP BY p.name
     ORDER BY quantity DESC
     LIMIT 10
   `,
-    [range.startDate, range.endDate],
+    [range.startDate, range.endDate, ...seasonParam],
   );
 
   const salesBySize = await all<NamedMetric>(
@@ -1160,11 +1174,13 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       IFNULL(SUM(si.lineTotalIQD), 0) as amountIQD
     FROM sale_items si
     JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
     GROUP BY pv.size
   `,
-    [range.startDate, range.endDate],
+    [range.startDate, range.endDate, ...seasonParam],
   );
 
   const salesByColor = await all<NamedMetric>(
@@ -1175,11 +1191,13 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       IFNULL(SUM(si.lineTotalIQD), 0) as amountIQD
     FROM sale_items si
     JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
     GROUP BY pv.color
   `,
-    [range.startDate, range.endDate],
+    [range.startDate, range.endDate, ...seasonParam],
   );
 
   const topCustomers = await all<NamedMetric>(
@@ -1200,21 +1218,28 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
 
   const revenueRow = await get<{ revenue: number }>(
     `
-    SELECT IFNULL(SUM(totalIQD), 0) as revenue
-    FROM sales
-    WHERE date(saleDate) BETWEEN date(?) AND date(?)
+    SELECT IFNULL(SUM(si.lineTotalIQD), 0) as revenue
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
   `,
-    [range.startDate, range.endDate],
+    [range.startDate, range.endDate, ...seasonParam],
   );
 
   const costRow = await get<{ cost: number }>(
     `
-    SELECT IFNULL(SUM(quantity * IFNULL(unitCostIQDAtSale, 0)), 0) as cost
+    SELECT IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as cost
     FROM sale_items si
     JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
   `,
-    [range.startDate, range.endDate],
+    [range.startDate, range.endDate, ...seasonParam],
   );
 
   const expensesRow = await get<{ total: number }>(
@@ -1233,7 +1258,9 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     WHERE p.isActive = 1 AND pv.isActive = 1
+    ${seasonFilter}
   `,
+    [...seasonParam],
   );
 
   // Calculate total cost of all items ever sold
@@ -1242,7 +1269,11 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     SELECT IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as totalCost
     FROM sale_items si
     JOIN sales s ON s.id = si.saleId
-    `
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE 1=1 ${seasonFilter}
+    `,
+    [...seasonParam]
   );
 
   const totalInventoryValueIncludingSoldIQD = (inventoryValueRow?.value || 0) + (totalSoldCostRow?.totalCost || 0);
@@ -1254,7 +1285,9 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     WHERE p.isActive = 1 AND pv.isActive = 1
-    `
+    ${seasonFilter}
+    `,
+    [...seasonParam]
   );
 
   const lowStock = await all<{ sku: string; productName: string; color?: string; size?: string; quantity: number }>(
@@ -1269,9 +1302,11 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     WHERE vs.quantity <= vs.lowStockThreshold
+    ${seasonFilter}
     ORDER BY vs.quantity ASC
     LIMIT 20
   `,
+    [...seasonParam]
   );
 
   const expensesVsSales = await all<ExpensesVsSalesEntry>(
@@ -1325,23 +1360,25 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         FROM sale_items si
         JOIN product_variants pv2 ON pv2.id = si.variantId
         JOIN products p2 ON p2.id = pv2.productId
-        WHERE p2.defaultSupplierId = p.defaultSupplierId
+        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilter.replace(/p\./g, 'p2.')}
       ) as soldQuantity,
       (
         SELECT IFNULL(SUM(si.quantity * pv2.avgCostUSD), 0)
         FROM sale_items si
         JOIN product_variants pv2 ON pv2.id = si.variantId
         JOIN products p2 ON p2.id = pv2.productId
-        WHERE p2.defaultSupplierId = p.defaultSupplierId
+        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilter.replace(/p\./g, 'p2.')}
       ) as totalSoldValueUSD
     FROM variant_stock vs
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     LEFT JOIN suppliers s ON s.id = p.defaultSupplierId
     WHERE p.isActive = 1 AND pv.isActive = 1
+    ${seasonFilter}
     GROUP BY p.defaultSupplierId
     ORDER BY totalValueUSD DESC
   `,
+    [...seasonParam, ...seasonParam, ...seasonParam]
   );
 
   // Returns summary for the date range
@@ -2075,13 +2112,14 @@ export async function createProduct(product: ProductInput): Promise<Product> {
   try {
     const productResult = await runWithResult(
       `
-      INSERT INTO products(name, baseCode, category, description, defaultSupplierId)
-  VALUES(?, ?, ?, ?, ?)
+      INSERT INTO products(name, baseCode, category, season, description, defaultSupplierId)
+  VALUES(?, ?, ?, ?, ?, ?)
     `,
       [
         product.name,
         product.code ?? null,
         product.category ?? null,
+        product.season ?? null,
         product.description ?? null,
         product.supplierId ?? null,
       ],
@@ -2947,6 +2985,11 @@ export async function updateProduct(input: ProductUpdateInput): Promise<Product>
     params.push(input.category ?? null);
   }
 
+  if (input.season !== undefined) {
+    updates.push('season = ?');
+    params.push(input.season ?? null);
+  }
+
   if (input.description !== undefined) {
     updates.push('description = ?');
     params.push(input.description ?? null);
@@ -3037,6 +3080,15 @@ export async function deleteVariant(variantId: number): Promise<void> {
 
   // Delete variant (cascade will handle stock and adjustments)
   await run('DELETE FROM product_variants WHERE id = ?', [variantId]);
+}
+
+export async function bulkUpdateProducts(_token: string, payload: { productIds: number[]; season?: string | null }): Promise<void> {
+  const { productIds, season } = payload;
+  if (!productIds.length) return;
+
+  const placeholders = productIds.map(() => '?').join(',');
+  const sql = `UPDATE products SET season = ? WHERE id IN (${placeholders})`;
+  await run(sql, [season ?? null, ...productIds]);
 }
 
 // ==================== RETURN MANAGEMENT ====================

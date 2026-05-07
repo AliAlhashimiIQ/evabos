@@ -35,6 +35,7 @@ export interface Product extends ProductVariant {
   category?: string | null;
   baseCode?: string | null;
   supplierName?: string | null;
+  season?: string | null;
   stockOnHand: number;
   salePriceIQD: number;
 }
@@ -50,6 +51,7 @@ export type ProductInput = {
   salePriceIQD: number;
   purchaseCostUSD: number;
   supplierId?: number | null;
+  season?: string | null;
 };
 
 export interface Supplier {
@@ -373,6 +375,7 @@ export interface ActivityLog {
 export interface DateRange {
   startDate: string;
   endDate: string;
+  season?: string | null;
 }
 
 export interface ProductsListResponse {
@@ -459,6 +462,7 @@ export interface ProductUpdateInput {
   category?: string | null;
   description?: string | null;
   defaultSupplierId?: number | null;
+  season?: string | null;
   isActive?: boolean;
 }
 

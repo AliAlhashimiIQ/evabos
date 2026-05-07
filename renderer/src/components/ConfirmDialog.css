@@ -1,0 +1,122 @@
+.ConfirmDialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99997;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: overlayFadeIn 0.15s ease;
+}
+
+.ConfirmDialog {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 28px 28px 20px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: modalScaleIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  text-align: center;
+}
+
+.ConfirmDialog-iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.ConfirmDialog-iconWrap--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.ConfirmDialog-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.ConfirmDialog-message {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 24px;
+  white-space: pre-line;
+}
+
+.ConfirmDialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.ConfirmDialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 100px;
+}
+
+.ConfirmDialog-btn--cancel {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.ConfirmDialog-btn--cancel:hover {
+  background: var(--hover-bg);
+}
+
+.ConfirmDialog-btn--confirm {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.ConfirmDialog-btn--confirm:hover {
+  background: #2563eb;
+}
+
+.ConfirmDialog-btn--danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.ConfirmDialog-btn--danger:hover {
+  background: #dc2626;
+}
+
+.ConfirmDialog-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

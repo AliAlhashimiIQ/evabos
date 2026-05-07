@@ -68,6 +68,8 @@ contextBridge.exposeInMainWorld('evaApi', {
     }) => ipcRenderer.invoke('inventory:stock:adjust', token, payload),
     importExcel: (token: string, payload: { fileBuffer: number[] | Buffer; branchId?: number }) =>
       ipcRenderer.invoke('inventory:excel:import', token, payload),
+    bulkUpdate: (token: string, payload: { productIds: number[]; season?: string | null }) =>
+      ipcRenderer.invoke('inventory:products:bulkUpdate', token, payload),
   },
   sales: {
     create: (token: string, data: SaleInput) => ipcRenderer.invoke('sales:create', token, data),

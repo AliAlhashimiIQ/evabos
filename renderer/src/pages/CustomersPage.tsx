@@ -5,6 +5,7 @@ import { Plus, Ticket, X, Check, Printer } from 'lucide-react';
 import './Pages.css';
 import './CustomersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonList } from '../components/Skeleton';
 
 type Customer = import('../types/electron').Customer;
 type CustomerInput = import('../types/electron').CustomerInput;
@@ -98,7 +99,7 @@ const CustomersPage = (): JSX.Element => {
         );
     }, [customers, search]);
 
-    const generateVoucherHtml = (customer: Customer, discount: number, validityDays: number): string => {
+    const generateVoucherHtml = (discount: number, validityDays: number, customerName?: string): string => {
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + validityDays);
         const expiryFormatted = expiryDate.toLocaleDateString('ar-IQ', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -122,7 +123,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
 <body>
 <div class="store-name">EVA CLOTHING</div>
 <div class="voucher-title">قسيمة خصم</div>
-<div class="customer-name">العميل: <strong>${customer.name}</strong></div>
+<div class="customer-name">${customerName ? `العميل: <strong>${customerName}</strong>` : 'لحامل هذه القسيمة'}</div>
 <div class="discount">${discount}% خصم</div>
 <div class="validity">صالحة لمدة ${validityDays} يوم<br />تنتهي في: ${expiryFormatted}</div>
 <div class="footer">قدّم هذه القسيمة عند الدفع<br /><br />الشروط والأحكام سارية</div>
@@ -166,7 +167,13 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                         onChange={(event) => setSearch(event.target.value)}
                     />
                     <button onClick={() => setModalOpen(true)}><Plus size={18} /> {t('newCustomer')}</button>
-                    <button onClick={() => setVoucherModalOpen(true)}><Ticket size={18} /> {t('createVoucher')}</button>
+                    <button onClick={() => {
+                        setVoucherCustomerId(selectedCustomer ? selectedCustomer.id : '');
+                        setVoucherSearch('');
+                        setVoucherDiscount(10);
+                        setVoucherValidityDays(14);
+                        setVoucherModalOpen(true);
+                    }}><Ticket size={18} /> {t('createVoucher')}</button>
                 </div>
             </div>
 
@@ -175,7 +182,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
             <div className="CustomersPage-content">
                 <aside className="CustomersPage-list">
                     {loading ? (
-                        <div className="CustomersPage-empty">{t('loadingCustomers')}</div>
+                        <SkeletonList items={5} />
                     ) : filteredCustomers.length === 0 ? (
                         <div className="CustomersPage-empty">{t('noCustomersMatch')}</div>
                     ) : (
@@ -212,7 +219,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                     <button
                                         className="delete-btn"
                                         onClick={async () => {
-                                            if (confirmDialog(t('confirmDeleteCustomer'))) {
+                                            if (await confirmDialog({ message: t('confirmDeleteCustomer'), variant: 'danger', confirmText: t('delete') })) {
                                                 try {
                                                     await window.evaApi.customers.delete(token!, selectedCustomer.id);
                                                     setSelectedCustomer(null);
@@ -381,24 +388,22 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                            <button type="button" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: '1px solid rgba(148,163,184,0.3)', background: 'transparent', color: '#fff', cursor: 'pointer' }}>{t('cancel')}</button>
-                            <button type="button" disabled={!voucherCustomerId} onClick={async () => {
-                                if (!voucherCustomerId) return;
+                            <button type="button" className="ghost" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }}>{t('cancel')}</button>
+                            <button type="button" onClick={async () => {
                                 const customer = customers.find(c => c.id === voucherCustomerId);
-                                if (customer) {
-                                    const html = generateVoucherHtml(customer, voucherDiscount, voucherValidityDays);
-                                    try {
-                                        await window.evaApi.printing.print({ html, printerName: null, silent: false });
-                                        setVoucherModalOpen(false);
-                                        setVoucherSearch('');
-                                        setVoucherCustomerId('');
-                                        setVoucherDiscount(10);
-                                        setVoucherValidityDays(14);
-                                    } catch (err) {
-                                        setError(t('failedToPrintVoucher') || 'Failed to print voucher');
-                                    }
+                                const name = customer?.name || (voucherSearch.trim() ? voucherSearch.trim() : undefined);
+                                const html = generateVoucherHtml(voucherDiscount, voucherValidityDays, name);
+                                try {
+                                    await window.evaApi.printing.print({ html, printerName: null, silent: false });
+                                    setVoucherModalOpen(false);
+                                    setVoucherSearch('');
+                                    setVoucherCustomerId('');
+                                    setVoucherDiscount(10);
+                                    setVoucherValidityDays(14);
+                                } catch (err) {
+                                    setError(t('failedToPrintVoucher') || 'Failed to print voucher');
                                 }
-                            }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', background: voucherCustomerId ? '#22c55e' : '#555', color: '#fff', cursor: voucherCustomerId ? 'pointer' : 'not-allowed', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Printer size={18} /> {t('printVoucher')}</button>
+                            }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', background: '#22c55e', color: '#fff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Printer size={18} /> {t('printVoucher')}</button>
                         </div>
                     </div>
                 </div>

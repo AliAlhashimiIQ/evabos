@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './BackupPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 
 type BackupInfo = import('../types/electron').BackupInfo;
 
@@ -78,7 +79,7 @@ const BackupPage = (): JSX.Element => {
       }
 
       const filename = selectedPath.split(/[/\\]/).pop() || 'selected file';
-      const confirmed = confirmDialog(
+      const confirmed = await confirmDialog(
         t('confirmRestore', { filename })
       );
 
@@ -101,9 +102,11 @@ const BackupPage = (): JSX.Element => {
   const handleRestore = async (backupPath: string, filename: string) => {
     if (!token || !window.evaApi) return;
 
-    const confirmed = confirmDialog(
-      t('confirmRestore', { filename })
-    );
+    const confirmed = await confirmDialog({
+      message: t('confirmRestore', { filename }),
+      variant: 'danger',
+      confirmText: t('restore'),
+    });
 
     if (!confirmed) return;
 
@@ -125,7 +128,7 @@ const BackupPage = (): JSX.Element => {
   const handleDelete = async (backupPath: string, filename: string) => {
     if (!token || !window.evaApi) return;
 
-    const confirmed = confirmDialog(t('confirmDeleteBackup', { filename }));
+    const confirmed = await confirmDialog({ message: t('confirmDeleteBackup', { filename }), variant: 'danger', confirmText: t('delete') });
 
     if (!confirmed) return;
 
@@ -194,7 +197,7 @@ const BackupPage = (): JSX.Element => {
       </div>
 
       {loading ? (
-        <div className="BackupPage-empty">{t('loading')}</div>
+        <SkeletonTable rows={3} cols={4} />
       ) : backups.length === 0 ? (
         <div className="BackupPage-empty">{t('noBackupsFound')}</div>
       ) : (

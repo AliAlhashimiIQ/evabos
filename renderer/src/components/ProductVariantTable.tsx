@@ -12,6 +12,9 @@ interface ProductVariantTableProps {
   onPrintLabel?: (variant: Product) => void;
   onDelete?: (variant: Product) => void;
   onEdit?: (variant: Product) => void;
+  selectedIds?: number[];
+  onToggleSelect?: (id: number) => void;
+  onToggleSelectAll?: (ids: number[]) => void;
 }
 
 const ProductVariantTable = ({
@@ -22,8 +25,13 @@ const ProductVariantTable = ({
   onPrintLabel,
   onDelete,
   onEdit,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
 }: ProductVariantTableProps): JSX.Element => {
   const { t } = useLanguage();
+  const allSelected = products.length > 0 && selectedIds.length === products.length;
+
   const defaultActionLabel = actionLabel || t('adjustStock');
 
   if (!products.length) {
@@ -31,10 +39,19 @@ const ProductVariantTable = ({
   }
 
   return (
-    <div className="ProductVariantTable-wrapper">
+    <div className="ProductVariantTable-container">
       <table className="ProductVariantTable">
         <thead>
           <tr>
+            {onToggleSelectAll && (
+              <th className="ProductVariantTable-checkboxCell">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => onToggleSelectAll(products.map(p => p.id))}
+                />
+              </th>
+            )}
             <th>{t('name')}</th>
             <th>{t('sku')}</th>
             <th>{t('barcode')}</th>
@@ -48,11 +65,20 @@ const ProductVariantTable = ({
         </thead>
         <tbody>
           {products.map((variant) => (
-            <tr key={variant.id}>
+            <tr key={variant.id} className={selectedIds.includes(variant.id) ? 'selected' : ''}>
+              {onToggleSelect && (
+                <td className="ProductVariantTable-checkboxCell">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(variant.id)}
+                    onChange={() => onToggleSelect(variant.id)}
+                  />
+                </td>
+              )}
               <td>
                 <div className="ProductVariantTable-name">
                   <strong>{variant.productName}</strong>
-                  <span>{variant.category ?? 'Uncategorized'}</span>
+                  <span>{variant.category ?? 'Uncategorized'} {variant.season ? `• ${variant.season}` : ''}</span>
                 </div>
               </td>
               <td>

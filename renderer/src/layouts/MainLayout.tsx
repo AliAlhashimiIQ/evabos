@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { PageTransition } from '../components/PageTransition';
+import { ShortcutOverlay } from '../components/ShortcutOverlay';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -131,9 +133,12 @@ const MainLayout = (): JSX.Element => {
           </div>
         </header>
         <main className="Layout-content">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
+      <ShortcutOverlay />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import './Pages.css';
 import './SuppliersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 
 type Supplier = import('../types/electron').Supplier;
 type SupplierInput = import('../types/electron').SupplierInput;
@@ -118,7 +119,7 @@ const SuppliersPage = (): JSX.Element => {
 
       <div className="SuppliersPage-tableWrapper">
         {loading ? (
-          <div className="SuppliersPage-empty">{t('loadingSuppliers')}</div>
+          <SkeletonTable rows={4} cols={6} />
         ) : suppliers.length === 0 ? (
           <div className="SuppliersPage-empty">{t('noSuppliersYet')}</div>
         ) : (
@@ -161,7 +162,7 @@ const SuppliersPage = (): JSX.Element => {
                       className="icon-button delete-icon"
                       onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirmDialog(t('confirmDeleteSupplier'))) {
+                        if (await confirmDialog({ message: t('confirmDeleteSupplier'), variant: 'danger', confirmText: t('delete') })) {
                           try {
                             await window.evaApi.suppliers.delete(token!, supplier.id);
                             loadSuppliers();

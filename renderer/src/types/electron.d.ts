@@ -23,6 +23,7 @@ export interface Product {
   baseCode?: string | null;
   barcode?: string | null;
   category?: string | null;
+  season?: string | null;
   color?: string | null;
   size?: string | null;
   supplierName?: string | null;
@@ -40,6 +41,7 @@ export type ProductInput = {
   code?: string | null;
   barcode?: string | null;
   category?: string | null;
+  season?: string | null;
   description?: string | null;
   color?: string | null;
   size?: string | null;
@@ -367,6 +369,7 @@ export type ExchangeRateInput = {
 export interface DateRange {
   startDate: string;
   endDate: string;
+  season?: string | null;
 }
 
 // Pagination types
@@ -414,6 +417,7 @@ export interface EvaApi {
       note?: string;
       userId?: number | null;
     }) => Promise<InventoryAdjustment>;
+    bulkUpdate: (token: string, payload: { productIds: number[]; season?: string | null }) => Promise<boolean>;
     importExcel: (token: string, payload: { fileBuffer: number[] | Buffer; branchId?: number }) => Promise<ExcelImportResult>;
   };
   sales: {
@@ -599,6 +603,7 @@ export interface ProductUpdateInput {
   name?: string;
   baseCode?: string | null;
   category?: string | null;
+  season?: string | null;
   description?: string | null;
   defaultSupplierId?: number | null;
   isActive?: boolean;

@@ -238,6 +238,51 @@ const PosPage = (): JSX.Element => {
     }
   }, [token]);
 
+  // Periodic Inventory Refresh (every 30 seconds)
+  // This prevents stale cart data if another cashier sells an item
+  useEffect(() => {
+    if (!token || !window.evaApi) return;
+    
+    const pollInventory = async () => {
+      try {
+        // Fetch enough products to cover what's currently loaded
+        const limit = Math.max(100, products.length);
+        const productResponse = await window.evaApi.products.list(token, { limit, cursor: 0 });
+        const freshProducts = productResponse.products || productResponse.items || [];
+        
+        // Update product list without resetting pagination
+        setProducts(prev => {
+          const merged = [...prev];
+          freshProducts.forEach(fp => {
+            const idx = merged.findIndex(p => p.id === fp.id);
+            if (idx !== -1) merged[idx] = fp;
+          });
+          return merged;
+        });
+
+        // Update cart items to reflect new stock levels
+        setProfiles((prevProfiles) =>
+          prevProfiles.map((profile) => ({
+            ...profile,
+            cart: profile.cart.map((item) => {
+              const updatedProduct = freshProducts.find((p) => p.id === item.product.id);
+              // Only update if stock changed
+              if (updatedProduct && updatedProduct.stockQuantity !== item.product.stockQuantity) {
+                return { ...item, product: updatedProduct };
+              }
+              return item;
+            }),
+          })),
+        );
+      } catch (err) {
+        console.error('Failed to poll inventory:', err);
+      }
+    };
+
+    const interval = setInterval(pollInventory, 30000); // 30s
+    return () => clearInterval(interval);
+  }, [token, products.length]);
+
 
 
   const subtotalIQD = useMemo(
@@ -709,8 +754,8 @@ const PosPage = (): JSX.Element => {
             {cart.length > 0 && (
               <button
                 className="Pos-clearButton"
-                onClick={() => {
-                  if (confirmDialog(t('clearAllItems'))) {
+                onClick={async () => {
+                  if (await confirmDialog(t('clearAllItems'))) {
                     updateCurrentProfile((profile) => ({
                       ...profile,
                       cart: [],

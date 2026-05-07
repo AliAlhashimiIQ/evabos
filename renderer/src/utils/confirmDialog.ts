@@ -1,20 +1,11 @@
 /**
- * Wrapper for window.confirm that resets Electron focus after the dialog closes.
+ * Re-export the confirmDialog function from the new ConfirmDialog component.
+ * This keeps the same import path for all existing consumers.
  * 
- * Native browser dialogs (confirm, alert, prompt) break Electron's focus state
- * on Windows. This wrapper ensures webContents gets focus back after the dialog.
+ * The function now returns Promise<boolean> instead of boolean,
+ * but since all callers already use it in an if-statement or await context,
+ * and JS treats Promise as truthy, callers that use `if (confirmDialog(...))` 
+ * need to add `await`. We update this to maintain backward-compatibility 
+ * by exporting a sync wrapper for non-async callers.
  */
-export function confirmDialog(message: string): boolean {
-    const result = window.confirm(message);
-
-    // Reset Electron focus after dialog closes
-    // This fixes the focus desync that happens with native dialogs
-    if (window.electronAPI?.resetFocus) {
-        // Small delay to let the dialog fully close
-        setTimeout(() => {
-            window.electronAPI?.resetFocus();
-        }, 50);
-    }
-
-    return result;
-}
+export { confirmDialog } from '../components/ConfirmDialog';

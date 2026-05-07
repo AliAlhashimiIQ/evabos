@@ -17,6 +17,23 @@
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
 }
 
+.ProductVariantTable-checkboxCell {
+  width: 40px;
+  text-align: center !important;
+  padding-left: 1.5rem !important;
+}
+
+.ProductVariantTable-checkboxCell input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--brand-primary);
+}
+
+.ProductVariantTable tr.selected {
+  background: rgba(99, 102, 241, 0.08);
+}
+
 .ProductVariantTable th {
   text-align: left;
   font-size: 0.8rem;

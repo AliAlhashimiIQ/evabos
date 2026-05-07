@@ -19,6 +19,9 @@ import {
   ShoppingCart,
   Database
 } from 'lucide-react';
+import { AnimatedNumber } from '../components/AnimatedNumber';
+import { Sparkline } from '../components/Sparkline';
+import { SkeletonCard } from '../components/Skeleton';
 import './Pages.css';
 import './DashboardPage.css';
 
@@ -26,7 +29,7 @@ type DashboardKPIs = import('../types/electron').DashboardKPIs;
 type PeakHourData = import('../types/electron').PeakHourData;
 type PeakDayData = import('../types/electron').PeakDayData;
 
-type DateRangePreset = 'today' | 'yesterday' | 'last2days' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
+type DateRangePreset = 'today' | 'yesterday' | 'last2days' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'allTime' | 'custom';
 
 const DashboardPage = (): JSX.Element => {
   const { token, user } = useAuth();
@@ -109,6 +112,12 @@ const DashboardPage = (): JSX.Element => {
         return {
           startDate: formatDate(firstDayLastMonth),
           endDate: formatDate(lastDayLastMonth),
+        };
+      }
+      case 'allTime': {
+        return {
+          startDate: '2000-01-01',
+          endDate: formatDate(today),
         };
       }
       case 'custom': {
@@ -209,9 +218,10 @@ const DashboardPage = (): JSX.Element => {
           <h1>{t('dashboard')}</h1>
         </div>
         <div className="Page-content">
-          <div className="Dashboard-loading">
-            <div className="spinner"></div>
-            <p>{t('loading')}</p>
+          <div className="Dashboard-kpis">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         </div>
       </div>
@@ -250,6 +260,7 @@ const DashboardPage = (): JSX.Element => {
               <option value="last30days">{t('last30days')}</option>
               <option value="thisMonth">{t('thisMonth')}</option>
               <option value="lastMonth">{t('lastMonth')}</option>
+              <option value="allTime">{t('allTime')}</option>
               <option value="custom">{t('customRange')}</option>
             </select>
             {datePreset === 'custom' && (
@@ -284,7 +295,7 @@ const DashboardPage = (): JSX.Element => {
             <div className="Dashboard-kpiIcon"><DollarSign size={24} /></div>
             <div className="Dashboard-kpiContent">
               <div className="Dashboard-kpiLabel">{datePreset === 'today' ? t('todaySales') : t('sales')}</div>
-              <div className="Dashboard-kpiValue">{kpis.todaySales.totalIQD.toLocaleString('en-IQ')} IQD</div>
+              <div className="Dashboard-kpiValue"><AnimatedNumber value={kpis.todaySales.totalIQD} suffix=" IQD" /></div>
               <div className="Dashboard-kpiSubtext">
                 <strong>{kpis.todaySales.count}</strong> {kpis.todaySales.count === 1 ? t('sale') : t('sales')} • <strong>{kpis.todaySales.totalItemsSold}</strong> {t('productsSold') || 'products sold'}
               </div>
@@ -295,8 +306,9 @@ const DashboardPage = (): JSX.Element => {
             <div className="Dashboard-kpiIcon"><TrendingUp size={24} /></div>
             <div className="Dashboard-kpiContent">
               <div className="Dashboard-kpiLabel">{t('totalProfit')}</div>
-              <div className="Dashboard-kpiValue">{kpis.todaySales.profitIQD.toLocaleString('en-IQ')} IQD</div>
+              <div className="Dashboard-kpiValue"><AnimatedNumber value={kpis.todaySales.profitIQD} suffix=" IQD" /></div>
               <div className="Dashboard-kpiSubtext">{profitMargin}% {t('margin')}</div>
+              <Sparkline data={peakDaysData.map(d => d.totalSalesIQD)} color="#22c55e" />
             </div>
           </div>
 
@@ -304,7 +316,7 @@ const DashboardPage = (): JSX.Element => {
             <div className="Dashboard-kpiIcon"><ShoppingBag size={24} /></div>
             <div className="Dashboard-kpiContent">
               <div className="Dashboard-kpiLabel">{t('avgTicket')}</div>
-              <div className="Dashboard-kpiValue">{kpis.todaySales.avgTicket.toLocaleString('en-IQ')} IQD</div>
+              <div className="Dashboard-kpiValue"><AnimatedNumber value={kpis.todaySales.avgTicket} suffix=" IQD" /></div>
               <div className="Dashboard-kpiSubtext">{t('perSale')}</div>
             </div>
           </div>
@@ -313,7 +325,7 @@ const DashboardPage = (): JSX.Element => {
             <div className="Dashboard-kpiIcon"><Wallet size={24} /></div>
             <div className="Dashboard-kpiContent">
               <div className="Dashboard-kpiLabel">{t('expenses')}</div>
-              <div className="Dashboard-kpiValue">{kpis.todayExpenses.toLocaleString('en-IQ')} IQD</div>
+              <div className="Dashboard-kpiValue"><AnimatedNumber value={kpis.todayExpenses} suffix=" IQD" /></div>
               <div className="Dashboard-kpiSubtext">{t('todaysTotal')}</div>
             </div>
           </div>
@@ -322,7 +334,7 @@ const DashboardPage = (): JSX.Element => {
             <div className="Dashboard-kpiIcon">{netProfit >= 0 ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}</div>
             <div className="Dashboard-kpiContent">
               <div className="Dashboard-kpiLabel">{t('netProfit')}</div>
-              <div className="Dashboard-kpiValue">{netProfit.toLocaleString('en-IQ')} IQD</div>
+              <div className="Dashboard-kpiValue"><AnimatedNumber value={netProfit} suffix=" IQD" /></div>
               <div className="Dashboard-kpiSubtext">{t('afterExpenses')}</div>
             </div>
           </div>

@@ -1,0 +1,164 @@
+.BulkEditSeasonModal {
+  width: min(450px, 95vw);
+  background: var(--bg-secondary);
+  border-radius: 1.25rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  animation: modalEnter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.BulkEditSeasonModal-header {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+[dir="rtl"] .BulkEditSeasonModal-header {
+  flex-direction: row-reverse;
+}
+
+.BulkEditSeasonModal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.BulkEditSeasonModal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.BulkEditSeasonModal-close:hover {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-primary);
+}
+
+.BulkEditSeasonModal-body {
+  padding: 1.5rem;
+}
+
+.BulkEditSeasonModal-info {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: inherit;
+}
+
+.BulkEditSeasonModal-info strong {
+  color: var(--brand-primary);
+}
+
+.BulkEditSeasonModal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.BulkEditSeasonModal-field label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.BulkEditSeasonModal-field input {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.BulkEditSeasonModal-field input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.BulkEditSeasonModal-help {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+  text-align: inherit;
+}
+
+.BulkEditSeasonModal-error {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.75rem;
+  color: #ef4444;
+  font-size: 0.9rem;
+}
+
+.BulkEditSeasonModal-footer {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+[dir="rtl"] .BulkEditSeasonModal-footer {
+  flex-direction: row-reverse;
+}
+
+.BulkEditSeasonModal-cancel {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.BulkEditSeasonModal-cancel:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.05);
+  color: var(--text-primary);
+}
+
+.BulkEditSeasonModal-submit {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: #2563eb;
+  border: none;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.BulkEditSeasonModal-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.BulkEditSeasonModal-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

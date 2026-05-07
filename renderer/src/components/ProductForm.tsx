@@ -25,6 +25,7 @@ const initialState: FormState = {
   code: '',
   barcode: '',
   category: '',
+  season: '',
   description: '',
   color: '',
   size: '',
@@ -178,6 +179,13 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         <label>
           <span>{t('category')}</span>
           <input type="text" value={formState.category ?? ''} onChange={handleChange('category')} />
+        </label>
+        <label>
+          <span>{t('season')}</span>
+          <input type="text" list="seasons-list" value={formState.season ?? ''} onChange={handleChange('season')} placeholder="e.g., Winter 2026" />
+          <datalist id="seasons-list">
+             {/* Can be populated from existing seasons later, for now just basic text */}
+          </datalist>
         </label>
         <label className="ProductForm-span">
           <span>{t('description')}</span>

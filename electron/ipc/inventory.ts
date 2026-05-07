@@ -8,6 +8,7 @@ import {
   updateVariant,
   adjustVariantStock,
   deleteVariant,
+  bulkUpdateProducts,
   listSuppliers,
   createSupplier,
   updateSupplier,
@@ -167,6 +168,18 @@ export function registerInventoryIpc(): void {
       const variantId = args[0] as number;
       await deleteVariant(variantId);
       await (await import('../db/database')).logActivity(session.userId, 'delete', 'variant', variantId);
+      return true;
+    }),
+  );
+
+  ipcMain.handle(
+    'inventory:products:bulkUpdate',
+    requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const payload = args[0] as { productIds: number[]; season?: string | null };
+      await bulkUpdateProducts(session.token, payload);
+      // Log activity for each product or one bulk log? Let's do one bulk log
+      await (await import('../db/database')).logActivity(session.userId, 'bulk_update', 'product', payload.productIds[0], { count: payload.productIds.length });
       return true;
     }),
   );

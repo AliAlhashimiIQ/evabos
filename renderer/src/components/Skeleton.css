@@ -1,0 +1,106 @@
+/* ═══ Skeleton Shimmer ═══ */
+@keyframes skeletonShimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.Skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08) 25%,
+    rgba(148, 163, 184, 0.18) 50%,
+    rgba(148, 163, 184, 0.08) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+}
+
+:root[data-theme='light'] .Skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.06) 25%,
+    rgba(30, 41, 59, 0.12) 50%,
+    rgba(30, 41, 59, 0.06) 75%
+  );
+  background-size: 800px 100%;
+}
+
+/* ═══ Skeleton Card ═══ */
+.SkeletonCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.SkeletonCard-icon {
+  flex-shrink: 0;
+}
+
+.SkeletonCard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ═══ Skeleton Table ═══ */
+.SkeletonTable {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.SkeletonTable-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+}
+
+.SkeletonTable-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  animation: skeletonRowFade 0.4s ease both;
+}
+
+@keyframes skeletonRowFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ Skeleton List ═══ */
+.SkeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.SkeletonList-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  animation: skeletonRowFade 0.4s ease both;
+}
+
+.SkeletonList-itemContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Product } from '../types/electron';
 import './InventoryAdjustModal.css';
 import NumberInput from './NumberInput';
+import PortalModal from './PortalModal';
 
 interface InventoryAdjustModalProps {
   variant: Product;
@@ -42,7 +43,7 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
   };
 
   return (
-    <div className="InventoryAdjustModal-overlay">
+    <PortalModal onClose={onClose}>
       <div className="InventoryAdjustModal-card">
         <header>
           <div>
@@ -93,7 +94,7 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
           </div>
         </form>
       </div>
-    </div>
+    </PortalModal>
   );
 };
 

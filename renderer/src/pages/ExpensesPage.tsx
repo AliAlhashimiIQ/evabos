@@ -6,6 +6,7 @@ import './Pages.css';
 import './ExpensesPage.css';
 import NumberInput from '../components/NumberInput';
 import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 
 type Expense = import('../types/electron').Expense;
 type ExpenseInput = import('../types/electron').ExpenseInput;
@@ -100,9 +101,8 @@ const ExpensesPage = (): JSX.Element => {
   const handleDelete = async (expenseId: number) => {
     if (!window.evaApi || !token) return;
     // Confirmation dialog
-    if (!confirmDialog(t('confirmDeleteExpense') || 'Are you sure you want to delete this expense?')) {
-      return;
-    }
+    const ok = await confirmDialog({ message: t('confirmDeleteExpense') || 'Are you sure you want to delete this expense?', variant: 'danger', confirmText: t('delete') });
+    if (!ok) return;
     try {
       await window.evaApi.expenses.delete(token, expenseId);
       await loadExpenses();
@@ -130,7 +130,7 @@ const ExpensesPage = (): JSX.Element => {
   };
 
   // Quick date filter handlers
-  const handleQuickFilter = (filterType: 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth') => {
+  const handleQuickFilter = (filterType: 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'allTime') => {
     const now = new Date();
     let start = new Date();
     let end = new Date();
@@ -153,6 +153,9 @@ const ExpensesPage = (): JSX.Element => {
         start.setMonth(now.getMonth() - 1);
         start.setDate(1);
         end.setDate(0); // Last day of previous month
+        break;
+      case 'allTime':
+        start = new Date(2000, 0, 1);
         break;
     }
 
@@ -262,6 +265,7 @@ const ExpensesPage = (): JSX.Element => {
           <button type="button" onClick={() => handleQuickFilter('thisWeek')}>{t('last7Days')}</button>
           <button type="button" onClick={() => handleQuickFilter('thisMonth')}>{t('thisMonth')}</button>
           <button type="button" onClick={() => handleQuickFilter('lastMonth')}>{t('lastMonth')}</button>
+          <button type="button" onClick={() => handleQuickFilter('allTime')}>{t('allTime')}</button>
         </div>
         <div className="ExpensesPage-filters">
           <label>
@@ -300,7 +304,7 @@ const ExpensesPage = (): JSX.Element => {
           <h3><ClipboardList size={20} /> {t('expenses')} ({filteredExpenses.length})</h3>
         </header>
         {loading ? (
-          <div className="ExpensesPage-empty">{t('loadingExpenses')}</div>
+          <SkeletonTable rows={4} cols={5} />
         ) : filteredExpenses.length === 0 ? (
           <div className="ExpensesPage-empty">{t('noExpensesInRange')}</div>
         ) : (

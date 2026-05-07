@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer, Trash2, RotateCcw } from 'lucide-react';
+import { confirmDialog } from '../utils/confirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 import PrintingModal from '../components/PrintingModal';
 import './Pages.css';
 import './SalesHistoryPage.css';
@@ -147,7 +149,7 @@ const SalesHistoryPage = (): JSX.Element => {
     }
   };
 
-  const handleQuickFilter = (range: 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth') => {
+  const handleQuickFilter = (range: 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'allTime') => {
     const now = new Date();
     let start = new Date();
     let end = new Date();
@@ -173,6 +175,9 @@ const SalesHistoryPage = (): JSX.Element => {
         start.setDate(1);
         end.setDate(0); // Last day of previous month
         break;
+      case 'allTime':
+        start = new Date(2000, 0, 1);
+        break;
     }
 
     setStartDate(start.toISOString().split('T')[0]);
@@ -181,9 +186,8 @@ const SalesHistoryPage = (): JSX.Element => {
 
   const handleDeleteSale = async (id: number) => {
     if (!window.evaApi || !token) return;
-    if (!window.confirm(t('confirmDeleteSale', { id: id }))) {
-      return;
-    }
+    const ok = await confirmDialog({ message: t('confirmDeleteSale', { id: id }), variant: 'danger', confirmText: t('delete') });
+    if (!ok) return;
     try {
       await window.evaApi.sales.delete(token, id);
       if (selectedSale?.id === id) {
@@ -321,6 +325,7 @@ const SalesHistoryPage = (): JSX.Element => {
             <button onClick={() => handleQuickFilter('last30')}>{t('last30Days')}</button>
             <button onClick={() => handleQuickFilter('thisMonth')}>{t('thisMonth')}</button>
             <button onClick={() => handleQuickFilter('lastMonth')}>{t('lastMonth')}</button>
+            <button onClick={() => handleQuickFilter('allTime')}>{t('allTime')}</button>
           </div>
           <div className="SalesHistory-filterGroup">
             <label>{t('startDate')}</label>
@@ -354,7 +359,7 @@ const SalesHistoryPage = (): JSX.Element => {
         {error && <div className="SalesHistory-error">{error}</div>}
 
         {loading ? (
-          <div className="SalesHistory-loading">{t('loading')}</div>
+          <SkeletonTable rows={6} cols={7} />
         ) : (
           <div className="SalesHistory-table">
             <table>
