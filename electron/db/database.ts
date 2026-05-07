@@ -1266,28 +1266,20 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
 
   const grossRevenueRow = await get<{ revenue: number }>(
     `
-    SELECT IFNULL(SUM(si.lineTotalIQD), 0) as revenue
-    FROM sale_items si
-    JOIN sales s ON s.id = si.saleId
-    JOIN product_variants pv ON pv.id = si.variantId
-    JOIN products p ON p.id = pv.productId
+    SELECT IFNULL(SUM(s.totalIQD), 0) as revenue
+    FROM sales s
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
-    ${seasonFilter}
   `,
-    [range.startDate, range.endDate, ...seasonParam],
+    [range.startDate, range.endDate],
   );
 
   const grossCostRow = await get<{ cost: number }>(
     `
-    SELECT IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as cost
-    FROM sale_items si
-    JOIN sales s ON s.id = si.saleId
-    JOIN product_variants pv ON pv.id = si.variantId
-    JOIN products p ON p.id = pv.productId
+    SELECT IFNULL(SUM(s.totalIQD - IFNULL(s.profitIQD, 0)), 0) as cost
+    FROM sales s
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
-    ${seasonFilter}
   `,
-    [range.startDate, range.endDate, ...seasonParam],
+    [range.startDate, range.endDate],
   );
 
   const grossItemsSoldRow = await get<{ count: number }>(

@@ -83,16 +83,21 @@ const createPrintWindow = async (html: string, options?: { printerName?: string 
           // Don't treat user cancellation as an error
           if (failureReason && failureReason.toLowerCase().includes('cancel')) {
             log('[Print] User cancelled');
-            win.close();
+            setTimeout(() => win.close(), 500);
             resolve();
           } else {
             logError('[Print] Failed:', failureReason);
-            win.close();
+            setTimeout(() => win.close(), 500);
             reject(new Error(failureReason || 'Print failed'));
           }
         } else {
-          log('[Print] Success');
-          win.close();
+          log('[Print] Success - waiting for spooler');
+          // Add delay before closing window to prevent Windows print spooler from aborting
+          setTimeout(() => {
+            if (!win.isDestroyed()) {
+              win.close();
+            }
+          }, 2000);
           resolve();
         }
       }

@@ -663,12 +663,12 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     if (!hasProductNames && sale.id) {
       // Fetch sale detail to get product names
       window.evaApi.sales.getDetail(token, sale.id)
-        .then((detail) => {
+        .then((detail: any) => {
           if (detail) {
             setSaleDetail(detail);
           }
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('Failed to fetch sale detail:', err);
         });
     } else if (hasProductNames) {
@@ -684,7 +684,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       try {
         // Fetch branch info
         const branches = await window.evaApi.branches.list(token);
-        const branch = branches.find((b) => b.id === sale.branchId);
+        const branch = branches.find((b: any) => b.id === sale.branchId);
         if (branch) {
           setBranchInfo({
             name: branch.name,
@@ -695,7 +695,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
 
         // Fetch cashier info
         const users = await window.evaApi.users.list(token);
-        const cashier = users.find((u) => u.id === sale.cashierId);
+        const cashier = users.find((u: any) => u.id === sale.cashierId);
         if (cashier) {
           setCashierInfo({ username: cashier.username });
         }
@@ -811,7 +811,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         if (mounted) {
           setPrinters(list);
           if (!propsPrinter) {
-            const def = list.find((printer) => printer.isDefault);
+            const def = list.find((printer: any) => printer.isDefault);
             setPrinterName(def?.name ?? null);
           }
         }
@@ -876,6 +876,11 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     const shouldAutoPrint = visible && autoPrint && !isAutoPrinting;
     const hasData = (payload && (barcodeDataUrl || !payload.barcodeValue)) || salesSummary;
 
+    // If we have a sale, wait for saleDetail to be loaded so product names are available
+    if (sale && !saleDetail && !salesSummary) {
+      return;
+    }
+
     if (shouldAutoPrint && hasData) {
       // Wait for printers to load to ensure we have the default printer selected
       if (printers.length === 0) {
@@ -885,12 +890,35 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       const performAutoPrint = async () => {
         setIsAutoPrinting(true);
         // Small delay to ensure render
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await handlePrint(true); // Pass silent=true
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Re-generate HTML with current state to avoid stale closures
+        if (!window.evaApi) return;
+        let html = '';
+        if (salesSummary) {
+          html = generateSalesSummaryHtml(salesSummary);
+        } else if (payload) {
+          html = template === 'receipt'
+            ? generateReceiptHtml(payload, barcodeDataUrl)
+            : generateInvoiceHtml(payload, barcodeDataUrl);
+        } else {
+          return;
+        }
+
+        try {
+          await window.evaApi.printing.print({ html, printerName, silent: true });
+        } catch (err) {
+          console.error('Auto-print failed:', err);
+        }
+
+        if (onPrinterChange) {
+          onPrinterChange(printerName ?? null);
+        }
+        onClose();
       };
       performAutoPrint();
     }
-  }, [visible, autoPrint, isAutoPrinting, payload, barcodeDataUrl, printers, salesSummary]);
+  }, [visible, autoPrint, isAutoPrinting, payload, barcodeDataUrl, printers, salesSummary, sale, saleDetail]);
 
   // Reset auto-print state when modal closes
   useEffect(() => {
