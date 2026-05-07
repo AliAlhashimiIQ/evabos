@@ -312,8 +312,9 @@ export interface AdvancedReports {
     count: number;
     totalIQD: number;
   };
-  totalInventoryValueIncludingSoldIQD?: number;
-  totalItemsInStock?: number;
+  totalInventoryValueIncludingSoldIQD: number;
+  totalItemsInStock: number;
+  totalItemsSold: number;
 }
 
 export interface PeakHourData {

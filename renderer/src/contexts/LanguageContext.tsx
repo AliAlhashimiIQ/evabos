@@ -448,6 +448,8 @@ const translations = {
     soldValueUSD: 'Sold Value (USD)',
     totalValueAllTime: 'Total Value (All Time)',
     totalStockCount: 'Total Items in Stock',
+    totalItemsSold: 'Total Items Sold',
+    // netProfit: 'Net Profit', // Duplicate
     createVoucher: 'Create Voucher',
     searchCustomer: 'Search Customer (Name or Phone)',
     searchByNameOrPhone: 'Type name or phone...',
@@ -541,10 +543,6 @@ const translations = {
     exportToExcel: 'Export to Excel',
     runReport: 'Run Report',
     // loading: 'Loading…', // Duplicate
-    // revenueIQD: 'Revenue (IQD)', // Duplicate
-    // costOfGoods: 'Cost of Goods', // Duplicate
-    // netProfit: 'Net Profit', // Duplicate
-    // inventoryValue: 'Inventory Value', // Duplicate
     inventoryBySupplier: 'Inventory by Supplier',
     valueUSD: 'Value (USD)',
     noSupplierAssigned: 'No Supplier',
@@ -614,7 +612,7 @@ const translations = {
     bulkUpdateInfo: 'You are about to update {count} products.',
     newSeason: 'New Season',
     bulkUpdateHelp: 'Leave empty to remove the season from selected products.',
-    updating: 'Updating...',
+    // updating: 'Updating...', // Duplicate
     updateProducts: 'Update Products',
   },
 
@@ -1080,14 +1078,15 @@ const translations = {
     // todaySales: 'مبيعات اليوم', // Duplicate
     analysis: 'تحليل',
     revenueIQD: 'الإيرادات (د.ع)',
-    costOfGoods: 'تكلفة البضائع',
+    costOfGoods: 'تكلفة البضاعة',
     // netProfit: 'صافي الربح', // Duplicate
-    inventoryValue: 'قيمة المخزون الحالي',
-    totalValueInclSold: 'قيمة المخزون (شامل المباع - تكلفة)',
+    inventoryValue: 'قيمة المخزون',
+    totalValueInclSold: 'إجمالي القيمة (شامل المباع)',
+    totalStockCount: 'إجمالي القطع في المخزن',
+    totalItemsSold: 'إجمالي القطع المباعة',
     soldQuantity: 'الكمية المباعة',
     soldValueUSD: 'قيمة المباع (USD)',
     totalValueAllTime: 'إجمالي القيمة (كل الوقت)',
-    totalStockCount: 'العدد الكلي للمخزون',
     createVoucher: 'إنشاء قسيمة',
     searchCustomer: 'بحث العميل (الاسم أو الهاتف)',
     searchByNameOrPhone: 'اكتب الاسم أو رقم الهاتف...',
@@ -1185,10 +1184,6 @@ const translations = {
     exportToExcel: 'تصدير إلى Excel',
     runReport: 'تشغيل التقرير',
     // loading: 'جاري التحميل…', // Duplicate
-    // revenueIQD: 'الإيرادات (IQD)', // Duplicate
-    // costOfGoods: 'تكلفة البضائع', // Duplicate
-    // netProfit: 'صافي الربح', // Duplicate
-    // inventoryValue: 'قيمة المخزون', // Duplicate
     inventoryBySupplier: 'قيمة المخزون حسب المورد',
     valueUSD: 'القيمة (USD)',
     noSupplierAssigned: 'بدون مورد',
@@ -1215,7 +1210,7 @@ const translations = {
     bulkUpdateInfo: 'أنت على وشك تحديث {count} منتج.',
     newSeason: 'الموسم الجديد',
     bulkUpdateHelp: 'اتركه فارغاً لإزالة الموسم من المنتجات المختارة.',
-    updating: 'جاري التحديث...',
+    // updating: 'جاري التحديث...', // Duplicate
     updateProducts: 'تحديث المنتجات',
     softwareUpdate: 'تحديث البرنامج',
     checkForUpdates: 'التحقق من وجود تحديثات',

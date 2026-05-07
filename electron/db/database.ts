@@ -1129,23 +1129,71 @@ export async function updateCustomer(input: CustomerUpdateInput): Promise<Custom
 
 
 export async function getAdvancedReports(range: DateRange): Promise<AdvancedReports> {
-  const dailySales = await all<DailySalesEntry>(
+  const seasonFilter = range.season ? ' AND p.season = ? ' : '';
+  const seasonParam = range.season ? [range.season] : [];
+
+  const returnsSummaryRow = await get<{ count: number; totalRefund: number; totalReturnCost: number }>(
     `
-    SELECT
-      date(saleDate) as date,
-      IFNULL(SUM(totalIQD), 0) as totalIQD,
-      COUNT(*) as orders,
-      CASE WHEN COUNT(*) = 0 THEN 0 ELSE IFNULL(SUM(totalIQD), 0) / COUNT(*) END as avgTicket
-    FROM sales
-    WHERE date(saleDate) BETWEEN date(?) AND date(?)
-    GROUP BY date(saleDate)
-    ORDER BY date(saleDate)
+    SELECT 
+      COUNT(*) as count,
+      IFNULL(SUM(refundAmountIQD), 0) as totalRefund,
+      IFNULL(SUM(totalCostIQD), 0) as totalReturnCost
+    FROM returns
+    WHERE date(createdAt) BETWEEN date(?) AND date(?)
   `,
     [range.startDate, range.endDate],
   );
 
-  const seasonFilter = range.season ? ' AND p.season = ? ' : '';
-  const seasonParam = range.season ? [range.season] : [];
+  const returnedItemsCountRow = await get<{ count: number }>(
+    `
+    SELECT IFNULL(SUM(ri.quantity), 0) as count
+    FROM return_items ri
+    JOIN returns r ON r.id = ri.returnId
+    WHERE date(r.createdAt) BETWEEN date(?) AND date(?)
+    `,
+    [range.startDate, range.endDate]
+  );
+
+  const totalReturns = returnsSummaryRow?.totalRefund ?? 0;
+  const totalReturnCost = returnsSummaryRow?.totalReturnCost ?? 0;
+  const totalItemsReturned = returnedItemsCountRow?.count ?? 0;
+
+  const dailySales = await all<DailySalesEntry>(
+    `
+    WITH daily_sales AS (
+      SELECT
+        date(saleDate) as date,
+        IFNULL(SUM(totalIQD), 0) as grossIQD,
+        COUNT(*) as orders
+      FROM sales
+      WHERE date(saleDate) BETWEEN date(?) AND date(?)
+      GROUP BY date(saleDate)
+    ),
+    daily_returns AS (
+      SELECT
+        date(createdAt) as date,
+        IFNULL(SUM(refundAmountIQD), 0) as returnedIQD
+      FROM returns
+      WHERE date(createdAt) BETWEEN date(?) AND date(?)
+      GROUP BY date(createdAt)
+    ),
+    all_dates AS (
+      SELECT date FROM daily_sales
+      UNION
+      SELECT date FROM daily_returns
+    )
+    SELECT
+      ad.date,
+      IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0) as totalIQD,
+      IFNULL(ds.orders, 0) as orders,
+      CASE WHEN IFNULL(ds.orders, 0) = 0 THEN 0 ELSE (IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0)) / ds.orders END as avgTicket
+    FROM all_dates ad
+    LEFT JOIN daily_sales ds ON ds.date = ad.date
+    LEFT JOIN daily_returns dr ON dr.date = ad.date
+    ORDER BY ad.date
+  `,
+    [range.startDate, range.endDate, range.startDate, range.endDate],
+  );
 
   const bestSellingItems = await all<NamedMetric>(
     `
@@ -1216,7 +1264,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     [range.startDate, range.endDate],
   );
 
-  const revenueRow = await get<{ revenue: number }>(
+  const grossRevenueRow = await get<{ revenue: number }>(
     `
     SELECT IFNULL(SUM(si.lineTotalIQD), 0) as revenue
     FROM sale_items si
@@ -1229,7 +1277,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     [range.startDate, range.endDate, ...seasonParam],
   );
 
-  const costRow = await get<{ cost: number }>(
+  const grossCostRow = await get<{ cost: number }>(
     `
     SELECT IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as cost
     FROM sale_items si
@@ -1240,6 +1288,19 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     ${seasonFilter}
   `,
     [range.startDate, range.endDate, ...seasonParam],
+  );
+
+  const grossItemsSoldRow = await get<{ count: number }>(
+    `
+    SELECT IFNULL(SUM(si.quantity), 0) as count
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
+    `,
+    [range.startDate, range.endDate, ...seasonParam]
   );
 
   const expensesRow = await get<{ total: number }>(
@@ -1381,24 +1442,12 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     [...seasonParam, ...seasonParam, ...seasonParam]
   );
 
-  // Returns summary for the date range
-  const returnsSummaryRow = await get<{ count: number; totalIQD: number }>(
-    `
-    SELECT 
-      COUNT(*) as count,
-      IFNULL(SUM(refundAmountIQD), 0) as totalIQD
-    FROM returns
-    WHERE date(createdAt) BETWEEN date(?) AND date(?)
-  `,
-    [range.startDate, range.endDate],
-  );
-
-  // Calculate profit margin percentage
-  const revenue = revenueRow?.revenue ?? 0;
-  const cost = costRow?.cost ?? 0;
+  const revenue = (grossRevenueRow?.revenue ?? 0) - totalReturns;
+  const cost = (grossCostRow?.cost ?? 0) - totalReturnCost;
   const expenses = expensesRow?.total ?? 0;
   const netProfit = revenue - cost - expenses;
   const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+  const totalItemsSold = (grossItemsSoldRow?.count ?? 0) - totalItemsReturned;
 
   return {
     dailySales,
@@ -1411,7 +1460,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       costIQD: cost,
       expensesIQD: expenses,
       netProfitIQD: netProfit,
-      profitMarginPercent: Math.round(profitMargin * 10) / 10, // Round to 1 decimal
+      profitMarginPercent: Math.round(profitMargin * 10) / 10,
     },
     inventoryValue: inventoryValueRow?.value ?? 0,
     lowStock,
@@ -1420,10 +1469,11 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     inventoryBySupplier,
     returnsSummary: {
       count: returnsSummaryRow?.count ?? 0,
-      totalIQD: returnsSummaryRow?.totalIQD ?? 0,
+      totalIQD: totalReturns,
     },
     totalInventoryValueIncludingSoldIQD,
     totalItemsInStock: totalStockCountRow?.count || 0,
+    totalItemsSold: totalItemsSold,
   };
 }
 
@@ -2177,7 +2227,7 @@ export async function createProduct(product: ProductInput): Promise<Product> {
   }
 }
 
-export async function createSale(input: SaleInput): Promise<Sale> {
+export async function createSale(input: SaleInput): Promise<SaleDetail> {
   if (!input.branchId || !input.cashierId) {
     throw new Error('branchId and cashierId are required for a sale');
   }
@@ -2247,23 +2297,12 @@ export async function createSale(input: SaleInput): Promise<Sale> {
       await recordCustomerPurchase(input.customerId, input.totalIQD);
     }
 
-    const items = await all<SaleItem>(
-      `
-  SELECT *
-    FROM sale_items
-      WHERE saleId = ?
-    ORDER BY id ASC
-      `,
-      [saleId],
-    );
+    const fullDetail = await getSaleDetail(saleId);
+    if (!fullDetail) {
+      throw new Error('Failed to retrieve sale details after creation');
+    }
 
-    return {
-      ...mapSaleRow({
-        id: saleId,
-        ...input,
-      }),
-      items: items.map(mapSaleItemRow),
-    };
+    return fullDetail;
   } catch (error) {
     await run('ROLLBACK');
     throw error;

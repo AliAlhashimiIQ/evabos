@@ -225,6 +225,10 @@ const ReportsPage = (): JSX.Element => {
       <div class="stat-value">${reports.profitAnalysis.netProfitIQD.toLocaleString('en-IQ')} IQD</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">Items Sold (Net)</div>
+      <div class="stat-value">${(reports.totalItemsSold || 0).toLocaleString('en-IQ')}</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Inventory Value</div>
       <div class="stat-value">${reports.inventoryValue.toLocaleString('en-IQ')} IQD</div>
     </div>
@@ -428,40 +432,40 @@ const ReportsPage = (): JSX.Element => {
       <section className="Reports-quickFilters">
         <button onClick={() => {
           const today = new Date();
-          setRange({ startDate: formatDateInput(today), endDate: formatDateInput(today) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(today), endDate: formatDateInput(today) }));
         }}><Calendar size={14} /> {t('today')}</button>
         <button onClick={() => {
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
-          setRange({ startDate: formatDateInput(yesterday), endDate: formatDateInput(yesterday) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(yesterday), endDate: formatDateInput(yesterday) }));
         }}><History size={14} /> {t('yesterday')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date();
           start.setDate(today.getDate() - 6);
-          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(start), endDate: formatDateInput(today) }));
         }}><BarChart size={14} /> {t('last7days')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date();
           start.setDate(today.getDate() - 29);
-          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(start), endDate: formatDateInput(today) }));
         }}><BarChart2 size={14} /> {t('last30days')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date(today.getFullYear(), today.getMonth(), 1);
-          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(today) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(start), endDate: formatDateInput(today) }));
         }}><CalendarDays size={14} /> {t('thisMonth')}</button>
         <button onClick={() => {
           const today = new Date();
           const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
           const end = new Date(today.getFullYear(), today.getMonth(), 0);
-          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(start), endDate: formatDateInput(end) }));
         }}><CalendarRange size={14} /> {t('lastMonth')}</button>
         <button onClick={() => {
           const end = new Date();
           const start = new Date(2000, 0, 1);
-          setRange({ startDate: formatDateInput(start), endDate: formatDateInput(end) });
+          setRange((prev) => ({ ...prev, startDate: formatDateInput(start), endDate: formatDateInput(end) }));
         }}><Database size={14} /> {t('allTime')}</button>
       </section>
 
@@ -532,6 +536,10 @@ const ReportsPage = (): JSX.Element => {
             <div>
               <span>{t('totalStockCount') || 'Total Items in Stock'}</span>
               <strong>{(reports.totalItemsInStock || 0).toLocaleString('en-IQ')}</strong>
+            </div>
+            <div>
+              <span>{t('totalItemsSold')}</span>
+              <strong>{(reports.totalItemsSold || 0).toLocaleString('en-IQ')}</strong>
             </div>
             <div>
               <span>{t('returns')}</span>

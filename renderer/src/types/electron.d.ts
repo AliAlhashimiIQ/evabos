@@ -327,6 +327,7 @@ export interface AdvancedReports {
   inventoryValue: number;
   totalInventoryValueIncludingSoldIQD: number;
   totalItemsInStock: number;
+  totalItemsSold: number;
   returnsSummary: {
     totalIQD: number;
     count: number;
