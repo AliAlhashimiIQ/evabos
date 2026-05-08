@@ -57,6 +57,7 @@ const createPrintWindow = async (html: string, options?: { printerName?: string 
       printBackground: true,
       landscape: false,
       margins: { marginType: 'none' },
+      pageSize: { width: 72000, height: 2000000 }, // 72mm width (receipt printable area), tall enough for any receipt
     };
 
     if (hasPrinter) {

@@ -81,17 +81,20 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   <head>
     <meta charset="UTF-8" />
     <style>
+      @page { size: 72mm auto; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { 
         font-family: 'Courier New', Courier, monospace;
         width: 100%;
-        max-width: 72mm;
+        max-width: 68mm;
         margin: 0 auto; 
+        padding: 0 4mm; /* Add explicit padding to keep text away from printer edges */
         font-size: 14px;
         line-height: 1.2;
         background: #ffffff;
         color: #000000;
         font-weight: bold;
+        box-sizing: border-box;
       }
       @media screen {
         body {
@@ -107,10 +110,10 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
           -webkit-print-color-adjust: exact; 
           print-color-adjust: exact; 
           margin: 0;
-          padding: 0;
+          padding: 0 4mm; /* Ensure padding is kept during print */
           box-shadow: none;
         }
-        @page { margin: 0; size: auto; }
+        @page { margin: 0; size: 72mm auto; }
       }
       .header { 
         text-align: center; 
@@ -142,9 +145,9 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         font-size: 14px; 
         border-collapse: collapse; 
         margin-bottom: 10px; 
+        table-layout: fixed; /* Prevents columns from expanding and clipping */
       }
       th { 
-        text-align: right; 
         border-bottom: 2px solid #000; 
         padding: 5px 0; 
         font-weight: 900;
@@ -153,6 +156,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         padding: 5px 0; 
         border-bottom: 1px solid #000; 
         font-weight: bold;
+        vertical-align: top;
       }
       .totals { 
         margin-top: 10px; 
@@ -184,42 +188,42 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="text-align: center; margin-bottom: 10px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" /></div>` : ''}
       <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
       <div class="store-info">
-        ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
+        ${payload.branchName ? `<div><strong>Branch:</strong> ${payload.branchName}</div>` : ''}
         ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
-        ${payload.branchPhone ? `<div>📞 Tel: ${payload.branchPhone}</div>` : ''}
+        ${payload.branchPhone ? `<div>Tel: ${payload.branchPhone}</div>` : ''}
       </div>
       <div class="sale-header">
         <h2>${payload.title}</h2>
         <p><strong>${payload.subtitle}</strong></p>
-        <p>📅 Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
+        <p>Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
   year: 'numeric',
-  month: 'long',
+  month: 'short',
   day: 'numeric',
   hour: '2-digit',
   minute: '2-digit'
 })}</p>
-        ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
+        ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
     </div>
     <table>
       <thead>
         <tr>
-          <th style="width: 45%; text-align: right;">Item</th>
-          <th style="width: 15%; text-align: center;">Qty</th>
-          <th style="width: 20%; text-align: left;">Price</th>
-          <th style="width: 20%; text-align: left;">Total</th>
+          <th style="width: 38%; text-align: right; padding-right: 2px;">Item</th>
+          <th style="width: 12%; text-align: center;">Qty</th>
+          <th style="width: 25%; text-align: center;">Price</th>
+          <th style="width: 25%; text-align: left;">Total</th>
         </tr>
       </thead>
       <tbody>
         ${payload.items.map(item => `
           <tr>
-            <td style="text-align: right; padding-left: 5px;">
+            <td style="text-align: right; padding-right: 2px;">
               <div>${item.name}</div>
               ${item.variant ? `<div style="font-size: 12px; font-weight: normal;">${item.variant}</div>` : ''}
             </td>
             <td style="text-align: center;">${item.quantity}</td>
-            <td style="text-align: left;">${item.priceIQD.toLocaleString('en-IQ')}</td>
+            <td style="text-align: center;">${item.priceIQD.toLocaleString('en-IQ')}</td>
             <td style="text-align: left;">${(item.priceIQD * item.quantity).toLocaleString('en-IQ')}</td>
           </tr>
         `).join('')}
@@ -236,10 +240,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       </tbody>
     </table>
     <div class="footer">${payload.footer}</div>
-    <br />
-    <br />
-    <br />
-    <br />
+    <div style="height: 30mm;"></div>
     <div style="text-align: center; font-size: 10px;">.</div>
   </body>
 </html>
@@ -251,6 +252,7 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   <head>
     <meta charset="UTF-8" />
     <style>
+      @page { size: 80mm auto; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       @media print {
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -881,13 +883,17 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       return;
     }
 
+    // Wait for printers to load so we have the correct printer selected
+    if (printers.length === 0) {
+      return;
+    }
+
     if (shouldAutoPrint && hasData) {
       const performAutoPrint = async () => {
         setIsAutoPrinting(true);
-        // Small delay to ensure render
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Small delay to ensure render is complete
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Re-generate HTML with current state to avoid stale closures
         if (!window.evaApi) return;
         let html = '';
         if (salesSummary) {
@@ -900,20 +906,23 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
           return;
         }
 
+        // Use the currently selected printer name
+        const targetPrinter = printerName;
+
         try {
-          await window.evaApi.printing.print({ html, printerName, silent: true });
+          await window.evaApi.printing.print({ html, printerName: targetPrinter, silent: true });
         } catch (err) {
           console.error('Auto-print failed:', err);
         }
 
         if (onPrinterChange) {
-          onPrinterChange(printerName ?? null);
+          onPrinterChange(targetPrinter ?? null);
         }
         onClose();
       };
       performAutoPrint();
     }
-  }, [visible, autoPrint, isAutoPrinting, payload, barcodeDataUrl, printers, salesSummary, sale, saleDetail]);
+  }, [visible, autoPrint, isAutoPrinting, payload, barcodeDataUrl, printers, printerName, salesSummary, sale, saleDetail]);
 
   // Reset auto-print state when modal closes
   useEffect(() => {
@@ -937,52 +946,62 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
 
   return (
     <div className="PrintingModal-overlay">
-      <div className="PrintingModal-card">
-        <header>
-          <h3>Print {salesSummary ? 'Report' : (sale ? 'Receipt' : 'Return')}</h3>
-          <button onClick={onClose}>✕</button>
-        </header>
-        <div className="PrintingModal-controls">
-          {!salesSummary && (
+      {autoPrint || isAutoPrinting ? (
+        <div className="PrintingModal-loadingOverlay">
+          <div className="ReceiptPrinter-container">
+            <div className="PrinterWrapper">
+              <div className="ReceiptPrinter-paper"></div>
+              <div className="ReceiptPrinter">
+                <div className="ReceiptPrinter-slot"></div>
+                <div className="ReceiptPrinter-led"></div>
+              </div>
+            </div>
+            <div className="ReceiptPrinter-text">جاري الطباعة...</div>
+          </div>
+        </div>
+      ) : (
+        <div className="PrintingModal-card">
+          <header>
+            <h3>Print {salesSummary ? 'Report' : (sale ? 'Receipt' : 'Return')}</h3>
+            <button onClick={onClose}>✕</button>
+          </header>
+          <div className="PrintingModal-controls">
+            {!salesSummary && (
+              <label>
+                Template
+                <select value={template} onChange={(event) => setTemplate(event.target.value as 'receipt' | 'invoice')}>
+                  <option value="receipt">80mm Receipt</option>
+                  <option value="invoice">A4 Invoice</option>
+                </select>
+              </label>
+            )}
             <label>
-              Template
-              <select value={template} onChange={(event) => setTemplate(event.target.value as 'receipt' | 'invoice')}>
-                <option value="receipt">80mm Receipt</option>
-                <option value="invoice">A4 Invoice</option>
+              Printer
+              <select value={printerName ?? ''} onChange={(event) => setPrinterName(event.target.value || null)}>
+                <option value="">System Prompt</option>
+                {printers.map((printer) => (
+                  <option key={printer.name} value={printer.name}>
+                    {printer.name}
+                  </option>
+                ))}
               </select>
             </label>
-          )}
-          <label>
-            Printer
-            <select value={printerName ?? ''} onChange={(event) => setPrinterName(event.target.value || null)}>
-              <option value="">System Prompt</option>
-              {printers.map((printer) => (
-                <option key={printer.name} value={printer.name}>
-                  {printer.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="PrintingModal-preview">
-          <iframe 
-            srcDoc={previewHtml} 
-            title="Receipt Preview"
-            style={{ width: '100%', height: '100%', minHeight: '400px', border: 'none', background: '#fff', borderRadius: '0.5rem' }}
-          />
-        </div>
-        <div className="PrintingModal-actions">
-          <button className="ghost" onClick={onClose}>
-            Close
-          </button>
-          <button onClick={() => handlePrint(false)}>Print</button>
-        </div>
-        {isAutoPrinting && (
-          <div className="PrintingModal-loadingOverlay">
-            <div className="PrintingModal-spinner">Printing...</div>
           </div>
-        )}
-      </div>
+          <div className="PrintingModal-preview">
+            <iframe 
+              srcDoc={previewHtml} 
+              title="Receipt Preview"
+              style={{ width: '100%', height: '100%', minHeight: '400px', border: 'none', background: '#fff', borderRadius: '0.5rem' }}
+            />
+          </div>
+          <div className="PrintingModal-actions">
+            <button className="ghost" onClick={onClose}>
+              Close
+            </button>
+            <button onClick={() => handlePrint(false)}>Print</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

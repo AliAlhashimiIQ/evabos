@@ -1,97 +1,216 @@
- .PrintingModal-overlay {
-   position: fixed;
-   top: 0;
-   left: 0;
-   right: 0;
-   bottom: 0;
-   width: 100vw;
-   height: 100vh;
-   background: rgba(2, 6, 23, 0.75);
-   display: flex;
-   justify-content: center;
-   align-items: center;
-   z-index: 1200;
-   overflow: hidden;
-   overscroll-behavior: none;
-   -webkit-overflow-scrolling: touch;
- }
+.PrintingModal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 6, 23, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1200;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
 
- .PrintingModal-card {
-   width: min(900px, 95vw);
-   max-height: 90vh;
-   background: var(--bg-input);
-   border: 1px solid rgba(148, 163, 184, 0.25);
-   border-radius: 1.25rem;
-   padding: 1.5rem;
-   display: flex;
-   flex-direction: column;
-   gap: 1rem;
- }
+.PrintingModal-card {
+  width: min(900px, 95vw);
+  max-height: 90vh;
+  background: var(--bg-input);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative; /* For absolute overlay */
+}
 
- .PrintingModal-card header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
- }
+.PrintingModal-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
- .PrintingModal-card header button {
-   background: transparent;
-   border: none;
-   color: rgba(248, 250, 252, 0.6);
-   font-size: 1.2rem;
-   cursor: pointer;
- }
+.PrintingModal-card header button {
+  background: transparent;
+  border: none;
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
 
- .PrintingModal-controls {
-   display: flex;
-   gap: 1rem;
- }
+.PrintingModal-controls {
+  display: flex;
+  gap: 1rem;
+}
 
- .PrintingModal-controls label {
-   flex: 1;
-   display: flex;
-   flex-direction: column;
-   gap: 0.4rem;
- }
+.PrintingModal-controls label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
 
- .PrintingModal-controls select {
-   border-radius: 0.85rem;
-   border: 1px solid rgba(148, 163, 184, 0.3);
-   padding: 0.6rem 0.8rem;
-   background: rgba(10, 15, 30, 0.85);
-   color: #f8fafc;
- }
+.PrintingModal-controls select {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 0.6rem 0.8rem;
+  background: rgba(10, 15, 30, 0.85);
+  color: #f8fafc;
+}
 
- .PrintingModal-preview {
-   flex: 1;
-   background: rgba(2, 6, 23, 0.6);
-   border-radius: 1rem;
-   padding: 1rem;
-   overflow: auto;
-   border: 1px solid rgba(148, 163, 184, 0.15);
- }
+.PrintingModal-preview {
+  flex: 1;
+  background: rgba(2, 6, 23, 0.6);
+  border-radius: 1rem;
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
 
- .PrintingModal-actions {
-   display: flex;
-   justify-content: flex-end;
-   gap: 0.75rem;
- }
+.PrintingModal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
 
- .PrintingModal-actions button {
-   border: none;
-   border-radius: 0.9rem;
-   padding: 0.7rem 1.4rem;
-   font-weight: 600;
-   cursor: pointer;
- }
+.PrintingModal-actions button {
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 
- .PrintingModal-actions .ghost {
-   background: transparent;
-   border: 1px solid rgba(148, 163, 184, 0.4);
-   color: rgba(248, 250, 252, 0.85);
- }
+.PrintingModal-actions .ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: rgba(248, 250, 252, 0.85);
+}
 
- .PrintingModal-actions button:not(.ghost) {
-   background: linear-gradient(120deg, #22d3ee, #3b82f6);
-   color: #0f172a;
- }
+.PrintingModal-actions button:not(.ghost) {
+  background: linear-gradient(120deg, #22d3ee, #3b82f6);
+  color: #0f172a;
+}
+
+/* Print Animation Overlay */
+.PrintingModal-overlay.auto-print-mode {
+  background: rgba(2, 6, 23, 0.2); /* Very light dim instead of full dark */
+  backdrop-filter: blur(2px);
+}
+
+.PrintingModal-loadingOverlay {
+  width: 320px;
+  height: 280px;
+  background: rgba(10, 15, 30, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  border-radius: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.ReceiptPrinter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.PrinterWrapper {
+  position: relative;
+  width: 160px;
+  height: 140px; /* Give room for the receipt to slide up */
+  display: flex;
+  justify-content: center;
+}
+
+.ReceiptPrinter {
+  position: absolute;
+  bottom: 0;
+  width: 160px;
+  height: 70px;
+  background: linear-gradient(180deg, #4b5563, #1f2937);
+  border-radius: 12px 12px 20px 20px;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 10px 25px rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  z-index: 2;
+}
+
+.ReceiptPrinter-slot {
+  position: absolute;
+  top: 0;
+  width: 110px;
+  height: 6px;
+  background: #000;
+  border-radius: 0 0 6px 6px;
+  box-shadow: inset 0 3px 5px rgba(0,0,0,0.8);
+}
+
+.ReceiptPrinter-led {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #22c55e;
+  animation: blinkLED 0.6s infinite alternate;
+}
+
+.ReceiptPrinter-paper {
+  position: absolute;
+  bottom: 66px; /* Just inside the slot */
+  width: 90px;
+  height: 0px; /* Starts at 0 */
+  background: #f8fafc;
+  border-radius: 4px 4px 0 0;
+  z-index: 1;
+  background-image: repeating-linear-gradient(
+    #f8fafc,
+    #f8fafc 10px,
+    #cbd5e1 10px,
+    #cbd5e1 12px
+  );
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+  animation: slideReceipt 2.5s ease-out forwards;
+}
+
+.ReceiptPrinter-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 1px;
+  animation: pulseText 1.5s infinite;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+@keyframes blinkLED {
+  0% { opacity: 0.3; box-shadow: 0 0 2px #22c55e; }
+  100% { opacity: 1; box-shadow: 0 0 15px #22c55e; }
+}
+
+@keyframes slideReceipt {
+  0% { height: 0px; }
+  100% { height: 110px; }
+}
+
+@keyframes pulseText {
+  0%, 100% { opacity: 0.5; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
+}
