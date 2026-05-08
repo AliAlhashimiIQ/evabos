@@ -5,6 +5,7 @@ import { BrowserWarning } from './components/BrowserWarning';
 import { LicenseValidator } from './components/LicenseValidator';
 import { LegalAcceptanceModal } from './components/LegalAcceptanceModal';
 import { ConfirmDialogHost } from './components/ConfirmDialog';
+import ErrorBoundary from './components/ErrorBoundary';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
 import PosPage from './pages/PosPage';
@@ -27,6 +28,7 @@ import './App.css';
 
 function App(): JSX.Element {
   return (
+    <ErrorBoundary>
     <LicenseValidator>
       <BrowserWarning />
       <LegalAcceptanceModal />
@@ -152,6 +154,7 @@ function App(): JSX.Element {
         <Route path="*" element={<Navigate to="/pos" replace />} />
       </Routes>
     </LicenseValidator>
+    </ErrorBoundary>
   );
 }
 

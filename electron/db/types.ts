@@ -518,6 +518,14 @@ export interface DashboardKPIs {
     size?: string | null;
     quantity: number;
   }>;
+  topSellingItems: Array<{
+    productName: string;
+    color?: string | null;
+    size?: string | null;
+    sku: string;
+    totalQty: number;
+    revenueIQD: number;
+  }>;
 }
 
 // ─── Online Orders ────────────────────────────────────────────────────────────

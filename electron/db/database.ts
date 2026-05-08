@@ -1,9 +1,28 @@
-import path from 'path';
+/**
+ * database.ts â€” Barrel module that re-exports shared utilities from core.ts
+ * and contains all domain business logic.
+ *
+ * All IPC handlers import from this file. The shared DB primitives now live in core.ts.
+ */
 import crypto from 'crypto';
-import bcrypt from 'bcrypt';
-import sqlite3 from 'sqlite3';
-import { app } from 'electron';
 import log from 'electron-log';
+
+// Re-export core utilities (barrel pattern - all IPC handlers import from this file)
+export { initDatabase, closeDatabase, getSetting, setSetting, getAllSettings,
+  ensureVariantStockRow, mapSaleItemRow,
+} from './core';
+export type { SettingRow, ProductVariantRow } from './core';
+
+// Import core utilities for use in domain functions below
+import {
+  run, runWithResult, get, all,
+  hashPassword, verifyPassword,
+  generateSku, generateBarcode,
+  ensureVariantStockRow, adjustVariantStockInternal,
+  mapVariantRow, mapSaleRow, mapSaleItemRow, mapExchangeRateRow,
+} from './core';
+import type { SqlValue, ProductVariantRow } from './core';
+
 import {
   DateRange,
   ExchangeRate,
@@ -16,10 +35,7 @@ import {
   Sale,
   SaleItem,
   SaleInput,
-  // SaleItemInput removed (unused)
   SalesListResponse,
-  // SaleItemInput removed (unused)
-
   Supplier,
   SupplierInput,
   PurchaseOrderInput,
@@ -61,775 +77,14 @@ import {
   OnlineOrderInput,
   OnlineOrderItem,
 } from './types';
-import { encryptCredential, isEncrypted } from './crypto';
 
-sqlite3.verbose();
-
-const isDev = process.env.NODE_ENV === 'development';
-
-type SqlValue = string | number | null;
-
-let dbInstance: sqlite3.Database | null = null;
-
-const resolveDbPath = (): string => {
-  if (!app.isReady()) {
-    throw new Error('Attempted to resolve DB path before Electron app was ready');
-  }
-
-  // Check if running as a Portable App (electron-builder sets this env var)
-  if (process.env.PORTABLE_EXECUTABLE_DIR) {
-    const portablePath = path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'eva-pos.db');
-    log.info('[db] Using PORTABLE database path:', portablePath);
-    return portablePath;
-  }
-
-  // Standard Install (NSIS) & Development: Use UserData (Persists across updates)
-  const userDataPath = path.join(app.getPath('userData'), 'eva-pos.db');
-
-  // MIGRATION: Check if old database exists next to exe (from previous versions)
-  // and copy it to the new userData location if the new one doesn't exist
-  if (app.isPackaged) {
-    const fs = require('fs');
-    const oldDbPath = path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
-
-    // Only migrate if old DB exists AND new DB doesn't exist
-    if (fs.existsSync(oldDbPath) && !fs.existsSync(userDataPath)) {
-      try {
-        log.info('[db] MIGRATION: Found old database at:', oldDbPath);
-        log.info('[db] MIGRATION: Copying to new location:', userDataPath);
-
-        // Ensure userData directory exists
-        const userDataDir = path.dirname(userDataPath);
-        if (!fs.existsSync(userDataDir)) {
-          fs.mkdirSync(userDataDir, { recursive: true });
-        }
-
-        // Copy old DB to new location
-        fs.copyFileSync(oldDbPath, userDataPath);
-        log.info('[db] MIGRATION: Successfully migrated database to userData!');
-
-        // Optionally rename old DB to mark it as migrated (don't delete in case something goes wrong)
-        try {
-          fs.renameSync(oldDbPath, oldDbPath + '.migrated');
-          log.info('[db] MIGRATION: Renamed old database to .migrated');
-        } catch (renameErr) {
-          log.warn('[db] MIGRATION: Could not rename old database (may be in use)');
-        }
-      } catch (migrationErr) {
-        log.error('[db] MIGRATION: Failed to migrate database:', migrationErr);
-        // Continue with new DB anyway
-      }
-    }
-  }
-
-  log.info('[db] Using userData database path:', userDataPath);
-  return userDataPath;
-};
-
-const connect = (): sqlite3.Database => {
-  const database = new sqlite3.Database(
-    resolveDbPath(),
-    sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
-  );
-
-  database.on('error', (err) => {
-    log.error('[sqlite] unexpected error', err);
-  });
-
-  database.exec('PRAGMA foreign_keys = ON;');
-
-  return database;
-};
-
-const getDb = (): sqlite3.Database => {
-  if (!app.isReady()) {
-    throw new Error('Attempted to access database before Electron app was ready');
-  }
-
-  if (!dbInstance) {
-    dbInstance = connect();
-
-    // AUTO-BACKUP: If running from USB (packaged), backup to PC Documents
-    if (app.isPackaged) {
-      try {
-        const dbPath = resolveDbPath();
-        const documentsPath = app.getPath('documents');
-        const backupDir = path.join(documentsPath, 'EVA_POS', 'Backups');
-        const fs = require('fs');
-
-        // Create backup dir if not exists
-        if (!fs.existsSync(backupDir)) {
-          fs.mkdirSync(backupDir, { recursive: true });
-        }
-
-        // Create backup with timestamp
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const timestamp = `${year}-${month}-${day}T${hours}-${minutes}-${seconds}`;
-        const backupPath = path.join(backupDir, `eva-pos-autobackup-${timestamp}.db`);
-
-        // Copy file (async to not block startup too much, but simple copy is fast)
-        fs.copyFile(dbPath, backupPath, (err: any) => {
-          if (err) log.error('[AutoBackup] Failed:', err);
-          else log.info('[AutoBackup] Success:', backupPath);
-        });
-
-        // Cleanup old backups (keep last 5)
-        fs.readdir(backupDir, (err: any, files: string[]) => {
-          if (err) return;
-          const backups = files.filter(f => f.startsWith('eva-pos-autobackup-')).sort();
-          if (backups.length > 5) {
-            const toDelete = backups.slice(0, backups.length - 5);
-            toDelete.forEach(f => fs.unlink(path.join(backupDir, f), () => { }));
-          }
-        });
-      } catch (err) {
-        log.error('[AutoBackup] Error:', err);
-      }
-    }
-  }
-
-  return dbInstance;
-};
-
-const run = (sql: string, params: SqlValue[] = []): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    getDb().run(sql, params, (err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve();
-    });
-  });
-};
-
-const runWithResult = (sql: string, params: SqlValue[] = []): Promise<sqlite3.RunResult> => {
-  return new Promise((resolve, reject) => {
-    getDb().run(sql, params, function (this: sqlite3.RunResult, err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(this);
-    });
-  });
-};
-
-const get = <T = unknown>(sql: string, params: SqlValue[] = []): Promise<T | undefined> => {
-  return new Promise((resolve, reject) => {
-    getDb().get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(row as T | undefined);
-    });
-  });
-};
-
-const all = <T = unknown>(sql: string, params: SqlValue[] = []): Promise<T[]> => {
-  return new Promise((resolve, reject) => {
-    getDb().all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(rows as T[]);
-    });
-  });
-};
-
-// Password hashing with bcrypt (secure, salted)
-const SALT_ROUNDS = 12;
-
-const hashPassword = async (password: string): Promise<string> => {
-  return await bcrypt.hash(password, SALT_ROUNDS);
-};
-
-// Verify password with hybrid support (old SHA-256 + new bcrypt)
-const verifyPassword = async (password: string, storedHash: string): Promise<boolean> => {
-  // Check if it's old SHA-256 hash (64 chars hex)
-  if (storedHash.length === 64 && /^[a-f0-9]+$/i.test(storedHash)) {
-    // Old hash format - verify with SHA-256
-    const oldHash = crypto.createHash('sha256').update(password).digest('hex');
-    return oldHash === storedHash;
-  }
-
-  // New bcrypt hash
-  try {
-    return await bcrypt.compare(password, storedHash);
-  } catch (err) {
-    log.error('[auth] Password verification error:', err);
-    return false;
-  }
-};
-
-const slugify = (value?: string | null): string =>
-  (value ?? '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 6);
-
-const generateSku = (productName: string, color?: string | null, size?: string | null): string => {
-  const nameSegment = slugify(productName).slice(0, 4);
-  const colorSegment = slugify(color).slice(0, 2) || 'XX';
-  const sizeSegment = slugify(size).slice(0, 2) || 'OS';
-  const randomSegment = Math.floor(Math.random() * 999)
-    .toString()
-    .padStart(3, '0');
-  return `EVA-${nameSegment}${colorSegment}${sizeSegment}-${randomSegment}`;
-};
-
-const generateBarcode = (): string => {
-  let payload = '';
-  for (let i = 0; i < 12; i += 1) {
-    payload += Math.floor(Math.random() * 10).toString();
-  }
-  const digits = payload.split('').map((d) => parseInt(d, 10));
-  const sum =
-    digits.reduce((acc, digit, index) => acc + digit * (index % 2 === 0 ? 1 : 3), 0) % 10;
-  const checkDigit = (10 - sum) % 10;
-  return payload + checkDigit.toString();
-};
-
-const createTables = async (): Promise<void> => {
-  await run(`
-    CREATE TABLE IF NOT EXISTS branches (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      address TEXT,
-      phone TEXT,
-      currency TEXT DEFAULT 'IQD',
-      isActive INTEGER DEFAULT 1
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT NOT NULL UNIQUE,
-      passwordHash TEXT NOT NULL,
-      role TEXT NOT NULL,
-      branchId INTEGER,
-      isLocked INTEGER DEFAULT 0,
-      requiresPasswordChange INTEGER DEFAULT 0,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (branchId) REFERENCES branches(id) ON DELETE SET NULL
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS exchange_rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      rate REAL NOT NULL,
-      effectiveDate TEXT NOT NULL,
-      note TEXT,
-      branchId INTEGER,
-      FOREIGN KEY (branchId) REFERENCES branches(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS suppliers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      contactName TEXT,
-      phone TEXT,
-      email TEXT,
-      address TEXT,
-      notes TEXT,
-      isActive INTEGER DEFAULT 1
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      baseCode TEXT,
-      category TEXT,
-      season TEXT,
-      description TEXT,
-      defaultSupplierId INTEGER,
-      isActive INTEGER DEFAULT 1,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (defaultSupplierId) REFERENCES suppliers(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS product_variants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      productId INTEGER NOT NULL,
-      size TEXT,
-      color TEXT,
-      sku TEXT NOT NULL UNIQUE,
-      barcode TEXT UNIQUE,
-      defaultPriceIQD REAL NOT NULL,
-      purchaseCostUSD REAL DEFAULT 0,
-      avgCostUSD REAL DEFAULT 0,
-      lastPurchaseCostUSD REAL DEFAULT 0,
-      isActive INTEGER DEFAULT 1,
-      FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS variant_stock (
-      variantId INTEGER NOT NULL,
-      branchId INTEGER NOT NULL,
-      quantity REAL NOT NULL DEFAULT 0,
-      lowStockThreshold REAL NOT NULL DEFAULT 1,
-      PRIMARY KEY (variantId, branchId),
-      FOREIGN KEY (variantId) REFERENCES product_variants(id) ON DELETE CASCADE,
-      FOREIGN KEY (branchId) REFERENCES branches(id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS inventory_adjustments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      variantId INTEGER NOT NULL,
-      branchId INTEGER NOT NULL,
-      deltaQuantity REAL NOT NULL,
-      reason TEXT NOT NULL,
-      note TEXT,
-      adjustedBy INTEGER,
-      adjustedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (variantId) REFERENCES product_variants(id),
-      FOREIGN KEY (branchId) REFERENCES branches(id),
-      FOREIGN KEY (adjustedBy) REFERENCES users(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS customers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      phone TEXT,
-      notes TEXT,
-      totalVisits INTEGER NOT NULL DEFAULT 0,
-      totalSpentIQD REAL NOT NULL DEFAULT 0,
-      lastVisitAt TEXT,
-      loyaltyPoints REAL NOT NULL DEFAULT 0,
-      discountPercent REAL DEFAULT NULL
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS purchase_orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      supplierId INTEGER NOT NULL,
-      branchId INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'draft',
-      reference TEXT,
-      orderedAt TEXT,
-      receivedAt TEXT,
-      subtotalUSD REAL NOT NULL DEFAULT 0,
-      shippingUSD REAL NOT NULL DEFAULT 0,
-      taxesUSD REAL NOT NULL DEFAULT 0,
-      notes TEXT,
-      FOREIGN KEY (supplierId) REFERENCES suppliers(id),
-      FOREIGN KEY (branchId) REFERENCES branches(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS purchase_order_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      purchaseOrderId INTEGER NOT NULL,
-      variantId INTEGER NOT NULL,
-      quantity REAL NOT NULL,
-      costUSD REAL NOT NULL,
-      costIQD REAL NOT NULL,
-      FOREIGN KEY (purchaseOrderId) REFERENCES purchase_orders(id) ON DELETE CASCADE,
-      FOREIGN KEY (variantId) REFERENCES product_variants(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS sales (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      branchId INTEGER NOT NULL,
-      cashierId INTEGER NOT NULL,
-      customerId INTEGER,
-      saleDate TEXT NOT NULL,
-      subtotalIQD REAL NOT NULL,
-      discountIQD REAL NOT NULL DEFAULT 0,
-      totalIQD REAL NOT NULL,
-      paymentMethod TEXT,
-      profitIQD REAL DEFAULT 0,
-      FOREIGN KEY (branchId) REFERENCES branches(id),
-      FOREIGN KEY (cashierId) REFERENCES users(id),
-      FOREIGN KEY (customerId) REFERENCES customers(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS sale_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      saleId INTEGER NOT NULL,
-      variantId INTEGER NOT NULL,
-      quantity REAL NOT NULL,
-      unitPriceIQD REAL NOT NULL,
-      unitCostIQDAtSale REAL,
-      lineTotalIQD REAL NOT NULL,
-      FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE,
-      FOREIGN KEY (variantId) REFERENCES product_variants(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS returns (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      saleId INTEGER,
-      branchId INTEGER NOT NULL,
-      processedBy INTEGER NOT NULL,
-      customerId INTEGER,
-      reason TEXT,
-      refundAmountIQD REAL NOT NULL,
-      totalCostIQD REAL DEFAULT 0,
-      type TEXT NOT NULL,
-      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (saleId) REFERENCES sales(id),
-      FOREIGN KEY (branchId) REFERENCES branches(id),
-      FOREIGN KEY (processedBy) REFERENCES users(id),
-      FOREIGN KEY (customerId) REFERENCES customers(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS return_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      returnId INTEGER NOT NULL,
-      saleItemId INTEGER,
-      variantId INTEGER NOT NULL,
-      quantity REAL NOT NULL,
-      amountIQD REAL NOT NULL,
-      FOREIGN KEY (returnId) REFERENCES returns(id) ON DELETE CASCADE,
-      FOREIGN KEY (saleItemId) REFERENCES sale_items(id),
-      FOREIGN KEY (variantId) REFERENCES product_variants(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS expenses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      branchId INTEGER NOT NULL,
-      expenseDate TEXT NOT NULL,
-      amountIQD REAL NOT NULL,
-      category TEXT NOT NULL,
-      note TEXT,
-      enteredBy INTEGER,
-      FOREIGN KEY (branchId) REFERENCES branches(id),
-      FOREIGN KEY (enteredBy) REFERENCES users(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS activity_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId INTEGER NOT NULL,
-      action TEXT NOT NULL,
-      entity TEXT,
-      entityId INTEGER,
-      metadata TEXT,
-      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (userId) REFERENCES users(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS online_orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      branchId INTEGER NOT NULL,
-      cashierId INTEGER NOT NULL,
-      customerId INTEGER,
-      customerName TEXT,
-      customerPhone TEXT,
-      source TEXT NOT NULL DEFAULT 'other',
-      note TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      subtotalIQD REAL NOT NULL DEFAULT 0,
-      discountIQD REAL NOT NULL DEFAULT 0,
-      totalIQD REAL NOT NULL DEFAULT 0,
-      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      confirmedAt TEXT,
-      rejectedAt TEXT,
-      rejectionReason TEXT,
-      saleId INTEGER,
-      FOREIGN KEY (branchId) REFERENCES branches(id),
-      FOREIGN KEY (cashierId) REFERENCES users(id),
-      FOREIGN KEY (customerId) REFERENCES customers(id),
-      FOREIGN KEY (saleId) REFERENCES sales(id)
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS online_order_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      orderId INTEGER NOT NULL,
-      variantId INTEGER NOT NULL,
-      quantity REAL NOT NULL,
-      unitPriceIQD REAL NOT NULL,
-      lineTotalIQD REAL NOT NULL,
-      FOREIGN KEY (orderId) REFERENCES online_orders(id) ON DELETE CASCADE,
-      FOREIGN KEY (variantId) REFERENCES product_variants(id)
-    )
-  `);
-};
-
-const seedInitialData = async (): Promise<void> => {
-  const existingBranch = await get<{ id: number }>(
-    'SELECT id FROM branches WHERE name = ? LIMIT 1',
-    ['EVA Main'],
-  );
-
-  let branchId = existingBranch?.id;
-
-  if (!branchId) {
-    await run(
-      `
-      INSERT INTO branches (name, address, phone)
-      VALUES (?, ?, ?)
-    `,
-      ['EVA Main', 'Baghdad, Iraq', '+964-000-0000'],
-    );
-
-    const created = await get<{ id: number }>(
-      'SELECT id FROM branches WHERE name = ? ORDER BY id DESC LIMIT 1',
-      ['EVA Main'],
-    );
-
-    branchId = created?.id;
-  }
-
-  const adminUser = await get<{ id: number }>(
-    'SELECT id FROM users WHERE username = ? LIMIT 1',
-    ['admin'],
-  );
-
-  if (!adminUser && branchId) {
-    const passwordHash = await hashPassword('admin123');
-    await run(
-      `
-      INSERT INTO users (username, passwordHash, role, branchId, requiresPasswordChange)
-      VALUES (?, ?, ?, ?, ?)
-    `,
-      ['admin', passwordHash, 'admin', branchId, 1], // requiresPasswordChange = 1
-    );
-  }
-
-  const hasExchangeRate = await get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM exchange_rates',
-  );
-
-  if (!hasExchangeRate || !hasExchangeRate.count) {
-    await run(
-      `
-      INSERT INTO exchange_rates (rate, effectiveDate, note)
-      VALUES (?, ?, ?)
-    `,
-      [1500, new Date().toISOString(), 'Initial rate'],
-    );
-  }
-};
-
-export async function initDatabase(): Promise<void> {
-  await createTables();
-
-  // Migration: Add totalCostIQD to returns if missing
-  try {
-    const columns = await all<{ name: string }>('PRAGMA table_info(returns)');
-    const hasTotalCost = columns.some((c) => c.name === 'totalCostIQD');
-    if (!hasTotalCost) {
-      await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0');
-      log.info('[db] Added totalCostIQD column to returns table');
-    }
-
-    const productCols = await all<{ name: string }>('PRAGMA table_info(products)');
-    if (!productCols.some((c) => c.name === 'season')) {
-      await run('ALTER TABLE products ADD COLUMN season TEXT');
-      log.info('[db] Added season column to products table');
-    }
-  } catch (err) {
-    log.error('[db] Migration failed:', err);
-  }
-
-  // Migration: Add discountPercent to customers if missing
-  try {
-    const customerColumns = await all<{ name: string }>('PRAGMA table_info(customers)');
-    const hasDiscount = customerColumns.some((c) => c.name === 'discountPercent');
-    if (!hasDiscount) {
-      await run('ALTER TABLE customers ADD COLUMN discountPercent REAL DEFAULT NULL');
-      log.info('[db] Added discountPercent column to customers table');
-    }
-  } catch (err) {
-    log.error('[db] Customer migration failed:', err);
-  }
-
-  // Migration: Add requiresPasswordChange to users if missing
-  try {
-    const userColumns = await all<{ name: string }>('PRAGMA table_info(users)');
-    const hasPasswordChange = userColumns.some((c) => c.name === 'requiresPasswordChange');
-    if (!hasPasswordChange) {
-      await run('ALTER TABLE users ADD COLUMN requiresPasswordChange INTEGER DEFAULT 0');
-      // Force existing admin users to change their password
-      await run('UPDATE users SET requiresPasswordChange = 1 WHERE username = ?', ['admin']);
-      log.info('[db] Added requiresPasswordChange column to users table');
-    }
-  } catch (err) {
-    log.error('[db] User migration failed:', err);
-  }
-
-  // Migration: Encrypt SMTP password if plaintext
-  try {
-    const smtpPassword = await get<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['smtp_password']);
-    if (smtpPassword && smtpPassword.value && !isEncrypted(smtpPassword.value)) {
-      const encrypted = encryptCredential(smtpPassword.value);
-      await run('UPDATE settings SET value = ? WHERE key = ?', [encrypted, 'smtp_password']);
-      log.info('[db] Encrypted existing SMTP password');
-    }
-  } catch (err) {
-    log.error('[db] SMTP encryption migration failed:', err);
-  }
-
-  await seedInitialData();
-}
-
-export interface SettingRow {
-  key: string;
-  value: string;
-}
+// â”€â”€â”€ Session State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const activeSessions = new Map<string, UserSession>();
 let posLocked = false;
 let posLockedBy: number | null = null;
 
-export async function getSetting(key: string): Promise<string | null> {
-  const row = await get<SettingRow>('SELECT value FROM settings WHERE key = ?', [key]);
-  return row?.value ?? null;
-}
-
-export async function setSetting(key: string, value: string): Promise<void> {
-  await run(
-    `
-    INSERT INTO settings (key, value)
-    VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value
-  `,
-    [key, value],
-  );
-}
-
-export async function getAllSettings(): Promise<SettingRow[]> {
-  return all<SettingRow>('SELECT key, value FROM settings ORDER BY key ASC');
-}
-
-export async function closeDatabase(): Promise<void> {
-  if (!dbInstance) {
-    return;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    dbInstance?.close((err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve();
-    });
-  });
-
-  dbInstance = null;
-}
-
-interface ProductVariantRow {
-  variantId: number;
-  productId: number;
-  productName: string;
-  category?: string | null;
-  season?: string | null;
-  baseCode?: string | null;
-  supplierName?: string | null;
-  size?: string | null;
-  color?: string | null;
-  sku: string;
-  barcode?: string | null;
-  defaultPriceIQD: number;
-  purchaseCostUSD: number;
-  avgCostUSD: number;
-  lastPurchaseCostUSD: number;
-  variantActive: number;
-  stockOnHand: number;
-}
-
-const mapVariantRow = (row: ProductVariantRow): Product => ({
-  id: row.variantId,
-  productId: row.productId,
-  name: row.productName, // Legacy support
-  productName: row.productName,
-  baseCode: row.baseCode,
-  category: row.category,
-  season: row.season,
-  supplierName: row.supplierName,
-  size: row.size,
-  color: row.color,
-  sku: row.sku,
-  barcode: row.barcode,
-  defaultPriceIQD: row.defaultPriceIQD,
-  salePriceIQD: row.defaultPriceIQD, // Alias
-  purchaseCostUSD: row.purchaseCostUSD,
-  avgCostUSD: row.avgCostUSD,
-  lastPurchaseCostUSD: row.lastPurchaseCostUSD,
-  isActive: row.variantActive === 1,
-  stockOnHand: row.stockOnHand,
-});
-
-const mapSaleRow = (row: any): Sale => ({
-  id: row.id,
-  branchId: row.branchId,
-  cashierId: row.cashierId,
-  customerId: row.customerId ?? null,
-  saleDate: row.saleDate,
-  subtotalIQD: row.subtotalIQD ?? 0,
-  discountIQD: row.discountIQD ?? 0,
-  totalIQD: row.totalIQD ?? 0,
-  paymentMethod: row.paymentMethod ?? null,
-  profitIQD: row.profitIQD ?? null,
-  items: [],
-});
-
-const mapSaleItemRow = (row: any): SaleItem => ({
-  id: row.id,
-  saleId: row.saleId,
-  variantId: row.variantId,
-  quantity: row.quantity,
-  unitPriceIQD: row.unitPriceIQD,
-  unitCostIQDAtSale: row.unitCostIQDAtSale ?? null,
-  lineTotalIQD: row.lineTotalIQD,
-});
-
-const mapExchangeRateRow = (row: any): ExchangeRate => ({
-  id: row.id,
-  rate: row.rate,
-  effectiveDate: row.effectiveDate,
-  note: row.note ?? null,
-});
+// â”€â”€â”€ Internal Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const fetchCustomerById = async (id: number): Promise<Customer | null> => {
   const result = await get<Customer>('SELECT * FROM customers WHERE id = ?', [id]);
@@ -837,7 +92,12 @@ const fetchCustomerById = async (id: number): Promise<Customer | null> => {
 };
 
 
+// â”€â”€â”€ Domain Business Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+
+
+
+// ─── Domain Business Logic ────────────────────────────────────────────────────
 
 export async function getSaleDetail(saleId: number): Promise<SaleDetail | null> {
   const sale = await get<Sale>(
@@ -875,57 +135,7 @@ export async function getSaleDetail(saleId: number): Promise<SaleDetail | null> 
 }
 
 
-export const ensureVariantStockRow = async (variantId: number, branchId: number): Promise<void> => {
-  await run(
-    `
-    INSERT OR IGNORE INTO variant_stock (variantId, branchId, quantity)
-    VALUES (?, ?, 0)
-  `,
-    [variantId, branchId],
-  );
-};
-
-const adjustVariantStockInternal = async (
-  variantId: number,
-  branchId: number,
-  deltaQuantity: number,
-  reason: string,
-  note?: string,
-  adjustedBy?: number | null,
-): Promise<InventoryAdjustment> => {
-  await ensureVariantStockRow(variantId, branchId);
-
-  await run(
-    `
-    UPDATE variant_stock
-    SET quantity = quantity + ?
-    WHERE variantId = ? AND branchId = ?
-  `,
-    [deltaQuantity, variantId, branchId],
-  );
-
-  const insertResult = await runWithResult(
-    `
-    INSERT INTO inventory_adjustments (
-      variantId, branchId, deltaQuantity, reason, note, adjustedBy
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    [variantId, branchId, deltaQuantity, reason, note ?? null, adjustedBy ?? null],
-  );
-
-  const record = await get<InventoryAdjustment>(
-    'SELECT * FROM inventory_adjustments WHERE id = ?',
-    [insertResult.lastID],
-  );
-
-  if (!record) {
-    throw new Error('Failed to record inventory adjustment');
-  }
-
-  return record;
-};
-
+// adjustVariantStock is the public API wrapper - re-exported from core
 export async function adjustVariantStock(args: {
   variantId: number;
   branchId: number;
@@ -3533,12 +2743,59 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
     quantity: number;
   }>(lowStockItemsQuery, branchId ? [branchId] : []);
 
+  // Top selling items for date range
+  const topSellingQuery = branchId
+    ? `
+      SELECT
+        p.name AS productName,
+        pv.color,
+        pv.size,
+        pv.sku,
+        SUM(si.quantity) AS totalQty,
+        SUM(si.lineTotalIQD) AS revenueIQD
+      FROM sale_items si
+      JOIN sales s ON s.id = si.saleId
+      JOIN product_variants pv ON pv.id = si.variantId
+      JOIN products p ON p.id = pv.productId
+      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?) AND s.branchId = ?
+      GROUP BY si.variantId
+      ORDER BY totalQty DESC
+      LIMIT 10
+    `
+    : `
+      SELECT
+        p.name AS productName,
+        pv.color,
+        pv.size,
+        pv.sku,
+        SUM(si.quantity) AS totalQty,
+        SUM(si.lineTotalIQD) AS revenueIQD
+      FROM sale_items si
+      JOIN sales s ON s.id = si.saleId
+      JOIN product_variants pv ON pv.id = si.variantId
+      JOIN products p ON p.id = pv.productId
+      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?)
+      GROUP BY si.variantId
+      ORDER BY totalQty DESC
+      LIMIT 10
+    `;
+
+  const topSellingItems = await all<{
+    productName: string;
+    color: string | null;
+    size: string | null;
+    sku: string;
+    totalQty: number;
+    revenueIQD: number;
+  }>(topSellingQuery, branchId ? [startDate, endDate, branchId] : [startDate, endDate]);
+
   return {
     todaySales,
     todayExpenses: todayExpensesRow?.total ?? 0,
     lowStockCount: lowStockRow?.count ?? 0,
     recentSales,
     lowStockItems,
+    topSellingItems,
   };
 }
 
@@ -3657,7 +2914,7 @@ export async function resetDatabase(): Promise<void> {
   }
 }
 
-// ─── Online Orders ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Online Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function mapOnlineOrderRow(row: any, itemRows: any[]): OnlineOrder {
   return {
@@ -3783,66 +3040,75 @@ export async function confirmOnlineOrder(
   if (!order) throw new Error('Online order not found');
   if (order.status !== 'pending') throw new Error('Order is not pending');
 
-  // Use current exchange rate if not provided (fallback to DB)
-  let rate = exchangeRate;
-  if (!rate || rate <= 0) {
-    const rateRow = await getCurrentExchangeRate();
-    rate = rateRow.currentRate?.rate ?? 1500;
-  }
+  await run('BEGIN TRANSACTION');
 
-  // Calculate profit: for each item, look up avgCostUSD → convert to IQD
-  let totalCostIQD = 0;
-  const itemCosts: Array<{ variantId: number; unitCostIQD: number }> = [];
+  try {
+    // Use current exchange rate if not provided (fallback to DB)
+    let rate = exchangeRate;
+    if (!rate || rate <= 0) {
+      const rateRow = await getCurrentExchangeRate();
+      rate = rateRow.currentRate?.rate ?? 1500;
+    }
 
-  for (const item of order.items) {
-    const variant = await get<{ avgCostUSD: number }>(
-      'SELECT avgCostUSD FROM product_variants WHERE id = ?',
-      [item.variantId],
+    // Calculate profit: for each item, look up avgCostUSD â†’ convert to IQD
+    let totalCostIQD = 0;
+    const itemCosts: Array<{ variantId: number; unitCostIQD: number }> = [];
+
+    for (const item of order.items) {
+      const variant = await get<{ avgCostUSD: number }>(
+        'SELECT avgCostUSD FROM product_variants WHERE id = ?',
+        [item.variantId],
+      );
+      const unitCostIQD = (variant?.avgCostUSD ?? 0) * rate;
+      totalCostIQD += unitCostIQD * item.quantity;
+      itemCosts.push({ variantId: item.variantId, unitCostIQD });
+    }
+
+    const profitIQD = order.totalIQD - totalCostIQD;
+
+    // Create a real sale with correct profitIQD
+    const saleResult = await runWithResult(
+      `INSERT INTO sales (branchId, cashierId, customerId, saleDate, subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD)
+       VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 'online', ?)`,
+      [
+        order.branchId,
+        userId,
+        order.customerId ?? null,
+        order.subtotalIQD,
+        order.discountIQD,
+        order.totalIQD,
+        profitIQD,
+      ],
     );
-    const unitCostIQD = (variant?.avgCostUSD ?? 0) * rate;
-    totalCostIQD += unitCostIQD * item.quantity;
-    itemCosts.push({ variantId: item.variantId, unitCostIQD });
-  }
+    const saleId = saleResult.lastID;
 
-  const profitIQD = order.totalIQD - totalCostIQD;
+    for (const item of order.items) {
+      const costEntry = itemCosts.find((c) => c.variantId === item.variantId);
+      const unitCostIQDAtSale = costEntry?.unitCostIQD ?? null;
 
-  // Create a real sale with correct profitIQD
-  const saleResult = await runWithResult(
-    `INSERT INTO sales (branchId, cashierId, customerId, saleDate, subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD)
-     VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 'online', ?)`,
-    [
-      order.branchId,
-      userId,
-      order.customerId ?? null,
-      order.subtotalIQD,
-      order.discountIQD,
-      order.totalIQD,
-      profitIQD,
-    ],
-  );
-  const saleId = saleResult.lastID;
-
-  for (const item of order.items) {
-    const costEntry = itemCosts.find((c) => c.variantId === item.variantId);
-    const unitCostIQDAtSale = costEntry?.unitCostIQD ?? null;
+      await run(
+        `INSERT INTO sale_items (saleId, variantId, quantity, unitPriceIQD, unitCostIQDAtSale, lineTotalIQD)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [saleId, item.variantId, item.quantity, item.unitPriceIQD, unitCostIQDAtSale, item.lineTotalIQD],
+      );
+      // Deduct stock
+      await run(
+        `UPDATE variant_stock SET quantity = quantity - ?
+         WHERE variantId = ? AND branchId = ?`,
+        [item.quantity, item.variantId, order.branchId],
+      );
+    }
 
     await run(
-      `INSERT INTO sale_items (saleId, variantId, quantity, unitPriceIQD, unitCostIQDAtSale, lineTotalIQD)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [saleId, item.variantId, item.quantity, item.unitPriceIQD, unitCostIQDAtSale, item.lineTotalIQD],
+      `UPDATE online_orders SET status = 'confirmed', confirmedAt = CURRENT_TIMESTAMP, saleId = ? WHERE id = ?`,
+      [saleId, orderId],
     );
-    // Deduct stock
-    await run(
-      `UPDATE variant_stock SET quantity = quantity - ?
-       WHERE variantId = ? AND branchId = ?`,
-      [item.quantity, item.variantId, order.branchId],
-    );
-  }
 
-  await run(
-    `UPDATE online_orders SET status = 'confirmed', confirmedAt = CURRENT_TIMESTAMP, saleId = ? WHERE id = ?`,
-    [saleId, orderId],
-  );
+    await run('COMMIT');
+  } catch (error) {
+    await run('ROLLBACK');
+    throw error;
+  }
 
   await logActivity(userId, 'confirm', 'online_order', orderId);
   return (await getOnlineOrderById(orderId))!;

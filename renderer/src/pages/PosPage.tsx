@@ -182,7 +182,7 @@ const PosPage = (): JSX.Element => {
         prevProfiles.map((profile) => ({
           ...profile,
           cart: profile.cart.map((item) => {
-            const updatedProduct = newProducts.find((p) => p.id === item.product.id);
+            const updatedProduct = newProducts.find((p: Product) => p.id === item.product.id);
             return updatedProduct ? { ...item, product: updatedProduct } : item;
           }),
         })),
@@ -253,8 +253,8 @@ const PosPage = (): JSX.Element => {
         // Update product list without resetting pagination
         setProducts(prev => {
           const merged = [...prev];
-          freshProducts.forEach(fp => {
-            const idx = merged.findIndex(p => p.id === fp.id);
+          freshProducts.forEach((fp: Product) => {
+            const idx = merged.findIndex((p: Product) => p.id === fp.id);
             if (idx !== -1) merged[idx] = fp;
           });
           return merged;
@@ -265,9 +265,9 @@ const PosPage = (): JSX.Element => {
           prevProfiles.map((profile) => ({
             ...profile,
             cart: profile.cart.map((item) => {
-              const updatedProduct = freshProducts.find((p) => p.id === item.product.id);
+              const updatedProduct = freshProducts.find((p: Product) => p.id === item.product.id);
               // Only update if stock changed
-              if (updatedProduct && updatedProduct.stockQuantity !== item.product.stockQuantity) {
+              if (updatedProduct && updatedProduct.stockOnHand !== item.product.stockOnHand) {
                 return { ...item, product: updatedProduct };
               }
               return item;
@@ -516,6 +516,16 @@ const PosPage = (): JSX.Element => {
               ? Math.max(0, subtotal - Math.max(0, Math.min(targetDiscountValue, subtotal)))
               : 0;
       const total = Math.max(subtotal - discount, 0);
+
+      // NaN/Infinity guard — block sale if financial values are corrupt
+      if (!isFinite(subtotal) || !isFinite(discount) || !isFinite(total) || total < 0) {
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: 'Invalid calculation detected. Please check prices and discount.',
+          success: null,
+        }));
+        return;
+      }
 
       try {
         updateProfileAtIndex(profileIndex, (profile) => ({

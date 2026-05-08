@@ -454,36 +454,42 @@ const DashboardPage = (): JSX.Element => {
 
           <div className="Dashboard-section">
             <div className="Dashboard-sectionHeader">
-              <h2>{t('lowStockAlert')}</h2>
-              <button onClick={() => navigate('/products')} className="Dashboard-viewAll">
-                {t('viewAll')} <ArrowRight size={16} />
+              <h2><Trophy size={20} /> {t('topSelling')}</h2>
+              <button onClick={() => navigate('/reports')} className="Dashboard-viewAll">
+                {t('viewReports')} <ArrowRight size={16} />
               </button>
             </div>
-            {kpis.lowStockItems.length === 0 ? (
+            {(!kpis.topSellingItems || kpis.topSellingItems.length === 0) ? (
               <div className="Dashboard-empty">
-                <div className="Dashboard-emptyIcon"><CheckCircle2 size={48} /></div>
-                <p>{t('allItemsInStock')}</p>
+                <div className="Dashboard-emptyIcon"><ShoppingBag size={48} /></div>
+                <p>{t('noSalesYet')}</p>
               </div>
             ) : (
-              <div className="Dashboard-lowStockList">
-                {kpis.lowStockItems.map((item: any, idx: number) => (
-                  <div key={idx} className="Dashboard-lowStockItem">
-                    <div className="Dashboard-lowStockIcon"><AlertTriangle size={20} /></div>
-                    <div className="Dashboard-lowStockInfo">
-                      <div className="Dashboard-lowStockName">{item.productName}</div>
-                      <div className="Dashboard-lowStockDetails">
-                        <span className="Dashboard-lowStockVariant">
-                          {[item.color, item.size].filter(Boolean).join(' / ') || 'N/A'}
-                        </span>
-                        <span className="Dashboard-lowStockSku">{item.sku}</span>
+              <div className="Dashboard-topSellerList">
+                {kpis.topSellingItems.map((item: any, idx: number) => {
+                  const maxQty = kpis.topSellingItems[0]?.totalQty || 1;
+                  const barPercent = Math.round((item.totalQty / maxQty) * 100);
+                  return (
+                    <div key={idx} className="Dashboard-topSellerItem">
+                      <div className="Dashboard-topSellerRank">
+                        {idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}
+                      </div>
+                      <div className="Dashboard-topSellerInfo">
+                        <div className="Dashboard-topSellerName">{item.productName}</div>
+                        <div className="Dashboard-topSellerMeta">
+                          {[item.color, item.size].filter(Boolean).join(' / ')}
+                        </div>
+                        <div className="Dashboard-topSellerBar">
+                          <div className="Dashboard-topSellerBarFill" style={{ width: `${barPercent}%` }} />
+                        </div>
+                      </div>
+                      <div className="Dashboard-topSellerStats">
+                        <span className="Dashboard-topSellerQty">{item.totalQty}</span>
+                        <span className="Dashboard-topSellerRevenue">{Math.round(item.revenueIQD).toLocaleString('en-IQ')} IQD</span>
                       </div>
                     </div>
-                    <div className="Dashboard-lowStockQty">
-                      <span className="Dashboard-lowStockQtyValue">{item.quantity}</span>
-                      <span className="Dashboard-lowStockQtyLabel">{t('left')}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

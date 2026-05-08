@@ -3,6 +3,7 @@ import JsBarcode from 'jsbarcode';
 import { useLanguage } from '../contexts/LanguageContext';
 import './BarcodeLabelModal.css';
 import NumberInput from './NumberInput';
+import PortalModal from './PortalModal';
 
 type Product = import('../types/electron').Product;
 
@@ -120,9 +121,9 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
       if (!window.evaApi) return;
       try {
         const list = await window.evaApi.printing.getPrinters();
-        if (mounted) {
+        if (mounted && list) {
           setPrinters(list);
-          const def = list.find((printer) => printer.isDefault);
+          const def = list.find((printer: any) => printer.isDefault);
           setPrinterName(def?.name ?? null);
         }
       } catch (err) {
@@ -139,8 +140,8 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
 
   if (!product.barcode) {
     return (
-      <div className="BarcodeLabelModal-overlay" onClick={onClose}>
-        <div className="BarcodeLabelModal-content" onClick={(e) => e.stopPropagation()}>
+      <PortalModal onClose={onClose}>
+        <div style={{ width: '100%', maxWidth: '700px' }}>
           <div className="BarcodeLabelModal-header">
             <h2>{t('printBarcodeLabel')}</h2>
             <button className="BarcodeLabelModal-close" onClick={onClose}>
@@ -156,7 +157,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
             </div>
           </div>
         </div>
-      </div>
+      </PortalModal>
     );
   }
 
@@ -267,7 +268,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
     ${settings.showPrice && product.salePriceIQD ? `
       <div class="label-price-container">
         ${fakeOriginalPrice ? `<span class="label-price-original">${fakeOriginalPrice.toLocaleString('en-IQ')}</span>` : ''}
-        <span class="label-price">${product.salePriceIQD.toLocaleString('en-IQ')} د.ع</span>
+        <span class="label-price">${(Number(product.salePriceIQD) || 0).toLocaleString('en-IQ')} د.ع</span>
       </div>
     ` : ''}
     ${settings.showSku && product.sku ? `<div class="label-store">SKU: ${product.sku}</div>` : ''}
@@ -340,8 +341,8 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
   const dimensions = getLabelDimensions();
 
   return (
-    <div className="BarcodeLabelModal-overlay" onClick={onClose}>
-      <div className="BarcodeLabelModal-content" onClick={(e) => e.stopPropagation()}>
+    <PortalModal onClose={onClose}>
+      <div style={{ width: '100%', maxWidth: '700px' }}>
         <div className="BarcodeLabelModal-header">
           <h2>{t('printBarcodeLabel')}</h2>
           <button className="BarcodeLabelModal-close" onClick={onClose}>
@@ -374,7 +375,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                     {t('printer')}
                     <select value={printerName ?? ''} onChange={(e) => setPrinterName(e.target.value || null)}>
                       <option value="">{t('systemDefault')}</option>
-                      {printers.map((printer) => (
+                      {(printers || []).map((printer) => (
                         <option key={printer.name} value={printer.name}>
                           {printer.name} {printer.isDefault ? '(Default)' : ''}
                         </option>
@@ -446,50 +447,26 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                         color: '#000',
                         lineHeight: '1.2',
                       }}>
-                        {product.salePriceIQD.toLocaleString('en-IQ')} د.ع
+                        {(Number(product.salePriceIQD) || 0).toLocaleString('en-IQ')} د.ع
                       </span>
                     </div>
                   )}
                   {settings.showSku && product.sku && (
-                    <div style={{
-                      fontSize: `${settings.fontSize * 0.9}px`,
-                      fontWeight: 'bold',
-                      color: '#000',
-                      lineHeight: '1.2',
-                      marginBottom: '2px',
-                      width: '100%',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
+                    <div className="BarcodeLabelModal-previewSku" style={{ fontSize: `${settings.fontSize * 0.8}px` }}>
                       SKU: {product.sku}
                     </div>
                   )}
                   {settings.customText3 && (
                     <div style={{
-                      fontSize: `${settings.fontSize * 0.9}px`,
-                      fontWeight: 'bold',
-                      textTransform: 'uppercase',
-                      color: '#000',
-                      lineHeight: '1.2',
-                      width: '100%',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      marginBottom: '2px',
+                      fontSize: `${settings.fontSize * 0.8}px`,
+                      color: '#333',
+                      marginTop: '2px',
                     }}>
                       {settings.customText3}
                     </div>
                   )}
-                  <div style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: 1,
-                    minHeight: 0,
-                    marginTop: '2px'
-                  }}>
+
+                  <div className="BarcodeLabelModal-previewBarcode" style={{ marginTop: 'auto' }}>
                     <canvas
                       ref={barcodeCanvasRef}
                       style={{
@@ -501,18 +478,14 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                       }}
                     />
                     {!barcodeReady && (
-                      <div style={{ padding: '10px', textAlign: 'center', color: '#999', fontSize: '10px' }}>
-                        Generating...
+                      <div style={{ color: '#ff6b6b', fontSize: '10px', padding: '10px' }}>
+                        {t('generatingBarcode')}
                       </div>
                     )}
                   </div>
                 </div>
                 <p className="BarcodeLabelModal-previewNote">
                   {t('size')}: {dimensions.width} × {dimensions.height} | {t('quantity')}: {quantity}
-                  <br />
-                  <small style={{ color: '#999', fontSize: '0.85rem' }}>
-                    {t('customizeInSettings')}
-                  </small>
                 </p>
               </div>
             </>
@@ -521,18 +494,18 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
 
         <div className="BarcodeLabelModal-footer">
           <button className="BarcodeLabelModal-cancelButton" onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </button>
           <button
             className="BarcodeLabelModal-printButton"
             onClick={handlePrint}
-            disabled={!barcodeReady}
+            disabled={!barcodeReady || loadingSettings}
           >
-            Print {quantity > 1 ? `${quantity} Labels` : 'Label'}
+            {t('print')}
           </button>
         </div>
       </div>
-    </div >
+    </PortalModal>
   );
 };
 

@@ -9,6 +9,7 @@ import ExcelImportModal from '../components/ExcelImportModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 import BarcodeLabelModal from '../components/BarcodeLabelModal';
 import BulkEditSeasonModal from '../components/BulkEditSeasonModal';
+import Combobox from '../components/Combobox';
 import './Pages.css';
 import './ProductsPage.css';
 import NumberInput from '../components/NumberInput';
@@ -315,12 +316,6 @@ const ProductsPage = (): JSX.Element => {
         )}
       </div>
 
-      <datalist id="edit-seasons-list">
-        {Array.from(new Set(products.map((p) => p.season).filter(Boolean))).map((s) => (
-          <option key={s} value={s!} />
-        ))}
-      </datalist>
-
       {error && <div className="ProductsPage-alert">{error}</div>}
 
       <div className="ProductsPage-tableWrapper">
@@ -361,7 +356,12 @@ const ProductsPage = (): JSX.Element => {
                   <X size={20} />
                 </button>
               </div>
-              <ProductForm onSubmit={handleCreateProduct} onCancel={() => setIsModalOpen(false)} loading={isSubmitting} />
+              <ProductForm 
+                onSubmit={handleCreateProduct} 
+                onCancel={() => setIsModalOpen(false)} 
+                loading={isSubmitting} 
+                existingSeasons={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
+              />
             </div>
           </PortalModal>
         )
@@ -440,11 +440,11 @@ const ProductsPage = (): JSX.Element => {
               </label>
               <label>
                 {t('season')}
-                <input
-                  type="text"
-                  list="edit-seasons-list"
+                <Combobox
                   value={editSeason}
-                  onChange={(e) => setEditSeason(e.target.value)}
+                  onChange={setEditSeason}
+                  options={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
+                  placeholder="e.g. Winter 2026"
                 />
               </label>
               <label>

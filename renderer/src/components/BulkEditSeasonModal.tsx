@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react';
 import PortalModal from './PortalModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import Combobox from './Combobox';
 import './BulkEditSeasonModal.css';
 
 interface BulkEditSeasonModalProps {
@@ -62,20 +63,13 @@ const BulkEditSeasonModal: React.FC<BulkEditSeasonModalProps> = ({
 
           <div className="BulkEditSeasonModal-field">
             <label htmlFor="bulk-season">{t('newSeason')}</label>
-            <input
+            <Combobox
               id="bulk-season"
-              type="text"
-              list="bulk-seasons-list"
               value={season}
-              onChange={(e) => setSeason(e.target.value)}
+              onChange={setSeason}
+              options={existingSeasons}
               placeholder="e.g. Winter 2026"
-              autoFocus
             />
-            <datalist id="bulk-seasons-list">
-              {existingSeasons.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
             <p className="BulkEditSeasonModal-help">
               {t('bulkUpdateHelp')}
             </p>

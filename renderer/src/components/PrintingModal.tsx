@@ -882,11 +882,6 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     }
 
     if (shouldAutoPrint && hasData) {
-      // Wait for printers to load to ensure we have the default printer selected
-      if (printers.length === 0) {
-        return;
-      }
-
       const performAutoPrint = async () => {
         setIsAutoPrinting(true);
         // Small delay to ensure render

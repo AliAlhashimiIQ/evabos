@@ -3,6 +3,7 @@ import NumberInput from './NumberInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Calculator } from 'lucide-react';
+import Combobox from './Combobox';
 type Supplier = import('../types/electron').Supplier;
 type ProductInput = import('../types/electron').ProductInput;
 import './ProductForm.css';
@@ -11,6 +12,7 @@ interface ProductFormProps {
   onSubmit: (payload: ProductInput) => Promise<void> | void;
   onCancel: () => void;
   loading?: boolean;
+  existingSeasons?: string[];
 }
 
 
@@ -34,7 +36,7 @@ const initialState: FormState = {
   supplierId: undefined,
 };
 
-const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Element => {
+const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: ProductFormProps): JSX.Element => {
   const { token } = useAuth();
   const { t } = useLanguage();
   const [formState, setFormState] = useState<FormState>(initialState);
@@ -182,10 +184,12 @@ const ProductForm = ({ onSubmit, onCancel, loading }: ProductFormProps): JSX.Ele
         </label>
         <label>
           <span>{t('season')}</span>
-          <input type="text" list="seasons-list" value={formState.season ?? ''} onChange={handleChange('season')} placeholder="e.g., Winter 2026" />
-          <datalist id="seasons-list">
-             {/* Can be populated from existing seasons later, for now just basic text */}
-          </datalist>
+          <Combobox
+            value={formState.season ?? ''}
+            onChange={(value) => setFormState(prev => ({ ...prev, season: value }))}
+            options={existingSeasons}
+            placeholder="e.g., Winter 2026"
+          />
         </label>
         <label className="ProductForm-span">
           <span>{t('description')}</span>

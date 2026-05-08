@@ -10,11 +10,12 @@
   display: flex;
   gap: 1rem;
   align-items: flex-end;
-  background: white;
+  background: var(--bg-card);
   padding: 1.25rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px var(--shadow);
   flex-wrap: wrap;
+  border: 1px solid var(--border-color);
 }
 
 .SalesHistory-filterGroup {
@@ -26,15 +27,16 @@
 .SalesHistory-filterGroup label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .SalesHistory-filterGroup input {
   padding: 0.625rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -85,14 +87,14 @@
 }
 
 .SalesHistory-table {
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px var(--shadow);
   overflow: hidden;
   /* Keeps the border radius */
   overflow-x: auto;
   /* Allows horizontal scrolling */
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 
 .SalesHistory-table table {
@@ -106,13 +108,13 @@
 .SalesHistory-table td {
   padding: 1rem 1.5rem;
   text-align: left;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .SalesHistory-table th {
-  background: #f8fafc;
+  background: var(--bg-tertiary);
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -124,7 +126,7 @@
 }
 
 .SalesHistory-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--hover-bg);
 }
 
 .SalesHistory-table tr:last-child td {
@@ -133,8 +135,8 @@
 
 .SalesHistory-view {
   padding: 0.375rem 0.75rem;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
   border: none;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -144,14 +146,13 @@
 }
 
 .SalesHistory-view:hover {
-  background: #bae6fd;
-  color: #0284c7;
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .SalesHistory-delete-row {
   padding: 0.375rem 0.75rem;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
   border: none;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -162,8 +163,7 @@
 }
 
 .SalesHistory-delete-row:hover {
-  background: #fecaca;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .SalesHistory-loading,
@@ -171,25 +171,26 @@
 .SalesHistory-empty {
   padding: 3rem;
   text-align: center;
-  color: #64748b;
-  background: white;
+  color: var(--text-secondary);
+  background: var(--bg-card);
   border-radius: 12px;
   margin-top: 1rem;
   font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--shadow);
+  border: 1px solid var(--border-color);
 }
 
 .SalesHistory-error {
   color: #ef4444;
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* Detail View */
 .SalesHistory-back {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   cursor: pointer;
   padding: 0.5rem 0;
@@ -202,29 +203,29 @@
 }
 
 .SalesHistory-back:hover {
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .SalesHistory-print {
   margin-left: auto;
   padding: 0.625rem 1.25rem;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #475569;
+  color: var(--text-secondary);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px var(--shadow);
 }
 
 .SalesHistory-print:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: var(--hover-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 .SalesHistory-delete {
@@ -254,18 +255,18 @@
 }
 
 .SalesHistory-detailSection {
-  background: white;
+  background: var(--bg-card);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px var(--shadow);
+  border: 1px solid var(--border-color);
 }
 
 .SalesHistory-detailSection h3 {
   margin: 0 0 1.5rem 0;
   font-size: 1.25rem;
-  color: #1e293b;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 1rem;
   font-weight: 700;
 }
@@ -284,13 +285,13 @@
 
 .SalesHistory-detailGrid label {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .SalesHistory-detailGrid span {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   font-size: 1.125rem;
 }
 
@@ -510,17 +511,17 @@
 .SalesHistory-itemsTable th {
   text-align: left;
   padding: 1rem;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 600;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .SalesHistory-itemsTable td {
   padding: 1rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-tertiary);
   font-weight: 500;
 }
 
@@ -543,16 +544,16 @@
 }
 
 .SalesHistory-badge--returned {
-  background-color: #fef2f2;
+  background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* Items Summary Column */
 .SalesHistory-items-summary {
   max-width: 350px;
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -574,12 +575,12 @@
 
 .SalesHistory-returned-badge {
   font-size: 0.7rem;
-  background: #fef2f2;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-weight: 600;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.2);
   white-space: nowrap;
 }
 
@@ -590,17 +591,17 @@
 }
 
 .SalesHistory-table::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--bg-primary);
   border-radius: 4px;
 }
 
 .SalesHistory-table::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 .SalesHistory-table::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--text-secondary);
 }
 
 .SalesHistory-quickFilters {
@@ -610,15 +611,15 @@
   width: 100%;
   margin-bottom: 0.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .SalesHistory-quickFilters button {
   padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -626,15 +627,15 @@
 }
 
 .SalesHistory-quickFilters button:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #334155;
+  background: var(--hover-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px var(--shadow);
 }
 
 .SalesHistory-quickFilters button:active {
-  background: #f1f5f9;
+  background: var(--bg-secondary);
   transform: translateY(0);
   box-shadow: none;
 }

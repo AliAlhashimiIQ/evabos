@@ -3,6 +3,7 @@ import { X, Tag } from 'lucide-react';
 import BarcodeLabelModal from './BarcodeLabelModal';
 import './ProductDetailsModal.css';
 import PortalModal from './PortalModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type Product = import('../types/electron').Product;
 
@@ -12,9 +13,11 @@ interface ProductDetailsModalProps {
 }
 
 const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JSX.Element => {
+  const { t } = useLanguage();
   const [showLabelModal, setShowLabelModal] = useState(false);
-  const [, setExchangeRate] = useState<number>(1500);
+  const [exchangeRate, setExchangeRate] = useState<number>(1500);
   const [profitMargin, setProfitMargin] = useState<string>('—');
+  const [profitAmountIQD, setProfitAmountIQD] = useState<string>('—');
 
   useEffect(() => {
     const loadRate = async () => {
@@ -27,6 +30,8 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
         if (product.avgCostUSD > 0) {
           const margin = (((product.salePriceIQD / rate - product.avgCostUSD) / product.avgCostUSD) * 100).toFixed(1);
           setProfitMargin(`${margin}%`);
+          const profit = product.salePriceIQD - (product.avgCostUSD * rate);
+          setProfitAmountIQD(profit.toLocaleString('en-IQ', { maximumFractionDigits: 0 }) + ' IQD');
         }
       } catch {
         // Keep default
@@ -39,7 +44,7 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
     <PortalModal onClose={onClose}>
       <div className="ProductDetailsModal-content" style={{ width: 'min(800px, 95vw)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="ProductDetailsModal-header">
-          <h2>Product Details</h2>
+          <h2>{t('productDetails')}</h2>
           <button className="ProductDetailsModal-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -47,33 +52,33 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
 
         <div className="ProductDetailsModal-body">
           <div className="ProductDetailsModal-section">
-            <h3>Basic Information</h3>
+            <h3>{t('basicInformation')}</h3>
             <div className="ProductDetailsModal-grid">
               <div className="ProductDetailsModal-field">
-                <label>Product Name</label>
+                <label>{t('productName')}</label>
                 <div className="ProductDetailsModal-value">{product.productName}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Category</label>
-                <div className="ProductDetailsModal-value">{product.category ?? 'Uncategorized'}</div>
+                <label>{t('category')}</label>
+                <div className="ProductDetailsModal-value">{product.category ?? t('uncategorized')}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Product Code</label>
+                <label>{t('code')}</label>
                 <div className="ProductDetailsModal-value">{product.baseCode ?? '—'}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Season</label>
+                <label>{t('season')}</label>
                 <div className="ProductDetailsModal-value">{product.season ?? '—'}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Supplier</label>
+                <label>{t('supplier')}</label>
                 <div className="ProductDetailsModal-value">{product.supplierName ?? '—'}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Status</label>
+                <label>{t('status')}</label>
                 <div className="ProductDetailsModal-value">
                   <span className={`ProductDetailsModal-status ${product.isActive ? 'active' : 'inactive'}`}>
-                    {product.isActive ? 'Active' : 'Inactive'}
+                    {product.isActive ? t('active') : t('inactive')}
                   </span>
                 </div>
               </div>
@@ -81,48 +86,48 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
           </div>
 
           <div className="ProductDetailsModal-section">
-            <h3>Variant Information</h3>
+            <h3>{t('variantInformation')}</h3>
             <div className="ProductDetailsModal-grid">
               <div className="ProductDetailsModal-field">
-                <label>SKU</label>
+                <label>{t('sku')}</label>
                 <div className="ProductDetailsModal-value ProductDetailsModal-sku">{product.sku}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Barcode (EAN-13)</label>
+                <label>{t('barcodeEAN')}</label>
                 <div className="ProductDetailsModal-value ProductDetailsModal-barcode">
-                  {product.barcode ?? 'Not assigned'}
+                  {product.barcode ?? t('notAssigned')}
                 </div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Color</label>
+                <label>{t('color')}</label>
                 <div className="ProductDetailsModal-value">{product.color ?? '—'}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Size</label>
+                <label>{t('size')}</label>
                 <div className="ProductDetailsModal-value">{product.size ?? '—'}</div>
               </div>
             </div>
           </div>
 
           <div className="ProductDetailsModal-section">
-            <h3>Pricing & Costs</h3>
+            <h3>{t('pricingAndCosts')}</h3>
             <div className="ProductDetailsModal-grid">
               <div className="ProductDetailsModal-field">
-                <label>Sale Price (IQD)</label>
+                <label>{t('sellingPriceIQD')}</label>
                 <div className="ProductDetailsModal-value ProductDetailsModal-price">
                   {product.salePriceIQD.toLocaleString('en-IQ')} IQD
                 </div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Average Cost (USD)</label>
+                <label>{t('avgCostUSDTitle')}</label>
                 <div className="ProductDetailsModal-value">${product.avgCostUSD.toFixed(2)}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Last Purchase Cost (USD)</label>
-                <div className="ProductDetailsModal-value">${product.lastPurchaseCostUSD.toFixed(2)}</div>
+                <label>{t('profitAmount')} (IQD)</label>
+                <div className="ProductDetailsModal-value">{profitAmountIQD}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Profit Margin</label>
+                <label>{t('profitMargin')}</label>
                 <div className="ProductDetailsModal-value">
                   {profitMargin}
                 </div>
@@ -131,22 +136,22 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
           </div>
 
           <div className="ProductDetailsModal-section">
-            <h3>Inventory</h3>
+            <h3>{t('inventoryTitle')}</h3>
             <div className="ProductDetailsModal-grid">
               <div className="ProductDetailsModal-field">
-                <label>Stock On Hand</label>
+                <label>{t('stockOnHand')}</label>
                 <div className="ProductDetailsModal-value">
                   <span className={`ProductDetailsModal-stock ${product.stockOnHand <= 0 ? 'low' : ''}`}>
-                    {product.stockOnHand.toLocaleString('en-IQ')} units
+                    {product.stockOnHand.toLocaleString('en-IQ')}
                   </span>
                 </div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Variant ID</label>
+                <label>{t('variantId')}</label>
                 <div className="ProductDetailsModal-value">#{product.id}</div>
               </div>
               <div className="ProductDetailsModal-field">
-                <label>Product ID</label>
+                <label>{t('productId')}</label>
                 <div className="ProductDetailsModal-value">#{product.productId}</div>
               </div>
             </div>
@@ -159,11 +164,11 @@ const ProductDetailsModal = ({ product, onClose }: ProductDetailsModalProps): JS
               className="ProductDetailsModal-printLabelButton"
               onClick={() => setShowLabelModal(true)}
             >
-              <Tag size={18} /> Print Label
+              <Tag size={18} /> {t('printLabel')}
             </button>
           )}
           <button className="ProductDetailsModal-closeButton" onClick={onClose}>
-            Close
+            {t('close')}
           </button>
         </div>
       </div>

@@ -1,0 +1,97 @@
+.Combobox-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.Combobox-input {
+  width: 100%;
+  padding: 0.65rem 2.5rem 0.65rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+[dir="rtl"] .Combobox-input {
+  padding: 0.65rem 0.8rem 0.65rem 2.5rem;
+}
+
+.Combobox-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.Combobox-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 0.2s;
+}
+
+[dir="rtl"] .Combobox-toggle {
+  right: auto;
+  left: 0.5rem;
+}
+
+.Combobox-toggle:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.Combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  z-index: 100;
+  list-style: none;
+  padding: 0.25rem;
+  margin: 0;
+}
+
+.Combobox-option {
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: background-color 0.1s ease;
+}
+
+.Combobox-option:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+/* Scrollbar for dropdown */
+.Combobox-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.Combobox-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.Combobox-dropdown::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+.Combobox-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

@@ -156,14 +156,24 @@ const registerIpcHandlers = (): void => {
   }
 
   ipcMain.handle('db:get-setting', async (_event, key: string) => {
-    return getSetting(key);
+    try {
+      return getSetting(key);
+    } catch (err) {
+      log.error('[ipc] db:get-setting failed:', err);
+      return null;
+    }
   });
 
   ipcMain.handle('app:check-for-updates', async () => {
-    if (!isDev) {
-      return autoUpdater.checkForUpdates();
+    try {
+      if (!isDev) {
+        return autoUpdater.checkForUpdates();
+      }
+      return { status: 'dev-mode', message: 'Updates not available in dev mode' };
+    } catch (err) {
+      log.error('[ipc] app:check-for-updates failed:', err);
+      return { status: 'error', message: String(err) };
     }
-    return { status: 'dev-mode', message: 'Updates not available in dev mode' };
   });
 
   // Forward auto-updater events to renderer
@@ -187,12 +197,28 @@ const registerIpcHandlers = (): void => {
   });
 
   ipcMain.handle('db:set-setting', async (_event, key: string, value: string) => {
-    await setSetting(key, value);
-    return true;
+    try {
+      // Block writes to sensitive keys that could be exploited
+      const sensitiveKeys = ['license_key', 'license_activated_at'];
+      if (sensitiveKeys.includes(key)) {
+        log.warn(`[ipc] Blocked direct write to sensitive setting: ${key}`);
+        throw new Error('Cannot modify this setting directly');
+      }
+      await setSetting(key, value);
+      return true;
+    } catch (err) {
+      log.error('[ipc] db:set-setting failed:', err);
+      throw err;
+    }
   });
 
   ipcMain.handle('db:get-all-settings', async () => {
-    return getAllSettings();
+    try {
+      return getAllSettings();
+    } catch (err) {
+      log.error('[ipc] db:get-all-settings failed:', err);
+      return [];
+    }
   });
 
   ipcMain.handle('app:relaunch', () => {

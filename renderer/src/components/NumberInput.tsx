@@ -11,12 +11,29 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
             props.onFocus?.(e);
         };
 
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            // Guard against NaN/Infinity propagating to parent
+            const raw = e.target.value;
+            const num = parseFloat(raw);
+            if (raw !== '' && (isNaN(num) || !isFinite(num))) {
+                // Override the value to 0 to prevent NaN corruption
+                const syntheticEvent = {
+                    ...e,
+                    target: { ...e.target, value: '0' },
+                } as React.ChangeEvent<HTMLInputElement>;
+                props.onChange?.(syntheticEvent);
+                return;
+            }
+            props.onChange?.(e);
+        };
+
         return (
             <input
                 type="number"
                 ref={ref}
                 {...props}
                 onFocus={handleFocus}
+                onChange={handleChange}
             />
         );
     }
@@ -25,3 +42,4 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 NumberInput.displayName = 'NumberInput';
 
 export default NumberInput;
+

@@ -68,7 +68,7 @@ const OnlineOrdersPage = (): JSX.Element => {
 
   useEffect(() => {
     if (!window.evaApi) return;
-    window.evaApi.exchangeRates.getCurrent().then((r) => { if (r.currentRate) setExchangeRate(r.currentRate.rate); });
+    window.evaApi.exchangeRates.getCurrent().then((r: any) => { if (r.currentRate) setExchangeRate(r.currentRate.rate); });
   }, []);
 
   const loadProducts = useCallback(async () => {
@@ -137,7 +137,11 @@ const OnlineOrdersPage = (): JSX.Element => {
 
   const filteredProducts = products.filter((p) =>
     p.stockOnHand > 0 &&
-    (productSearch === '' || p.productName.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase())),
+    (productSearch === '' || 
+      p.productName.toLowerCase().includes(productSearch.toLowerCase()) || 
+      p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.barcode && p.barcode.toLowerCase().includes(productSearch.toLowerCase()))
+    )
   );
 
   return (
@@ -267,7 +271,32 @@ const OnlineOrdersPage = (): JSX.Element => {
 
               <div className="OO-formSection">
                 <h3>إضافة منتجات</h3>
-                <div className="OO-productSearch"><Search size={16} /><input placeholder="البحث بالاسم أو الرمز…" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} /></div>
+                <div className="OO-productSearch">
+                  <Search size={16} />
+                  <input 
+                    placeholder="البحث بالاسم أو الرمز…" 
+                    value={productSearch} 
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value.toLowerCase().trim();
+                        const exactMatch = products.find(p => 
+                          (p.barcode && p.barcode.toLowerCase() === val) || 
+                          p.sku.toLowerCase() === val
+                        );
+                        if (exactMatch) {
+                          addToCart(exactMatch);
+                          setProductSearch('');
+                        } else if (filteredProducts.length === 1) {
+                          addToCart(filteredProducts[0]);
+                          setProductSearch('');
+                        }
+                      }
+                    }}
+                  />
+                </div>
                 <div className="OO-productGrid">
                   {filteredProducts.slice(0, 40).map((p) => (
                     <button key={p.id} className="OO-productCard" onClick={() => addToCart(p)}>
