@@ -75,18 +75,39 @@ const ActivityLogsPage = (): JSX.Element => {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
-                  <td>{log.id}</td>
-                  <td>{log.userId}</td>
-                  <td>
-                    <span className="ActivityLogsPage-action">{log.action}</span>
-                  </td>
-                  <td>{log.entity ?? '—'}</td>
-                  <td>{log.entityId ?? '—'}</td>
-                  <td>{new Date(log.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
+              {logs.map((log) => {
+                let details = '';
+                if (log.metadata) {
+                  try {
+                    const meta = JSON.parse(log.metadata);
+                    if (meta.details) {
+                      details = meta.details;
+                    } else {
+                      details = Object.entries(meta)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ');
+                    }
+                  } catch (e) {
+                    details = log.metadata;
+                  }
+                }
+
+                return (
+                  <tr key={log.id}>
+                    <td>{log.id}</td>
+                    <td>{log.userId}</td>
+                    <td>
+                      <div className="ActivityLogsPage-actionWrapper">
+                        <span className="ActivityLogsPage-action">{log.action}</span>
+                        {details && <span className="ActivityLogsPage-metadata" title={details}>{details}</span>}
+                      </div>
+                    </td>
+                    <td>{log.entity ?? '—'}</td>
+                    <td>{log.entityId ?? '—'}</td>
+                    <td>{new Date(log.createdAt).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

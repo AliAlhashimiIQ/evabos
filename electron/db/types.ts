@@ -279,6 +279,7 @@ export interface ActivityLogEntry {
   action: string;
   entity?: string | null;
   entityId?: number | null;
+  metadata?: string | null;
   createdAt: string;
 }
 

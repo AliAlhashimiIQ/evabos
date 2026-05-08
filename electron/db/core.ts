@@ -173,6 +173,14 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS online_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, customerName TEXT, customerPhone TEXT, source TEXT NOT NULL DEFAULT 'other', note TEXT, status TEXT NOT NULL DEFAULT 'pending', subtotalIQD REAL NOT NULL DEFAULT 0, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL DEFAULT 0, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, confirmedAt TEXT, rejectedAt TEXT, rejectionReason TEXT, saleId INTEGER, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (saleId) REFERENCES sales(id))`);
   await run(`CREATE TABLE IF NOT EXISTS online_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, orderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (orderId) REFERENCES online_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
+  
+  // Performance Indexes
+  await run(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(saleDate)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(saleId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_sale_items_variant ON sale_items(variantId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_variant_stock_lookup ON variant_stock(variantId, branchId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_returns_date ON returns(createdAt)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_returns_sale ON returns(saleId)`);
 };
 
 const seedInitialData = async (): Promise<void> => {

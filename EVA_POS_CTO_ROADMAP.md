@@ -142,12 +142,13 @@ Incorrect financial data is the #1 reason businesses abandon a POS system. If a 
 ### Estimated Difficulty: Medium | Time: ~2 weeks
 
 ### Completion Criteria
-- [ ] Customer purchase recording moved inside the sale transaction
-- [ ] Indexes added: `sales(saleDate)`, `sale_items(saleId)`, `sale_items(variantId)`, `variant_stock(variantId, branchId)`, `returns(createdAt)`, `returns(saleId)`
-- [ ] N+1 queries eliminated with JOINs
-- [ ] Exchange rate dynamically fetched for inventory valuation
-- [ ] `deleteSale` uses `adjustVariantStockInternal` for proper audit trail
+- [x] Customer purchase recording moved inside the sale transaction
+- [x] Indexes added: `sales(saleDate)`, `sale_items(saleId)`, `sale_items(variantId)`, `variant_stock(variantId, branchId)`, `returns(createdAt)`, `returns(saleId)`
+- [x] N+1 queries eliminated with JOINs
+- [x] Exchange rate dynamically fetched for inventory valuation
+- [x] `deleteSale` uses `adjustVariantStockInternal` for proper audit trail
 - [x] WAL mode enabled: `PRAGMA journal_mode=WAL;` *(done in Phase 1)*
+- [x] Auto-backups (Skipped/Cancelled by User)
 
 ---
 

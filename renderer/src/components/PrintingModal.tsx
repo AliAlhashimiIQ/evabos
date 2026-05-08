@@ -945,7 +945,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
   }
 
   return (
-    <div className="PrintingModal-overlay">
+    <div className={`PrintingModal-overlay ${autoPrint || isAutoPrinting ? 'auto-print-mode' : ''}`}>
       {autoPrint || isAutoPrinting ? (
         <div className="PrintingModal-loadingOverlay">
           <div className="ReceiptPrinter-container">

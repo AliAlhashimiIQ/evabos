@@ -66,8 +66,7 @@ export function registerSalesIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
       if (!session) throw new Error('Unauthorized');
       const saleId = args[0] as number;
-      await deleteSale(saleId);
-      await (await import('../db/database')).logActivity(session.userId, 'delete', 'sale', saleId);
+      await deleteSale(saleId, session.userId);
       return true;
     }),
   );

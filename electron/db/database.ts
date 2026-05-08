@@ -514,16 +514,19 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     [range.startDate, range.endDate],
   );
 
+  const currentRateObj = await getCurrentExchangeRate();
+  const currentRate = currentRateObj?.currentRate?.rate ?? 1500;
+
   const inventoryValueRow = await get<{ value: number }>(
     `
-    SELECT IFNULL(SUM(vs.quantity * pv.avgCostUSD * 1500), 0) as value
+    SELECT IFNULL(SUM(vs.quantity * pv.avgCostUSD * ?), 0) as value
     FROM variant_stock vs
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     WHERE p.isActive = 1 AND pv.isActive = 1
     ${seasonFilter}
   `,
-    [...seasonParam],
+    [currentRate, ...seasonParam],
   );
 
   // Calculate total cost of all items ever sold
@@ -1187,13 +1190,34 @@ export async function listPurchaseOrders(): Promise<PurchaseOrderWithItems[]> {
     return [];
   }
 
-  const results: PurchaseOrderWithItems[] = [];
-  for (const order of orders) {
-    const fullOrder = await fetchPurchaseOrderById(order.id);
-    if (fullOrder) {
-      results.push(fullOrder);
-    }
+  const orderIds = orders.map((o) => o.id);
+  const placeholders = orderIds.map(() => '?').join(', ');
+  
+  const itemsRows = await all<PurchaseOrderItem>(
+    `
+    SELECT *
+    FROM purchase_order_items
+    WHERE purchaseOrderId IN (${placeholders})
+    ORDER BY id ASC
+    `,
+    orderIds,
+  );
+
+  const itemsByOrder = new Map<number, PurchaseOrderItem[]>();
+  for (const item of itemsRows) {
+    const list = itemsByOrder.get(item.purchaseOrderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.purchaseOrderId, list);
   }
+
+  const results: PurchaseOrderWithItems[] = orders.map((order) => {
+    // Remove the extra itemCount property added by the listing query
+    const { itemCount, ...orderWithoutCount } = order as any;
+    return {
+      ...orderWithoutCount,
+      items: itemsByOrder.get(order.id) ?? [],
+    };
+  });
 
   return results;
 }
@@ -1493,11 +1517,11 @@ export async function createSale(input: SaleInput): Promise<SaleDetail> {
       );
     }
 
-    await run('COMMIT');
-
     if (input.customerId) {
       await recordCustomerPurchase(input.customerId, input.totalIQD);
     }
+
+    await run('COMMIT');
 
     const fullDetail = await getSaleDetail(saleId);
     if (!fullDetail) {
@@ -1818,7 +1842,7 @@ export async function logActivity(
 export async function listActivityLogs(limit = 200): Promise<ActivityLogEntry[]> {
   return all<ActivityLogEntry>(
     `
-    SELECT id, userId, action, entity, entityId, createdAt
+    SELECT id, userId, action, entity, entityId, metadata, createdAt
     FROM activity_logs
     ORDER BY datetime(createdAt) DESC
   LIMIT ?
@@ -2800,7 +2824,7 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
 }
 
 
-export async function deleteSale(saleId: number): Promise<void> {
+export async function deleteSale(saleId: number, userId: number): Promise<void> {
   await run('BEGIN TRANSACTION');
   try {
     // 1. Get sale details
@@ -2826,15 +2850,21 @@ export async function deleteSale(saleId: number): Promise<void> {
       for (const item of returnItems) {
         if (item.saleItemId) {
           // Was a RETURN (Stock added) -> Reverse by SUBTRACTING
-          await run(
-            'UPDATE variant_stock SET quantity = quantity - ? WHERE variantId = ? AND branchId = ?',
-            [item.quantity, item.variantId, ret.branchId]
+          await adjustVariantStockInternal(
+            item.variantId,
+            ret.branchId,
+            -item.quantity,
+            'Sale Deleted',
+            `Reversed return for deleted sale #${saleId}`
           );
         } else {
           // Was an EXCHANGE_IN (Stock removed) -> Reverse by ADDING
-          await run(
-            'UPDATE variant_stock SET quantity = quantity + ? WHERE variantId = ? AND branchId = ?',
-            [item.quantity, item.variantId, ret.branchId]
+          await adjustVariantStockInternal(
+            item.variantId,
+            ret.branchId,
+            item.quantity,
+            'Sale Deleted',
+            `Reversed exchange for deleted sale #${saleId}`
           );
         }
       }
@@ -2846,9 +2876,12 @@ export async function deleteSale(saleId: number): Promise<void> {
 
     // 3. Restore stock for sale items (Sale removed stock -> Add it back)
     for (const item of sale.items) {
-      await run(
-        'UPDATE variant_stock SET quantity = quantity + ? WHERE variantId = ? AND branchId = ?',
-        [item.quantity, item.variantId, sale.branchId]
+      await adjustVariantStockInternal(
+        item.variantId,
+        sale.branchId,
+        item.quantity,
+        'Sale Deleted',
+        `Restored stock from deleted sale #${saleId}`
       );
     }
 
@@ -2869,6 +2902,13 @@ export async function deleteSale(saleId: number): Promise<void> {
     // 5. Delete items and sale
     await run('DELETE FROM sale_items WHERE saleId = ?', [saleId]);
     await run('DELETE FROM sales WHERE id = ?', [saleId]);
+
+    // 6. Log activity with metadata
+    const restockedSummary = sale.items.map(item => `${item.productName} (${item.quantity})`).join(', ');
+    await logActivity(userId, 'delete', 'sale', saleId, { 
+      details: `Restored stock: ${restockedSummary}`,
+      items: sale.items.map(i => ({ name: i.productName, qty: i.quantity }))
+    });
 
     await run('COMMIT');
   } catch (err) {

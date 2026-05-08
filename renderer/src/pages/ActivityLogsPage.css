@@ -78,4 +78,22 @@
   border-radius: 0.4rem;
   font-size: 0.85rem;
   font-weight: 500;
+  width: fit-content;
+}
+
+.ActivityLogsPage-actionWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ActivityLogsPage-metadata {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 350px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
