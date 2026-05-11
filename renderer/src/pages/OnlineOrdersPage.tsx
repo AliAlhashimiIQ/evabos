@@ -1,10 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ShoppingBag, CheckCircle2, XCircle, Clock, Plus, Search,
   Loader2, Instagram, Phone, MessageCircle, Globe, Package,
   ChevronDown, ChevronUp, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { confirmDialog } from '../utils/confirmDialog';
 import './OnlineOrdersPage.css';
 
 type OnlineOrder = import('../types/electron').OnlineOrder;
@@ -32,7 +35,8 @@ interface CartItem { product: Product; quantity: number; unitPrice: number; }
 
 const OnlineOrdersPage = (): JSX.Element => {
   const { token, user } = useAuth();
-  const [orders, setOrders] = useState<OnlineOrder[]>([]);
+  const toast = useToast();
+  const [allOrders, setAllOrders] = useState<OnlineOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OnlineOrderStatus | 'all'>('pending');
@@ -52,17 +56,20 @@ const OnlineOrdersPage = (): JSX.Element => {
   const [formDiscount, setFormDiscount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [scannerMessage, setScannerMessage] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // --- Load all orders (unfiltered) ---
   const loadOrders = useCallback(async () => {
     if (!window.evaApi || !token) return;
     try {
       setLoading(true); setError(null);
-      const result = await window.evaApi.onlineOrders.list(token, statusFilter === 'all' ? undefined : statusFilter);
-      setOrders(result);
+      const result = await window.evaApi.onlineOrders.list(token);
+      setAllOrders(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     } finally { setLoading(false); }
-  }, [token, statusFilter]);
+  }, [token]);
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
@@ -71,6 +78,16 @@ const OnlineOrdersPage = (): JSX.Element => {
     window.evaApi.exchangeRates.getCurrent().then((r: any) => { if (r.currentRate) setExchangeRate(r.currentRate.rate); });
   }, []);
 
+  // --- Client-side filtering + counts ---
+  const counts = {
+    all: allOrders.length,
+    pending: allOrders.filter(o => o.status === 'pending').length,
+    confirmed: allOrders.filter(o => o.status === 'confirmed').length,
+    rejected: allOrders.filter(o => o.status === 'rejected').length,
+  };
+  const filteredOrders = statusFilter === 'all' ? allOrders : allOrders.filter(o => o.status === statusFilter);
+
+  // --- Products ---
   const loadProducts = useCallback(async () => {
     if (!window.evaApi || !token) return;
     const resp = await window.evaApi.products.list(token, { limit: 500, cursor: 0 });
@@ -79,35 +96,119 @@ const OnlineOrdersPage = (): JSX.Element => {
 
   useEffect(() => { if (showForm) loadProducts(); }, [showForm, loadProducts]);
 
+  // --- Barcode Scanner ---
+  const processProductSearch = useCallback((value: string) => {
+    if (!showForm || !value.trim()) return;
+    const val = value.trim();
+    const valLower = val.toLowerCase();
+
+    // Exact match (barcode or SKU)
+    let variant = products.find(p => 
+      (p.barcode && p.barcode.toLowerCase() === valLower) || 
+      p.sku.toLowerCase() === valLower
+    );
+    // Prepend '0' (scanner fix)
+    if (!variant) {
+      const v0 = '0' + val;
+      variant = products.find(p => p.barcode === v0 || p.sku === v0);
+    }
+    // Name search fallback — only if single result
+    if (!variant) {
+      const nameMatches = products.filter(p => 
+        p.stockOnHand > 0 && p.productName.toLowerCase().includes(valLower)
+      );
+      if (nameMatches.length === 1) variant = nameMatches[0];
+    }
+
+    if (variant) {
+      if (variant.stockOnHand <= 0) {
+        setScannerMessage(`❌ "${variant.productName}" — نفذ المخزون`);
+      } else {
+        const existing = cart.find(i => i.product.id === variant!.id);
+        if (existing && existing.quantity >= variant.stockOnHand) {
+          setScannerMessage(`⚠️ "${variant.productName}" — الكمية القصوى (${variant.stockOnHand})`);
+        } else {
+          addToCart(variant);
+          setScannerMessage(`✅ ${variant.productName}`);
+        }
+      }
+    } else {
+      setScannerMessage(`❌ لا يوجد تطابق: ${val}`);
+    }
+
+    setProductSearch(''); // CLEAR INPUT
+    setTimeout(() => setScannerMessage(null), 2500);
+    // Refocus search input
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  }, [products, cart, showForm]);
+
+  useBarcodeScanner({ onScan: processProductSearch, threshold: 50, minLength: 3 });
+
+  // --- Confirm Order ---
   const handleConfirm = async (orderId: number) => {
     if (!window.evaApi || !token) return;
+    const ok = await confirmDialog({
+      title: 'تأكيد الطلب',
+      message: 'سيتم خصم المخزون وإنشاء عملية بيع جديدة. هل تريد المتابعة؟',
+      confirmText: 'تأكيد',
+      cancelText: 'إلغاء',
+    });
+    if (!ok) return;
     setActionLoading(orderId);
-    try { await window.evaApi.onlineOrders.confirm(token, orderId, exchangeRate); await loadOrders(); }
-    catch (err) { alert(err instanceof Error ? err.message : 'Failed'); }
-    finally { setActionLoading(null); }
+    try {
+      const result = await window.evaApi.onlineOrders.confirm(token, orderId, exchangeRate);
+      toast.success(`تم تأكيد الطلب #${orderId} — عملية بيع #${result.saleId}`);
+      await loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'فشل التأكيد');
+    } finally { setActionLoading(null); }
   };
 
+  // --- Reject Order ---
   const handleReject = async (orderId: number) => {
     if (!window.evaApi || !token) return;
     setActionLoading(orderId);
     try {
       await window.evaApi.onlineOrders.reject(token, orderId, rejectReason || undefined);
-      setRejectingId(null); setRejectReason(''); await loadOrders();
-    } catch (err) { alert(err instanceof Error ? err.message : 'Failed'); }
-    finally { setActionLoading(null); }
+      setRejectingId(null); setRejectReason('');
+      toast.success(`تم رفض الطلب #${orderId}`);
+      await loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'فشل الرفض');
+    } finally { setActionLoading(null); }
   };
 
+  // --- Cart Logic with Stock Validation ---
   const addToCart = (p: Product) => {
     setCart((prev) => {
       const ex = prev.find((i) => i.product.id === p.id);
-      if (ex) return prev.map((i) => i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      if (ex) {
+        if (ex.quantity >= p.stockOnHand) {
+          toast.warning(`الكمية القصوى المتاحة: ${p.stockOnHand}`);
+          return prev;
+        }
+        return prev.map((i) => i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      if (p.stockOnHand <= 0) {
+        toast.warning(`"${p.productName}" نفذ المخزون`);
+        return prev;
+      }
       return [...prev, { product: p, quantity: 1, unitPrice: p.salePriceIQD }];
     });
   };
 
   const updateQty = (id: number, q: number) => {
     if (q <= 0) setCart((prev) => prev.filter((i) => i.product.id !== id));
-    else setCart((prev) => prev.map((i) => i.product.id === id ? { ...i, quantity: q } : i));
+    else {
+      setCart((prev) => prev.map((i) => {
+        if (i.product.id !== id) return i;
+        if (q > i.product.stockOnHand) {
+          toast.warning(`الكمية القصوى: ${i.product.stockOnHand}`);
+          return { ...i, quantity: i.product.stockOnHand };
+        }
+        return { ...i, quantity: q };
+      }));
+    }
   };
 
   const updatePrice = (id: number, price: number) =>
@@ -115,10 +216,23 @@ const OnlineOrdersPage = (): JSX.Element => {
 
   const cartSubtotal = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const cartTotal = Math.max(cartSubtotal - formDiscount, 0);
+  
+  // Calculate Profit
+  const cartCost = cart.reduce((s, i) => s + (i.product.avgCostUSD || 0) * exchangeRate * i.quantity, 0);
+  const cartProfit = cartTotal - cartCost;
 
+  // --- Submit ---
   const handleSubmit = async () => {
     if (!window.evaApi || !token || !user) return;
-    if (cart.length === 0) { setFormError('Add at least one item'); return; }
+    if (cart.length === 0) { setFormError('أضف منتج واحد على الأقل'); return; }
+
+    // Stock validation
+    const overstock = cart.find(i => i.quantity > i.product.stockOnHand);
+    if (overstock) {
+      setFormError(`"${overstock.product.productName}" — الكمية (${overstock.quantity}) تتجاوز المخزون (${overstock.product.stockOnHand})`);
+      return;
+    }
+
     setSubmitting(true); setFormError(null);
     try {
       await window.evaApi.onlineOrders.create(token, {
@@ -130,6 +244,7 @@ const OnlineOrdersPage = (): JSX.Element => {
       });
       setShowForm(false); setCart([]); setFormCustomerName(''); setFormCustomerPhone('');
       setFormNote(''); setFormDiscount(0); setProductSearch('');
+      toast.success('تم إنشاء الطلب بنجاح');
       await loadOrders();
     } catch (err) { setFormError(err instanceof Error ? err.message : 'Failed'); }
     finally { setSubmitting(false); }
@@ -158,18 +273,19 @@ const OnlineOrdersPage = (): JSX.Element => {
         {(['all', 'pending', 'confirmed', 'rejected'] as const).map((s) => (
           <button key={s} className={`OO-tab ${statusFilter === s ? 'OO-tab--active' : ''}`} onClick={() => setStatusFilter(s)}>
             {s === 'all' ? 'الكل' : STATUS_CFG[s as OnlineOrderStatus].label}
+            <span className="OO-tab-count">{counts[s]}</span>
           </button>
         ))}
       </div>
 
       {loading && <div className="OO-loading"><Loader2 size={28} className="spin" /> جاري التحميل…</div>}
       {error && <div className="OO-error">{error}</div>}
-      {!loading && orders.length === 0 && (
+      {!loading && filteredOrders.length === 0 && (
         <div className="OO-empty"><Package size={48} /><p>لا توجد طلبات بعد</p></div>
       )}
 
       <div className="OO-list">
-        {orders.map((order) => {
+        {filteredOrders.map((order) => {
           const cfg = STATUS_CFG[order.status];
           const expanded = expandedId === order.id;
           return (
@@ -243,107 +359,156 @@ const OnlineOrdersPage = (): JSX.Element => {
 
       {showForm && (
         <div className="OO-overlay" onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
-          <div className="OO-modal">
+          <div className="OO-modal OO-modal--large">
             <div className="OO-modal-header">
               <h2>طلب جديد أونلاين</h2>
               <button className="OO-closeBtn" onClick={() => setShowForm(false)}><X size={20} /></button>
             </div>
-            <div className="OO-modal-body">
-              <div className="OO-formSection">
-                <h3>العميل والمصدر</h3>
-                <div className="OO-formRow">
-                  <label>الاسم<input value={formCustomerName} onChange={(e) => setFormCustomerName(e.target.value)} placeholder="اسم العميل" /></label>
-                  <label>الهاتف<input value={formCustomerPhone} onChange={(e) => setFormCustomerPhone(e.target.value)} placeholder="07xx-xxx-xxxx" /></label>
+            
+            <div className="OO-modal-body OO-modal-split">
+              {/* Right Side: Cart & Total */}
+              <div className="OO-modal-split-cart">
+                <div className="OO-formSection OO-cartSection">
+                  <h3>عناصر الطلب ({cart.reduce((s, i) => s + i.quantity, 0)} منتج)</h3>
+                  
+                  {cart.length === 0 ? (
+                    <div className="OO-emptyCart">
+                      <Package size={48} />
+                      <p>السلة فارغة</p>
+                      <span>امسح منتجات لإضافتها للطلب</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="OO-cartTableWrap">
+                        <table className="OO-cartTable">
+                          <thead><tr><th>المنتج</th><th>النوع</th><th>الكمية</th><th>سعر الوحدة</th><th>المجموع</th><th></th></tr></thead>
+                          <tbody>
+                            {cart.map((item) => (
+                              <tr key={item.product.id}>
+                                <td>
+                                  <div className="OO-cartProductName">{item.product.productName}</div>
+                                  <div className="OO-cartProductSku">{item.product.sku}</div>
+                                </td>
+                                <td className="OO-cartVariant">{[item.product.color, item.product.size].filter(Boolean).join(' / ') || '—'}</td>
+                                <td>
+                                  <div className="OO-qtyWrapper">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={item.product.stockOnHand}
+                                      value={item.quantity}
+                                      onChange={(e) => updateQty(item.product.id, Number(e.target.value))}
+                                      className={`OO-qtyInput ${item.quantity > item.product.stockOnHand ? 'OO-qtyInput--exceeded' : ''}`}
+                                    />
+                                  </div>
+                                </td>
+                                <td>
+                                  <input type="number" min={0} value={item.unitPrice} onChange={(e) => updatePrice(item.product.id, Number(e.target.value))} className="OO-priceInput" />
+                                </td>
+                                <td className="OO-cartLineTotal">{(item.unitPrice * item.quantity).toLocaleString('en-IQ')}</td>
+                                <td>
+                                  <button className="OO-removeBtn" onClick={() => updateQty(item.product.id, 0)} title="حذف">
+                                    <X size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="OO-cartSummary">
+                        <div className="OO-cartSummary-left">
+                          <div className="OO-profitRow">
+                            الربح المتوقع: <span className={cartProfit >= 0 ? 'OO-profit-positive' : 'OO-profit-negative'}>{cartProfit.toLocaleString('en-IQ')} د.ع</span>
+                          </div>
+                        </div>
+                        <div className="OO-cartSummary-right">
+                          <div className="OO-discountRow">
+                            <label>الخصم:</label>
+                            <input type="number" min={0} value={formDiscount} onChange={(e) => setFormDiscount(Number(e.target.value))} className="OO-discountInput" placeholder="0" />
+                          </div>
+                          <div className="OO-totalRow">
+                            المجموع النهائي <strong>{cartTotal.toLocaleString('en-IQ')} د.ع</strong>
+                            {formDiscount > 0 && <span className="OO-subtotalHint">({cartSubtotal.toLocaleString('en-IQ')} - خصم)</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="OO-formRow">
-                  <label>المصدر
-                    <select value={formSource} onChange={(e) => setFormSource(e.target.value as OnlineOrderSource)}>
-                      <option value="instagram">Instagram</option>
-                      <option value="tiktok">TikTok</option>
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="phone">Phone</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label>ملاحظة<input value={formNote} onChange={(e) => setFormNote(e.target.value)} placeholder="العنوان، طلبات خاصة…" /></label>
+
+                <div className="OO-modal-actions">
+                  <button className="OO-btn OO-btn--ghost" onClick={() => setShowForm(false)}>إلغاء</button>
+                  <button className="OO-btn OO-btn--confirm OO-btn--block" disabled={submitting || cart.length === 0} onClick={handleSubmit}>
+                    {submitting ? <Loader2 size={16} className="spin" /> : <Plus size={16} />} حفظ كطلب قيد الانتظار
+                  </button>
                 </div>
               </div>
 
-              <div className="OO-formSection">
-                <h3>إضافة منتجات</h3>
-                <div className="OO-productSearch">
-                  <Search size={16} />
-                  <input 
-                    placeholder="البحث بالاسم أو الرمز…" 
-                    value={productSearch} 
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = (e.target as HTMLInputElement).value.toLowerCase().trim();
-                        const exactMatch = products.find(p => 
-                          (p.barcode && p.barcode.toLowerCase() === val) || 
-                          p.sku.toLowerCase() === val
-                        );
-                        if (exactMatch) {
-                          addToCart(exactMatch);
-                          setProductSearch('');
-                        } else if (filteredProducts.length === 1) {
-                          addToCart(filteredProducts[0]);
-                          setProductSearch('');
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="OO-productGrid">
-                  {filteredProducts.slice(0, 40).map((p) => (
-                    <button key={p.id} className="OO-productCard" onClick={() => addToCart(p)}>
-                      <span className="OO-productName">{p.productName}</span>
-                      {(p.color || p.size) && <span className="OO-productVariant">{[p.color, p.size].filter(Boolean).join(' / ')}</span>}
-                      <span className="OO-productPrice">{p.salePriceIQD.toLocaleString('en-IQ')} د.ع</span>
-                      <span className="OO-productStock">المخزون: {p.stockOnHand}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {cart.length > 0 && (
+              {/* Left Side: Adding & Customer */}
+              <div className="OO-modal-split-form">
                 <div className="OO-formSection">
-                  <h3>عناصر الطلب</h3>
-                  <table className="OO-cartTable">
-                    <thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>المجموع</th><th></th></tr></thead>
-                    <tbody>
-                      {cart.map((item) => (
-                        <tr key={item.product.id}>
-                          <td>{item.product.productName}{item.product.color ? ` / ${item.product.color}` : ''}{item.product.size ? ` / ${item.product.size}` : ''}</td>
-                          <td><input type="number" min={1} max={item.product.stockOnHand} value={item.quantity} onChange={(e) => updateQty(item.product.id, Number(e.target.value))} className="OO-qtyInput" /></td>
-                          <td><input type="number" min={0} value={item.unitPrice} onChange={(e) => updatePrice(item.product.id, Number(e.target.value))} className="OO-priceInput" /></td>
-                          <td>{(item.unitPrice * item.quantity).toLocaleString('en-IQ')}</td>
-                          <td><button className="OO-removeBtn" onClick={() => updateQty(item.product.id, 0)}><X size={14} /></button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="OO-cartSummary">
-                    <div className="OO-discountRow">
-                      <label>الخصم (د.ع):</label>
-                      <input type="number" min={0} value={formDiscount} onChange={(e) => setFormDiscount(Number(e.target.value))} className="OO-discountInput" />
+                  <h3>إضافة منتجات</h3>
+
+                  <div className="OO-scanBar">
+                    <div className="OO-scanBar-icon"><Search size={20} /></div>
+                    <input 
+                      ref={searchInputRef}
+                      placeholder="امسح الباركود أو اكتب رقم المنتج واضغط Enter…" 
+                      value={productSearch} 
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      autoFocus
+                      data-barcode-input
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (val) processProductSearch(val);
+                        }
+                      }}
+                    />
+                    {productSearch && (
+                      <button className="OO-scanBar-clear" onClick={() => { setProductSearch(''); searchInputRef.current?.focus(); }}>
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {scannerMessage && (
+                    <div className={`OO-scannerFeedback ${scannerMessage.startsWith('✅') ? 'OO-scannerFeedback--success' : scannerMessage.startsWith('⚠') ? 'OO-scannerFeedback--warning' : 'OO-scannerFeedback--error'}`}>
+                      {scannerMessage}
                     </div>
-                    <div className="OO-totalRow">
-                      {cartSubtotal.toLocaleString('en-IQ')}{formDiscount > 0 ? ` − ${formDiscount.toLocaleString('en-IQ')}` : ''} = <strong>{cartTotal.toLocaleString('en-IQ')} د.ع</strong>
+                  )}
+
+                  {!scannerMessage && (
+                    <div className="OO-scanHint">
+                      <Package size={32} />
+                      <p>امسح الباركود للإضافة السريعة</p>
+                      <span>سيتم تجميع الكميات تلقائياً</span>
                     </div>
+                  )}
+                </div>
+
+                <div className="OO-formSection">
+                  <h3>العميل والمصدر</h3>
+                  <div className="OO-formCol">
+                    <label>الاسم<input value={formCustomerName} onChange={(e) => setFormCustomerName(e.target.value)} placeholder="اسم العميل" /></label>
+                    <label>الهاتف<input value={formCustomerPhone} onChange={(e) => setFormCustomerPhone(e.target.value)} placeholder="07xx-xxx-xxxx" /></label>
+                    <label>المصدر
+                      <select value={formSource} onChange={(e) => setFormSource(e.target.value as OnlineOrderSource)}>
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="phone">Phone</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label>ملاحظة<input value={formNote} onChange={(e) => setFormNote(e.target.value)} placeholder="العنوان، طلبات خاصة…" /></label>
                   </div>
                 </div>
-              )}
-              {formError && <div className="OO-formError">{formError}</div>}
-            </div>
-            <div className="OO-modal-footer">
-              <button className="OO-btn OO-btn--ghost" onClick={() => setShowForm(false)}>إلغاء</button>
-              <button className="OO-btn OO-btn--confirm" disabled={submitting || cart.length === 0} onClick={handleSubmit}>
-                {submitting ? <Loader2 size={16} className="spin" /> : <Plus size={16} />} حفظ كطلب قيد الانتظار
-              </button>
+
+                {formError && <div className="OO-formError">{formError}</div>}
+              </div>
             </div>
           </div>
         </div>

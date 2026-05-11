@@ -16,13 +16,14 @@
   border: none; border-radius: 0.75rem;
   padding: 0.65rem 1.25rem; font-weight: 600; cursor: pointer;
   white-space: nowrap; font-size: 0.9rem;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.15s;
 }
-.OO-newBtn:hover { opacity: 0.85; }
+.OO-newBtn:hover { opacity: 0.85; transform: translateY(-1px); }
 
 /* Tabs */
 .OO-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .OO-tab {
+  display: flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 1rem; border-radius: 0.5rem;
   border: 1px solid var(--border-color, rgba(255,255,255,0.1));
   background: transparent; color: var(--text-secondary); cursor: pointer;
@@ -30,6 +31,14 @@
 }
 .OO-tab--active { background: var(--primary-color, #2563eb); color: #fff; border-color: transparent; font-weight: 600; }
 .OO-tab:hover:not(.OO-tab--active) { background: var(--bg-hover, rgba(255,255,255,0.05)); }
+
+.OO-tab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px;
+  border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+  background: rgba(255,255,255,0.15); padding: 0 0.35rem;
+}
+.OO-tab--active .OO-tab-count { background: rgba(255,255,255,0.25); }
 
 /* States */
 .OO-loading, .OO-empty {
@@ -47,9 +56,9 @@
   border: 1px solid var(--border-color, rgba(255,255,255,0.1));
   background: var(--bg-secondary, rgba(255,255,255,0.04));
   overflow: hidden;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, transform 0.15s;
 }
-.OO-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.OO-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); transform: translateY(-1px); }
 .OO-card--pending { border-left: 3px solid #f59e0b; }
 .OO-card--confirmed { border-left: 3px solid #22c55e; }
 .OO-card--rejected { border-left: 3px solid #ef4444; }
@@ -99,8 +108,9 @@
   display: inline-flex; align-items: center; gap: 0.4rem;
   padding: 0.55rem 1rem; border-radius: 0.6rem; border: none;
   font-size: 0.875rem; font-weight: 600; cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.1s;
 }
+.OO-btn:active:not(:disabled) { transform: scale(0.97); }
 .OO-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .OO-btn--confirm { background: rgba(34,197,94,0.2); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
 .OO-btn--confirm:hover:not(:disabled) { background: rgba(34,197,94,0.35); }
@@ -111,7 +121,25 @@
 .OO-btn--ghost   { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color, rgba(255,255,255,0.15)); }
 .OO-btn--ghost:hover { background: var(--bg-hover, rgba(255,255,255,0.05)); }
 
-/* Modal */
+/* Scanner Feedback */
+.OO-scannerFeedback {
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  animation: OO-slideIn 0.2s ease-out;
+}
+.OO-scannerFeedback--success { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.OO-scannerFeedback--warning { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+.OO-scannerFeedback--error   { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+@keyframes OO-slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal & Split Layout */
 .OO-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
   display: flex; align-items: center; justify-content: center; padding: 1rem;
@@ -119,72 +147,216 @@
 .OO-modal {
   background: var(--bg-secondary, #1e1e2e);
   border-radius: 1.25rem; width: 100%; max-width: 900px;
-  max-height: 90vh; display: flex; flex-direction: column;
+  height: 85vh; /* Fixed height for POS layout */
+  display: flex; flex-direction: column;
   box-shadow: 0 24px 80px rgba(0,0,0,0.5);
   border: 1px solid var(--border-color, rgba(255,255,255,0.1));
 }
+.OO-modal--large { max-width: 1100px; }
+
 .OO-modal-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07));
+  flex-shrink: 0;
 }
 .OO-modal-header h2 { margin: 0; font-size: 1.2rem; }
 .OO-closeBtn { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.25rem; border-radius: 0.4rem; }
 .OO-closeBtn:hover { background: rgba(255,255,255,0.08); }
-.OO-modal-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.OO-modal-footer {
-  display: flex; justify-content: flex-end; gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color, rgba(255,255,255,0.07));
+
+.OO-modal-body { 
+  flex: 1; 
+  padding: 1.5rem; 
+  display: flex; 
+  flex-direction: column;
+  overflow: hidden; /* Prevent full body scrolling */
 }
 
-.OO-formSection h3 { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
-.OO-formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
-.OO-formRow label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; color: var(--text-secondary); }
-.OO-formRow input, .OO-formRow select {
-  padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+.OO-modal-split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  align-items: stretch;
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .OO-modal-split { grid-template-columns: 1fr; overflow-y: auto; }
+}
+
+.OO-modal-split-cart {
+  display: flex; flex-direction: column; gap: 1rem;
+  background: var(--bg-primary);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  padding: 1.5rem;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
+  overflow: hidden; /* Keep content inside */
+}
+
+.OO-modal-split-form {
+  display: flex; flex-direction: column; gap: 1.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0; /* padding for scrollbar */
+  overflow-y: auto; /* Form column can scroll if small screen */
+}
+
+.OO-modal-actions {
+  display: flex; gap: 0.75rem; justify-content: flex-end;
+  padding-top: 1rem;
+  margin-top: auto; /* Push to bottom if cart is short */
+  border-top: 1px dashed var(--border-color, rgba(255,255,255,0.1));
+}
+.OO-btn--block { flex: 1; justify-content: center; padding: 0.8rem; font-size: 1rem; }
+
+/* Forms */
+.OO-formSection h3 { margin: 0 0 1rem; font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+
+.OO-formCol { display: flex; flex-direction: column; gap: 1rem; }
+.OO-formCol label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+.OO-formCol input, .OO-formCol select {
+  padding: 0.7rem 0.85rem; border-radius: 0.5rem;
   border: 1px solid var(--border-color, rgba(255,255,255,0.15));
-  background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;
+  background: var(--bg-primary); color: var(--text-primary); font-size: 0.95rem;
+  transition: all 0.2s;
+}
+.OO-formCol input:focus, .OO-formCol select:focus { 
+  border-color: var(--primary-color, #2563eb); outline: none; 
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
-.OO-productSearch {
-  display: flex; align-items: center; gap: 0.5rem;
-  background: var(--bg-primary); border: 1px solid var(--border-color, rgba(255,255,255,0.1));
-  border-radius: 0.6rem; padding: 0.4rem 0.75rem; margin-bottom: 0.75rem;
+/* Scan Bar */
+.OO-scanBar {
+  display: flex; align-items: center; gap: 0;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color, rgba(255,255,255,0.12));
+  border-radius: 0.85rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.OO-scanBar:focus-within {
+  border-color: var(--primary-color, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+.OO-scanBar-icon {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.75rem 0.85rem;
   color: var(--text-secondary);
+  flex-shrink: 0;
 }
-.OO-productSearch input { border: none; background: transparent; color: var(--text-primary); flex: 1; outline: none; font-size: 0.9rem; }
-
-.OO-productGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; max-height: 220px; overflow-y: auto; }
-.OO-productCard {
-  display: flex; flex-direction: column; gap: 0.15rem;
-  background: var(--bg-primary); border: 1px solid var(--border-color, rgba(255,255,255,0.08));
-  border-radius: 0.6rem; padding: 0.6rem 0.75rem; text-align: left; cursor: pointer;
-  transition: all 0.15s;
+.OO-scanBar:focus-within .OO-scanBar-icon { color: var(--primary-color, #2563eb); }
+.OO-scanBar input {
+  border: none; background: transparent; color: var(--text-primary);
+  flex: 1; outline: none; font-size: 1rem; padding: 0.75rem 0;
+  font-weight: 500;
 }
-.OO-productCard:hover { border-color: var(--primary-color, #2563eb); background: rgba(37,99,235,0.08); }
-.OO-productName { font-weight: 600; font-size: 0.82rem; color: var(--text-primary); line-height: 1.3; }
-.OO-productVariant { font-size: 0.75rem; color: var(--text-secondary); }
-.OO-productPrice { font-weight: 700; font-size: 0.85rem; color: var(--primary-color, #2563eb); }
-.OO-productStock { font-size: 0.72rem; color: var(--text-secondary); }
+.OO-scanBar input::placeholder { color: var(--text-secondary); font-weight: 400; }
+.OO-scanBar-clear {
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--text-secondary);
+  cursor: pointer; padding: 0.75rem; border-radius: 0;
+  transition: color 0.15s;
+}
+.OO-scanBar-clear:hover { color: #f87171; }
 
-.OO-cartTable { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.OO-cartTable th { padding: 0.4rem 0.5rem; text-align: left; color: var(--text-secondary); font-size: 0.8rem; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07)); }
-.OO-cartTable td { padding: 0.5rem 0.5rem; }
+/* Scan Hint (empty state) */
+.OO-scanHint, .OO-emptyCart {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  color: var(--text-secondary);
+  border: 2px dashed var(--border-color, rgba(255,255,255,0.1));
+  border-radius: 1rem;
+  text-align: center;
+  background: rgba(255,255,255,0.01);
+}
+.OO-scanHint p, .OO-emptyCart p { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+.OO-scanHint span, .OO-emptyCart span { font-size: 0.85rem; opacity: 0.7; }
+
+
+/* Cart Section */
+.OO-cartSection {
+  display: flex; flex-direction: column; flex: 1;
+}
+.OO-cartSection h3 { margin-bottom: 1.25rem; }
+
+.OO-cartTableWrap {
+  overflow-x: auto;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  margin-bottom: 1.5rem;
+  background: var(--bg-secondary, rgba(255,255,255,0.02));
+}
+
+.OO-cartTable { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: right; }
+.OO-cartTable th { 
+  padding: 0.75rem 0.85rem; 
+  color: var(--text-secondary); font-size: 0.8rem; 
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08)); 
+  font-weight: 600;
+}
+.OO-cartTable td { padding: 0.85rem; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.OO-cartTable tr:last-child td { border-bottom: none; }
+
+.OO-cartProductName { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
+.OO-cartProductSku { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; font-family: monospace; }
+.OO-cartVariant { font-size: 0.85rem; color: var(--text-secondary); }
+.OO-cartLineTotal { font-weight: 700; color: var(--text-primary); font-size: 1rem; }
+
+.OO-qtyWrapper { display: flex; align-items: center; }
 .OO-qtyInput, .OO-priceInput {
-  width: 80px; padding: 0.3rem 0.5rem; border-radius: 0.4rem;
+  width: 90px; padding: 0.5rem; border-radius: 0.5rem;
   border: 1px solid var(--border-color, rgba(255,255,255,0.15));
   background: var(--bg-primary); color: var(--text-primary); text-align: center;
+  transition: all 0.2s; font-weight: 600; font-size: 0.95rem;
 }
-.OO-removeBtn { background: none; border: none; color: #f87171; cursor: pointer; padding: 0.25rem; border-radius: 0.3rem; }
-.OO-removeBtn:hover { background: rgba(239,68,68,0.15); }
+.OO-qtyInput:focus, .OO-priceInput:focus { 
+  border-color: var(--primary-color, #2563eb); 
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  outline: none;
+}
+.OO-qtyInput--exceeded { border-color: #ef4444 !important; background: rgba(239,68,68,0.08); color: #f87171; }
+.OO-removeBtn { 
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #f87171; 
+  cursor: pointer; padding: 0.4rem; border-radius: 0.4rem; 
+  transition: all 0.15s; opacity: 0.6;
+}
+.OO-removeBtn:hover { background: rgba(239,68,68,0.15); opacity: 1; transform: scale(1.05); }
 
-.OO-cartSummary { margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-.OO-discountRow { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
-.OO-discountInput { width: 120px; padding: 0.3rem 0.5rem; border-radius: 0.4rem; border: 1px solid var(--border-color, rgba(255,255,255,0.15)); background: var(--bg-primary); color: var(--text-primary); }
-.OO-totalRow { font-size: 0.95rem; }
-.OO-totalRow strong { font-size: 1.1rem; color: var(--primary-color, #2563eb); }
-.OO-formError { background: rgba(239,68,68,0.15); color: #f87171; border-radius: 0.6rem; padding: 0.75rem; font-size: 0.875rem; }
+.OO-cartSummary { 
+  display: flex; justify-content: space-between; align-items: flex-end; 
+  flex-wrap: wrap; gap: 1rem;
+  padding: 1rem; background: rgba(255,255,255,0.02);
+  border-radius: 0.85rem; border: 1px solid var(--border-color, rgba(255,255,255,0.05));
+}
+.OO-cartSummary-left { display: flex; flex-direction: column; gap: 0.5rem; }
+.OO-cartSummary-right { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-end; }
+
+.OO-profitRow {
+  font-size: 0.9rem; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--bg-primary); padding: 0.5rem 0.85rem; border-radius: 0.6rem;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.05));
+}
+.OO-profit-positive { color: #22c55e; font-weight: 700; font-size: 1rem; }
+.OO-profit-negative { color: #ef4444; font-weight: 700; font-size: 1rem; }
+
+.OO-discountRow { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); }
+.OO-discountInput { 
+  width: 130px; padding: 0.5rem 0.6rem; border-radius: 0.5rem; 
+  border: 1px solid var(--border-color, rgba(255,255,255,0.15)); 
+  background: var(--bg-primary); color: var(--text-primary); 
+  font-size: 0.95rem; transition: border-color 0.2s;
+}
+.OO-discountInput:focus { border-color: var(--primary-color, #2563eb); outline: none; }
+.OO-totalRow { 
+  font-size: 1.1rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-secondary);
+}
+.OO-totalRow strong { font-size: 1.5rem; color: var(--primary-color, #2563eb); }
+.OO-subtotalHint { font-size: 0.85rem; opacity: 0.7; }
+.OO-formError { background: rgba(239,68,68,0.15); color: #f87171; border-radius: 0.6rem; padding: 0.75rem; font-size: 0.875rem; margin-top: 1rem; }
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

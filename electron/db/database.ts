@@ -3028,12 +3028,33 @@ export async function listOnlineOrders(status?: string): Promise<OnlineOrder[]> 
     status ? [status] : [],
   );
 
-  const orders: OnlineOrder[] = [];
-  for (const row of rows) {
-    const itemRows = await fetchOnlineOrderItems(row.id);
-    orders.push(mapOnlineOrderRow(row, itemRows));
+  if (rows.length === 0) return [];
+
+  // Bulk-fetch all items for these orders in one query
+  const orderIds = rows.map(r => r.id);
+  const placeholders = orderIds.map(() => '?').join(',');
+  const allItemRows = await all<any>(
+    `SELECT oi.*,
+            p.name AS productName,
+            pv.color,
+            pv.size,
+            pv.sku
+     FROM online_order_items oi
+     JOIN product_variants pv ON pv.id = oi.variantId
+     JOIN products p ON p.id = pv.productId
+     WHERE oi.orderId IN (${placeholders})`,
+    orderIds,
+  );
+
+  // Group items by orderId
+  const itemsByOrder = new Map<number, any[]>();
+  for (const item of allItemRows) {
+    const list = itemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.orderId, list);
   }
-  return orders;
+
+  return rows.map(row => mapOnlineOrderRow(row, itemsByOrder.get(row.id) ?? []));
 }
 
 export async function createOnlineOrder(
