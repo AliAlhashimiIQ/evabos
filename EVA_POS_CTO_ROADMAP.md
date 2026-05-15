@@ -1,57 +1,47 @@
 # EVA POS — CTO Execution Roadmap
-### Version 2.0.8 → Production-Ready Commercial Release
+### Version 3.0.2 → Commercial Public Release
 
-> **Audit Date:** May 8, 2026  
-> **Audited By:** Antigravity Deep Codebase Analysis  
-> **Codebase:** Electron 28 + React 18 + SQLite3 + TypeScript  
-> **Total Files Audited:** ~120 source files across electron/, renderer/, and config  
-> **Database Layer:** 3,868 lines in a single `database.ts` monolith (113 KB)
+> **Audit Date:** May 15, 2026
+> **Audited By:** Antigravity Deep Codebase Analysis (Second Audit)
+> **Codebase:** Electron 28 + React 18 + SQLite3 + TypeScript
+> **Total Files Audited:** ~140 source files across electron/, renderer/, and config
+> **Database Layer:** 3,327 lines in `database.ts` (98 KB) + 22 KB `core.ts`
 
 ---
 
 ## Executive Summary
 
-EVA POS is a functional, feature-rich desktop POS system already in production use. However, the architecture has several critical single-points-of-failure that **will** cause data loss or security breaches at scale. This roadmap prioritizes stabilization and security before any new features.
+EVA POS has matured significantly since the first audit (v2.0.8). **Phases 1 and 4 are fully complete**, and significant progress has been made on Phase 3. The system is stable for daily use with crash prevention, data integrity, and transactional safety all resolved. However, **Phase 2 (Security) remains almost entirely untouched**, which is the single biggest blocker for a public commercial release. This updated roadmap reflects the current reality and prioritizes what must be done before going public.
 
-```mermaid
-gantt
-    title EVA POS — Release Timeline
-    dateFormat  YYYY-MM-DD
-    section Critical
-    Phase 1 - Crash Prevention     :crit, p1, 2026-05-10, 14d
-    Phase 2 - Security Hardening   :crit, p2, after p1, 14d
-    section Foundation
-    Phase 3 - Architecture Cleanup :p3, after p2, 21d
-    Phase 4 - Data Integrity       :p4, after p3, 14d
-    section Product
-    Phase 5 - UX & Polish          :p5, after p4, 21d
-    Phase 6 - Production Readiness :p6, after p5, 14d
-    section Growth
-    Phase 7 - Intelligence & Scale :p7, after p6, 30d
+### What's Changed Since Last Audit
+| Area | Before (v2.0.8) | Now (v3.0.2) |
+|------|-----------------|--------------|
+| **Crash Prevention** | No error boundary, no transaction safety | ✅ ErrorBoundary, all IPC try/catch, transactions |
+| **Database** | 3,868 lines, no indexes, no WAL | ✅ WAL enabled, indexes added, core.ts extracted |
+| **Reports** | Basic — 1 tab | ✅ 7 tabs: Overview, Sales, Monthly, Inventory, Financial, Customers, Activity |
+| **Online Orders** | Create + Confirm/Reject only | ✅ Full CRUD: Create, Edit, Delete, Confirm, Reject |
+| **POS Architecture** | 1,083-line monolith | ✅ Decomposed: useCart, usePosScanner, useFocusRecovery hooks |
+| **Theme Support** | Dark mode only | ✅ Light + Dark mode with CSS variables |
+| **Security** | Hardcoded license key, no auth on settings | ❌ **Unchanged — critical blocker** |
+| **Tests** | 0 tests | ❌ Still 0 tests |
+| **Stale Files** | 27 removed | ⚠️ 3 new stale files crept back in |
+
+```
+RELEASE READINESS:   ██████████████░░░░░░ 70%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Stability      ████████████████████ 100%
+✅ Data Integrity  ████████████████████ 100%
+⚠️ Architecture   ██████████████░░░░░░  70%
+❌ Security       ████░░░░░░░░░░░░░░░░  20%
+⚠️ UX & Polish    ██████████████░░░░░░  65%
+❌ Production Ops ██░░░░░░░░░░░░░░░░░░  10%
 ```
 
 ---
 
 ## Phase 1: Crash Prevention & Runtime Safety ✅ COMPLETE
-**Goal:** Eliminate every crash path a real cashier will hit during a shift.
+**Status: All 7 criteria met. No further action needed.**
 
-### Problems Discovered
-
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **No global error boundary.** Any uncaught React error (like the label black screen) kills the entire app. Cashier loses their cart mid-transaction. | `App.tsx` | 🔴 Critical |
-| 2 | **`database.ts` is 3,868 lines with zero try/catch on 14 raw SQL helper calls.** A corrupt row or schema drift crashes the main process silently. | `database.ts:200-246` | 🔴 Critical |
-| 3 | **Sessions stored only in memory (`activeSessions` Map).** If the main process restarts (auto-update, crash), every logged-in user is force-logged-out with no warning. Cart data is lost. | `database.ts:719` | 🔴 Critical |
-| 4 | **`confirmOnlineOrder` does stock deduction without a transaction wrapper.** A network hiccup mid-confirm leaves stock deducted but no sale recorded. | `database.ts:3777-3848` | 🔴 Critical |
-| 5 | **`PageTransition` uses CSS `transform`, which breaks all `position: fixed` modals inside it.** Already caused the label black screen; any future modal added inside `<Outlet>` will have the same bug. | `PageTransition.tsx` | 🟡 High |
-| 6 | **No validation on `NumberInput` or `CalculatorInput` for NaN/Infinity.** A cashier typing `0/0` or clearing a price field can produce NaN sales that corrupt profit reports. | `CalculatorInput.tsx`, `PosPage.tsx` | 🟡 High |
-
-### Why This Matters
-A POS system that crashes during a sale destroys trust instantly. Iraqi retail shops don't have IT departments — if the app freezes, the cashier calls the owner, and the owner calls you.
-
-### Estimated Difficulty: Medium | Time: ~2 weeks
-
-### Completion Criteria
 - [x] Global `ErrorBoundary` wraps `<Routes>`, shows recovery UI in Arabic
 - [x] All IPC handlers have try/catch with structured error responses
 - [x] `confirmOnlineOrder` wrapped in `BEGIN TRANSACTION / COMMIT / ROLLBACK`
@@ -62,232 +52,252 @@ A POS system that crashes during a sale destroys trust instantly. Iraqi retail s
 
 ---
 
-## Phase 2: Security Hardening
+## Phase 2: Security Hardening ❌ CRITICAL — BLOCKER FOR PUBLIC RELEASE
 **Goal:** Close every door an attacker or curious user could exploit.
+**Status: 0 of 6 criteria met. This is the #1 priority before going public.**
 
-### Problems Discovered
+> [!CAUTION]
+> **Do NOT publish the app publicly until Phase 2 is complete.** The license key is extractable from the binary, settings IPC has no auth, and tokens never expire. Any technically-inclined user can pirate or exploit the app.
 
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **License secret is hardcoded as 4 concatenated strings.** Any user running `strings` on the ASAR can extract `vxH/OXFe6jiiB5/qumKTE8u84m+OiuOy` and generate unlimited license keys. | `licensing.ts:15-19` | 🔴 Critical |
-| 2 | **`db:get-setting` and `db:set-setting` IPC handlers have NO auth check.** Any renderer code (or XSS injection) can read/write ALL settings including `license_key`, `smtp_password`, email config. | `main.ts:158-196` | 🔴 Critical |
-| 3 | **Auth tokens stored in `localStorage`.** Accessible via DevTools or any JS injection. Token never expires — a stolen token works forever. | `AuthContext.tsx:24` | 🟡 High |
-| 4 | **SMTP password encrypted with machine-specific key, but the key derivation uses only public info** (hostname, platform, CPU model, total RAM). An attacker who knows the machine specs can reconstruct the key. | `crypto.ts:22-33` | 🟡 High |
-| 5 | **No rate limiting on login.** Brute-force attacks on the `admin` account are trivially easy. | `database.ts:2472` | 🟡 High |
-| 6 | **`resetDatabase()` is exported and callable.** If any IPC handler exposes this (even accidentally in a future update), all business data is wiped. | `database.ts:3623` | 🟡 High |
-| 7 | **Default admin password `admin123` with `requiresPasswordChange` is easily bypassable** — the user just dismisses the modal. No enforcement at the route level. | `database.ts:627-633` | 🟠 Medium |
+### Current State of Issues
 
-### Why This Matters
-You are selling this software to businesses that store financial data. A single breach = legal liability + complete loss of customer trust. The license key issue alone means anyone can pirate your software.
-
-### Estimated Difficulty: High | Time: ~2 weeks
+| # | Issue | Status | Priority |
+|---|-------|--------|----------|
+| 1 | License secret hardcoded as concatenated strings in `licensing.ts` | ❌ OPEN | 🔴 Critical |
+| 2 | `db:get-setting` / `db:set-setting` have NO auth check in `main.ts` | ❌ OPEN | 🔴 Critical |
+| 3 | Auth tokens in `localStorage`, never expire | ❌ OPEN | 🟡 High |
+| 4 | SMTP password encryption uses only public machine info | ❌ OPEN | 🟡 High |
+| 5 | No login rate limiting — brute force trivially easy | ❌ OPEN | 🟡 High |
+| 6 | `resetDatabase()` exported and callable | ❌ OPEN | 🟡 High |
+| 7 | Default admin password bypass | ❌ OPEN | 🟠 Medium |
 
 ### Completion Criteria
-- [ ] License validation moved to a server-side check (even a simple Firebase function)
+- [ ] License validation moved to server-side check (even a simple Firebase/Supabase function)
 - [ ] ALL `db:*` and `app:*` IPC handlers require a valid session token
 - [ ] Token expiry implemented (24h rolling window)
 - [ ] Login rate limiting (5 attempts, then 60s lockout)
 - [ ] `resetDatabase` removed from exports or gated behind admin + confirmation code
 - [ ] Password change enforced at router level (redirect until changed)
 
+### Estimated Difficulty: High | Time: ~2 weeks
+
 ---
 
-## Phase 3: Architecture Cleanup
-**Goal:** Make the codebase maintainable by a team, not just one developer.
+## Phase 3: Architecture Cleanup ⚠️ IN PROGRESS (70%)
+**Goal:** Make the codebase maintainable by a team.
 
-### Problems Discovered
+### What's Been Done
+- [x] `database.ts` split: `db/core.ts` (22 KB) extracted — infrastructure, schema, helpers
+- [x] `PosPage` decomposed: `useCart` hook, `usePosScanner` hook, `useFocusRecovery` hook
+- [x] 18 IPC handlers modularized into separate files under `electron/ipc/`
+- [x] Reports decomposed into 7 separate tab components
+- [x] 27+ stale files removed from root
 
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **`database.ts` is a 3,868-line God Object.** Auth, sales, inventory, reports, customers, branches, online orders, expenses, returns — all in one file. Any change risks breaking unrelated features. | `database.ts` | 🟡 High |
-| 2 | **`preload.ts` is 192 lines of manually maintained API surface.** Every new IPC channel requires editing 3 files (handler, preload, type definition). High chance of drift. | `preload.ts` | 🟠 Medium |
-| 3 | **`PosPage.tsx` is 1,083 lines.** Cart logic, customer selection, payment flow, discount calculation, barcode scanning, keyboard shortcuts — all coupled together. | `PosPage.tsx` | 🟠 Medium |
-| 4 | **`PrintingModal.tsx` is 996 lines.** Receipt template HTML, print logic, printer selection, auto-print, preview — all in one component. | `PrintingModal.tsx` | 🟠 Medium |
-| 5 | **`ReportsPage.tsx` is 38,012 bytes** with inline chart rendering. No code splitting. | `ReportsPage.tsx` | 🟠 Medium |
-| 6 | **No test files exist.** Zero unit tests, zero integration tests. The `vitest` and `playwright` devDependencies are unused. | `package.json` | 🟡 High |
-| 7 | **14 stale markdown files** in root (`FIXES_APPLIED.md`, `lint_errors.txt`, `build_error.txt`, etc.) pollute the repo. | Root directory | 🟢 Low |
+### What's Still Needed
 
-### Why This Matters
-You cannot safely hire another developer, accept contributions, or even make confident changes yourself when one file controls your entire business logic. The 113KB database file is a ticking time bomb for merge conflicts and regression bugs.
-
-### Estimated Difficulty: High | Time: ~3 weeks
+| # | Issue | Current State | Priority |
+|---|-------|---------------|----------|
+| 1 | `database.ts` is still **3,327 lines (98 KB)** — a God Object | Partially split; core.ts helps but main file still massive | 🟡 High |
+| 2 | **0 unit tests exist** — `vitest` and `playwright` are installed but unused | No test files anywhere in the repo | 🟡 High |
+| 3 | **3 stale files** crept back into root: `clean_test_data.js`, `debug_sales.js`, `scratch_BarcodeLabelModal_205.tsx` | Should be removed or moved to `tools/` | 🟢 Low |
+| 4 | `preload.ts` is now **197 lines** of manually maintained API surface | Each new feature requires editing 3 files | 🟠 Medium |
+| 5 | `PrintingModal.tsx` is **32 KB** — receipt HTML, print logic, preview all coupled | Needs decomposition | 🟠 Medium |
+| 6 | `LanguageContext.tsx` is **57 KB** — massive inline translation dictionary | Should be moved to JSON files | 🟠 Medium |
 
 ### Completion Criteria
-- [x] `database.ts` split: shared infrastructure extracted to `db/core.ts` (~250 lines) — reduced from 3,878 → 3,158 lines
-- [ ] Continue splitting domain modules: `db/auth.ts`, `db/sales.ts`, `db/inventory.ts`, `db/reports.ts` (each ≤ 500 lines)
-- [x] `PosPage` decomposed: `useCart` hook (cart state, profiles, financials) + `usePosScanner` hook (barcode scanning)
+- [ ] Continue splitting `database.ts` into domain modules: `db/sales.ts`, `db/inventory.ts`, `db/reports.ts` (each ≤ 500 lines)
 - [ ] At least 20 unit tests covering critical paths (sale creation, stock adjustment, return processing)
-- [x] 27 stale files removed from root (markdown guides, lint reports, build errors)
+- [ ] Remove or relocate 3 stale files from root
+- [ ] Extract receipt templates from `PrintingModal.tsx`
+
+### Estimated Difficulty: High | Time: ~2 weeks remaining
 
 ---
 
-## Phase 4: Data Integrity & Database Optimization
-**Goal:** Guarantee that no transaction can leave the database in an inconsistent state.
+## Phase 4: Data Integrity & Database Optimization ✅ COMPLETE
+**Status: All 7 criteria met. No further action needed.**
 
-### Problems Discovered
-
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **`recordCustomerPurchase` runs AFTER the sale transaction commits.** If it fails, the customer's stats are wrong but the sale exists. | `database.ts:2288-2290` | 🟡 High |
-| 2 | **No database indexes.** Queries like `WHERE date(saleDate) BETWEEN...` do full table scans. At 10,000+ sales this becomes noticeable. | Schema (lines 300-594) | 🟡 High |
-| 3 | **`listPurchaseOrders` runs N+1 queries** — fetches all orders, then loops and fetches each one's items individually. | `database.ts:1959-1989` | 🟠 Medium |
-| 4 | **Exchange rate hardcoded to 1500 in inventory value calculation** (`SUM(vs.quantity * pv.avgCostUSD * 1500)`). Ignores the actual exchange rate table. | `database.ts:1309` | 🟠 Medium |
-| 5 | **`deleteSale` reverses stock with raw SQL** instead of using `adjustVariantStockInternal`, bypassing the audit trail in `inventory_adjustments`. | `database.ts:3590-3596` | 🟡 High |
-| 6 | **Auto-backup creates a new file every app launch** without checking if a backup already exists for today. Users who restart frequently fill their Documents folder. | `database.ts:152-194` | 🟢 Low |
-| 7 | **No WAL mode enabled.** SQLite defaults to rollback journal, which is slower for concurrent reads during report generation. | `database.ts:139` | 🟠 Medium |
-
-### Why This Matters
-Incorrect financial data is the #1 reason businesses abandon a POS system. If a shop owner sees their profit numbers don't match reality, they will never trust the software again.
-
-### Estimated Difficulty: Medium | Time: ~2 weeks
-
-### Completion Criteria
 - [x] Customer purchase recording moved inside the sale transaction
 - [x] Indexes added: `sales(saleDate)`, `sale_items(saleId)`, `sale_items(variantId)`, `variant_stock(variantId, branchId)`, `returns(createdAt)`, `returns(saleId)`
 - [x] N+1 queries eliminated with JOINs
 - [x] Exchange rate dynamically fetched for inventory valuation
 - [x] `deleteSale` uses `adjustVariantStockInternal` for proper audit trail
-- [x] WAL mode enabled: `PRAGMA journal_mode=WAL;` *(done in Phase 1)*
+- [x] WAL mode enabled: `PRAGMA journal_mode=WAL;`
 - [x] Auto-backups (Skipped/Cancelled by User)
 
 ---
 
-## Phase 5: UX, Polish & Feature Completion
+## Phase 5: UX, Polish & Feature Completion ⚠️ PARTIALLY DONE (65%)
 **Goal:** Make every screen feel premium and complete.
 
-### Problems Discovered
+### What's Been Done
+- [x] Light + Dark theme support with CSS variables throughout
+- [x] Reports page fully overhauled: 7 tabs, charts, RTL-safe, theme-aware
+- [x] Monthly analysis tab with card-based layout, per-month KPIs, trend indicators
+- [x] Online Orders: full edit/delete/confirm/reject workflow
+- [x] Toast notifications via `ToastContext` used across most pages
+- [x] Skeleton loading on ProductsPage, SalesHistoryPage, ExpensesPage, SuppliersPage, BackupPage
+- [x] Confirm dialog component (`ConfirmDialog.tsx`) used for destructive actions
+- [x] Barcode label printing with customizable templates
+- [x] Keyboard shortcut overlay (`ShortcutOverlay.tsx`)
+- [x] POS lock overlay for cashier breaks
 
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **No toast/notification system connected.** `ToastContext.tsx` exists but most operations show `alert()` on error. | Throughout codebase | 🟠 Medium |
-| 2 | **Inconsistent modal patterns.** Some use `PortalModal`, some use `ProductsPage-modalOverlay`, the `BarcodeLabelModal` was using a custom overlay (fixed this session). | Various components | 🟠 Medium |
-| 3 | **`LanguageContext.tsx` is 56KB** — a massive translation dictionary hardcoded in a React context. Any missing key silently returns the key string. | `LanguageContext.tsx` | 🟠 Medium |
-| 4 | **No loading states on data-heavy pages.** `SkeletonTable` exists but only used on ProductsPage. Dashboard, Reports, Sales History load with blank screens. | Various pages | 🟠 Medium |
-| 5 | **No keyboard navigation in the POS cart.** Cashiers using barcode scanners can't tab through items or adjust quantities without touching the mouse. | `PosPage.tsx` | 🟡 High |
-| 6 | **Online Orders page has no real-time refresh.** If an order comes in while viewing the page, the cashier has to manually navigate away and back. | `OnlineOrdersPage.tsx` | 🟠 Medium |
-| 7 | **No receipt customization UI.** Store name, address, logo, footer text are all hardcoded in `PrintingModal.tsx`. | `PrintingModal.tsx` | 🟠 Medium |
-| 8 | **Dark mode only.** No light mode option despite `ThemeContext.tsx` existing. Some printed labels render dark backgrounds. | `ThemeContext.tsx`, CSS files | 🟢 Low |
+### What's Still Needed
 
-### Why This Matters
-Premium UX = higher price point. Every `alert()` and every loading blank screen signals "amateur software" to the shop owner comparing you to competitors.
-
-### Estimated Difficulty: Medium | Time: ~3 weeks
+| # | Issue | Current State | Priority |
+|---|-------|---------------|----------|
+| 1 | **6 files still use `alert()`** instead of toast: UsersPage, SettingsPage, ReportsPage, BranchesPage, LicenseValidator, BarcodeLabelModal | Each `alert()` signals amateur UX | 🟠 Medium |
+| 2 | **No receipt customization UI** — store name, address, logo, footer hardcoded in `PrintingModal.tsx` | Critical for branding; every shop wants their name on receipts | 🟡 High |
+| 3 | **No loading states on Dashboard or Reports** — they render blank screens while fetching | DashboardPage and ReportsPage need skeleton loading | 🟠 Medium |
+| 4 | **Online Orders has no auto-refresh** — must navigate away and back to see new orders | 30s polling or IPC push needed | 🟠 Medium |
+| 5 | **No keyboard-first POS workflow** — Tab/arrow keys don't navigate the cart | Cashiers with barcode scanners are mouse-dependent | 🟡 High |
+| 6 | **Inconsistent modal patterns** — mix of `PortalModal`, inline overlays, and custom implementations | Should standardize on one pattern | 🟢 Low |
 
 ### Completion Criteria
-- [ ] All `alert()` calls replaced with toast notifications
-- [ ] All modals use `PortalModal` consistently
-- [ ] Skeleton loading on every data page
+- [ ] All `alert()` calls replaced with `toast` notifications
 - [ ] Receipt customization in Settings (store name, address, logo, footer)
-- [ ] Keyboard-first POS workflow (Tab, Enter, arrow keys)
-- [ ] Online Orders auto-refresh (30s polling or IPC push)
+- [ ] Skeleton loading on Dashboard and Reports pages
+- [ ] Online Orders auto-refresh (30s polling)
+- [ ] Keyboard-first POS workflow (Tab, Enter, arrow keys in cart)
+
+### Estimated Difficulty: Medium | Time: ~1.5 weeks remaining
 
 ---
 
-## Phase 6: Production Readiness & Deployment
+## Phase 6: Production Readiness & Deployment ❌ NOT STARTED
 **Goal:** Ship with confidence. Every release is tested, every crash is reported.
 
-### Problems Discovered
+### Current State
 
-| # | Issue | File | Risk |
-|---|-------|------|------|
-| 1 | **No CI/CD pipeline.** Builds are done manually on a developer laptop. | Project root | 🟡 High |
-| 2 | **No crash reporting.** When the app crashes in production, you only know when the customer calls you. | `main.ts` | 🟡 High |
-| 3 | **No telemetry.** You don't know how many active installations exist, which features are used, or what errors occur. | N/A | 🟠 Medium |
-| 4 | **Code signing disabled** (`forceCodeSigning: false`). Windows SmartScreen blocks unsigned apps, scaring users. | `package.json:53-54` | 🟡 High |
-| 5 | **`electron` version 28 is outdated.** Current stable is 33+. Missing security patches and Chromium fixes. | `package.json:106` | 🟠 Medium |
-| 6 | **`npmRebuild: false` in build config.** This is a workaround for sqlite3 native module issues, but it can cause binary mismatches on different machines. | `package.json:75` | 🟠 Medium |
-| 7 | **No staging/beta channel.** Every release goes directly to all users. | `package.json` build config | 🟠 Medium |
+| # | Issue | Status | Priority |
+|---|-------|--------|----------|
+| 1 | **No CI/CD pipeline** — builds done manually | ❌ OPEN | 🟡 High |
+| 2 | **No crash reporting** — you only know about crashes when customers call | ❌ OPEN | 🟡 High |
+| 3 | **No telemetry** — no idea how many active installations or which features are used | ❌ OPEN | 🟠 Medium |
+| 4 | **Code signing disabled** (`forceCodeSigning: false`) — Windows SmartScreen scares users | ❌ OPEN | 🟡 High |
+| 5 | **Electron 28 is outdated** — current stable is 33+, missing security patches | ❌ OPEN | 🟠 Medium |
+| 6 | **`npmRebuild: false`** — workaround for sqlite3 native module, fragile | ❌ OPEN | 🟠 Medium |
+| 7 | **No staging/beta channel** — every release goes to all users | ❌ OPEN | 🟠 Medium |
 
-### Why This Matters
-You are currently flying blind. You don't know when users have problems, you can't rollback bad releases, and Windows actively warns users not to install your app.
+### Completion Criteria
+- [ ] GitHub Actions workflow: lint → build → publish draft release
+- [ ] Sentry or similar crash reporter integrated in main + renderer
+- [ ] Code signing certificate obtained and configured
+- [ ] Electron updated to latest stable (33+)
+- [ ] Beta update channel (`autoUpdater.channel = 'beta'`)
+- [ ] `better-sqlite3` evaluated as sqlite3 replacement (faster, simpler bindings)
 
 ### Estimated Difficulty: High | Time: ~2 weeks
 
-### Completion Criteria
-- [ ] GitHub Actions workflow: lint → test → build → publish draft release
-- [ ] Sentry or similar crash reporter integrated in main + renderer
-- [ ] Anonymous usage telemetry (opt-in) tracking: daily active users, feature usage, errors
-- [ ] Code signing certificate obtained and configured
-- [ ] Electron updated to latest stable
-- [ ] Beta update channel (`autoUpdater.channel = 'beta'`)
-- [ ] `better-sqlite3` evaluated as replacement for `sqlite3` (synchronous, simpler native binding)
-
 ---
 
-## Phase 7: Intelligence, Scale & Monetization
+## Phase 7: Intelligence, Scale & Monetization 🔮 FUTURE
 **Goal:** Transform from a tool into a platform.
-
-### Opportunities Identified
 
 | # | Opportunity | Business Impact | Difficulty |
 |---|-------------|-----------------|------------|
-| 1 | **AI-powered reorder suggestions.** Analyze sales velocity + current stock + lead times → auto-generate purchase orders. | 💰💰💰 Premium feature | Hard |
-| 2 | **Multi-branch cloud sync.** SQLite → PostgreSQL migration with offline-first sync (CRDTs or last-write-wins). | 💰💰💰 Enterprise tier | Very Hard |
-| 3 | **WhatsApp/Telegram integration** for online orders. Iraqi market heavily uses messaging for orders. | 💰💰 Competitive advantage | Medium |
-| 4 | **Automatic Arabic receipt formatting** with proper RTL layout. Currently, receipts mix LTR and RTL text. | 💰 User satisfaction | Medium |
-| 5 | **SaaS dashboard.** Web portal where shop owners view reports from their phone. | 💰💰💰 Recurring revenue | Hard |
-| 6 | **Tiered licensing.** Free (1 branch, 100 products), Pro (unlimited, reports), Enterprise (multi-branch, sync). | 💰💰💰 Monetization | Medium |
-| 7 | **Automated end-of-day reports** with profit/loss summary sent to owner's phone (already partially built with email). | 💰 Retention | Easy |
-| 8 | **Barcode scanner camera mode.** Use laptop webcam as a barcode scanner for shops without hardware scanners. | 💰 Market expansion | Medium |
-
-### Dependencies
-- Phases 1-6 must be complete before any Phase 7 work
-- Cloud sync requires a complete database abstraction layer (Phase 3)
-- AI features require telemetry data collection (Phase 6)
-
-### Estimated Time: 2-6 months (ongoing)
+| 1 | **AI-powered reorder suggestions** — auto-generate purchase orders from sales velocity | 💰💰💰 Premium | Hard |
+| 2 | **Multi-branch cloud sync** — SQLite → PostgreSQL with offline-first sync | 💰💰💰 Enterprise | Very Hard |
+| 3 | **WhatsApp/Telegram integration** for online orders (Iraqi market is message-driven) | 💰💰 Competitive edge | Medium |
+| 4 | **SaaS web dashboard** — shop owners view reports from their phone | 💰💰💰 Recurring revenue | Hard |
+| 5 | **Tiered licensing** — Free (1 branch, 100 products), Pro (unlimited), Enterprise (multi-branch) | 💰💰💰 Monetization | Medium |
+| 6 | **Automated end-of-day reports** to owner's phone (email already partially built) | 💰 Retention | Easy |
+| 7 | **Camera barcode scanner** — use laptop webcam for shops without hardware scanners | 💰 Market expansion | Medium |
 
 ---
 
-## Risk Matrix
+## Current Feature Inventory
 
-```
-                    IMPACT
-              Low    Med    High   Critical
-         ┌────────┬────────┬────────┬────────┐
-  High   │        │  P5.4  │  P3.6  │  P1.1  │
-         │        │  P5.6  │  P6.1  │  P1.3  │
-LIKELY   │        │        │  P6.4  │  P2.1  │
-         ├────────┼────────┼────────┼────────┤
-  Med    │  P3.7  │  P4.6  │  P4.1  │  P1.4  │
-         │  P5.8  │  P5.3  │  P4.5  │  P2.2  │
-         │        │        │  P2.5  │        │
-         ├────────┼────────┼────────┼────────┤
-  Low    │        │  P5.1  │  P2.4  │  P2.6  │
-         │        │        │  P6.5  │        │
-         └────────┴────────┴────────┴────────┘
-```
+### ✅ Fully Implemented (Production-Ready)
+| Feature | Pages/Components |
+|---------|-----------------|
+| Point of Sale | `PosPage.tsx` (41 KB) with cart hooks, barcode scanning, discount, payment |
+| Inventory Management | `ProductsPage.tsx` with variants, stock adjustment, Excel import, bulk season edit |
+| Sales History | `SalesHistoryPage.tsx` with date filtering, detail view, sale deletion |
+| Returns & Refunds | `ReturnsPage.tsx` with partial/full refund, stock reversal |
+| Customer Management | `CustomersPage.tsx` with purchase history, loyalty tracking |
+| Supplier Management | `SuppliersPage.tsx` with CRUD |
+| Purchase Orders | `PurchaseOrdersPage.tsx` with create and receive workflow |
+| Expense Tracking | `ExpensesPage.tsx` with categories and date filtering |
+| Online Orders | `OnlineOrdersPage.tsx` with create, edit, delete, confirm, reject |
+| Advanced Reports | 7 tabs: Overview, Sales, Monthly, Inventory, Financial, Customers, Activity |
+| Barcode Labels | `BarcodeLabelModal.tsx` with customizable templates |
+| Receipt Printing | `PrintingModal.tsx` with auto-print and preview |
+| User Management | `UsersPage.tsx` with roles (admin, manager, cashier) |
+| Branch Management | `BranchesPage.tsx` with multi-branch support |
+| Backup & Restore | `BackupPage.tsx` with manual and auto backup |
+| Exchange Rates | Dynamic IQD/USD rate management |
+| Dashboard | `DashboardPage.tsx` with KPIs, sparklines, animated numbers |
+| Settings | `SettingsPage.tsx` with email, label config, database reset |
+| Auto-Updates | GitHub releases via `electron-updater` |
+| Licensing | USB hardware-locked license validation |
+| Localization | Arabic + English with full RTL support |
+| Activity Logs | Full audit trail of user actions |
 
 ---
 
-## Recommended Execution Order
+## 🚀 Public Release Checklist
 
 > [!IMPORTANT]
-> **Do NOT skip phases.** Each phase depends on the previous one being stable.
+> **Minimum viable for public release — complete these in order:**
 
-1. **Phase 1** — Crash Prevention *(Week 1-2)*
-2. **Phase 2** — Security Hardening *(Week 3-4)*
-3. **Phase 4** — Data Integrity *(Week 5-6)* — moved up because it's faster than Phase 3 and protects financial data
-4. **Phase 3** — Architecture Cleanup *(Week 7-9)*
-5. **Phase 5** — UX & Polish *(Week 10-12)*
-6. **Phase 6** — Production Readiness *(Week 13-14)*
-7. **Phase 7** — Intelligence & Scale *(Month 4+)*
+### Must-Have (Blocks Release) 🔴
+- [ ] **Security: Auth on all IPC channels** — prevent settings/data theft
+- [ ] **Security: Login rate limiting** — prevent brute force
+- [ ] **Security: Token expiry** — prevent stolen token reuse
+- [ ] **Security: License key not extractable** — prevent piracy
+- [ ] **Code signing** — prevent Windows SmartScreen warnings
+- [ ] **Remove stale debug files** from root (`clean_test_data.js`, `debug_sales.js`, `scratch_*.tsx`)
+
+### Should-Have (First Week Post-Release) 🟡
+- [ ] Replace all `alert()` with toast notifications (6 files)
+- [ ] Receipt customization UI in Settings
+- [ ] Crash reporting (Sentry)
+- [ ] Online Orders auto-refresh
+- [ ] Skeleton loading on Dashboard + Reports
+
+### Nice-to-Have (First Month Post-Release) 🟢
+- [ ] Unit test suite (20+ tests)
+- [ ] CI/CD pipeline
+- [ ] Split `database.ts` into domain modules
+- [ ] Keyboard-first POS navigation
+- [ ] Electron upgrade to v33+
+- [ ] Beta update channel
+
+---
+
+## Recommended Execution Order for Public Release
+
+> [!IMPORTANT]
+> **Do NOT go public until the security items are done. Everything else can be patched post-launch.**
+
+1. **Phase 2 — Security Hardening** *(Week 1-2)* — **THE BLOCKER**
+2. **Phase 5 remainder — UX Polish** *(Week 3)* — Replace alerts, add skeletons, auto-refresh
+3. **Phase 6 — Code Signing + Crash Reporting** *(Week 4)* — Professional installer, know when things break
+4. **Phase 3 remainder — Architecture** *(Week 5-6)* — Tests, split database, clean root
+5. **Phase 7 — Growth Features** *(Month 2+)* — WhatsApp, cloud sync, AI reorders
 
 > [!TIP]
-> **Quick win:** Phases 1 and 4 together give you the biggest stability improvement for the least effort. You could ship a rock-solid `v2.1.0` in just 4 weeks.
+> **Quick win:** Fixing the 6 `alert()` files + adding receipt customization takes ~2 days and dramatically improves perceived quality. Do it alongside security work.
 
 ---
 
 ## Summary Stats
 
-| Metric | Value |
-|--------|-------|
-| Critical issues found | **8** |
-| High-risk issues found | **14** |
-| Medium-risk issues found | **16** |
-| Low-risk issues found | **4** |
-| Total issues | **42** |
-| Estimated total time (Phases 1-6) | **~14 weeks** |
-| Lines of code in largest file | **3,868** (database.ts) |
-| Number of existing tests | **0** |
-| IPC channels without auth | **5** |
+| Metric | v2.0.8 (May 8) | v3.0.2 (May 15) | Delta |
+|--------|-----------------|------------------|-------|
+| Version | 2.0.8 | 3.0.2 | +1.0.4 |
+| Critical issues | 8 | **2** | -6 ✅ |
+| High-risk issues | 14 | **8** | -6 ✅ |
+| Medium-risk issues | 16 | **10** | -6 ✅ |
+| Low-risk issues | 4 | **3** | -1 ✅ |
+| Total issues | 42 | **23** | -19 ✅ |
+| Phases complete | 0/7 | **2/7** | +2 ✅ |
+| Report tabs | 1 | **7** | +6 ✅ |
+| IPC handler files | ? | **18** | Modularized ✅ |
+| Custom hooks | 0 | **5** | +5 ✅ |
+| `database.ts` lines | 3,868 | **3,327** | -541 ✅ |
+| Test count | 0 | **0** | — ❌ |
+| Pages with `alert()` | ~12 | **6** | -6 ✅ |
+| Stale root files | 27 (then cleaned) | **3** new ones | ⚠️ |
+| Estimated time to public release | ~14 weeks | **~4 weeks** | -10 weeks ✅ |

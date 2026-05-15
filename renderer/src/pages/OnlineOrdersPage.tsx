@@ -57,6 +57,7 @@ const OnlineOrdersPage = (): JSX.Element => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [scannerMessage, setScannerMessage] = useState<string | null>(null);
+  const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // --- Load all orders (unfiltered) ---
@@ -235,19 +236,79 @@ const OnlineOrdersPage = (): JSX.Element => {
 
     setSubmitting(true); setFormError(null);
     try {
-      await window.evaApi.onlineOrders.create(token, {
+      const payload = {
         branchId: user.branchId ?? 1,
         customerName: formCustomerName || null, customerPhone: formCustomerPhone || null,
         source: formSource, note: formNote || null,
         subtotalIQD: cartSubtotal, discountIQD: formDiscount, totalIQD: cartTotal,
         items: cart.map((i) => ({ variantId: i.product.id, quantity: i.quantity, unitPriceIQD: i.unitPrice, lineTotalIQD: i.unitPrice * i.quantity })),
-      });
+      };
+
+      if (editOrderId) {
+        await window.evaApi.onlineOrders.update(token, editOrderId, payload);
+        toast.success('تم تحديث الطلب بنجاح');
+      } else {
+        await window.evaApi.onlineOrders.create(token, payload);
+        toast.success('تم إنشاء الطلب بنجاح');
+      }
+      
       setShowForm(false); setCart([]); setFormCustomerName(''); setFormCustomerPhone('');
-      setFormNote(''); setFormDiscount(0); setProductSearch('');
-      toast.success('تم إنشاء الطلب بنجاح');
+      setFormNote(''); setFormDiscount(0); setProductSearch(''); setEditOrderId(null);
       await loadOrders();
     } catch (err) { setFormError(err instanceof Error ? err.message : 'Failed'); }
     finally { setSubmitting(false); }
+  };
+
+  const openEditForm = async (order: OnlineOrder) => {
+    setEditOrderId(order.id);
+    setFormCustomerName(order.customerName || '');
+    setFormCustomerPhone(order.customerPhone || '');
+    setFormNote(order.note || '');
+    setFormSource(order.source);
+    setFormDiscount(order.discountIQD || 0);
+
+    // Map order.items to cart
+    setCart(order.items.map(item => {
+      const found = products.find(p => p.id === item.variantId);
+      return {
+        product: found || {
+          id: item.variantId,
+          productId: 0,
+          sku: item.sku || '',
+          productName: item.productName || 'Unknown Product',
+          color: item.color || null,
+          size: item.size || null,
+          barcode: null,
+          salePriceIQD: item.unitPriceIQD,
+          stockOnHand: 9999, // Allow editing without stock errors if we don't have the full product
+          avgCostUSD: 0
+        } as Product,
+        quantity: item.quantity,
+        unitPrice: item.unitPriceIQD
+      };
+    }));
+    setShowForm(true);
+  };
+
+  const handleDelete = async (orderId: number) => {
+    if (!window.evaApi || !token) return;
+    const ok = await confirmDialog({
+      title: 'حذف الطلب',
+      message: 'هل أنت متأكد من حذف هذا الطلب نهائياً؟ لا يمكن التراجع عن هذه الخطوة.',
+      confirmText: 'حذف',
+      cancelText: 'إلغاء'
+    });
+    if (!ok) return;
+    setActionLoading(orderId);
+    try {
+      await window.evaApi.onlineOrders.delete(token, orderId);
+      toast.success('تم حذف الطلب بنجاح');
+      await loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'فشل الحذف');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const filteredProducts = products.filter((p) =>
@@ -266,7 +327,11 @@ const OnlineOrdersPage = (): JSX.Element => {
           <h1><ShoppingBag size={26} style={{ verticalAlign: 'middle', marginInlineEnd: '0.5rem' }} />الطلبات أونلاين</h1>
           <p>إدارة طلبات إنستغرام، تيك توك، وواتساب — يتم خصم المخزون <strong>فقط عند التأكيد</strong></p>
         </div>
-        <button className="OO-newBtn" onClick={() => setShowForm(true)}><Plus size={18} /> طلب جديد أونلاين</button>
+        <button className="OO-newBtn" onClick={() => {
+          setEditOrderId(null);
+          setCart([]); setFormCustomerName(''); setFormCustomerPhone(''); setFormNote(''); setFormDiscount(0);
+          setShowForm(true);
+        }}><Plus size={18} /> طلب جديد أونلاين</button>
       </div>
 
       <div className="OO-tabs">
@@ -341,10 +406,16 @@ const OnlineOrdersPage = (): JSX.Element => {
                       ) : (
                         <>
                           <button className="OO-btn OO-btn--confirm" disabled={actionLoading === order.id} onClick={() => handleConfirm(order.id)}>
-                            {actionLoading === order.id ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />} تأكيد — خصم المخزون وإنشاء عملية بيع
+                            {actionLoading === order.id ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />} تأكيد البيع
+                          </button>
+                          <button className="OO-btn OO-btn--ghost" onClick={() => openEditForm(order)}>
+                            تعديل
                           </button>
                           <button className="OO-btn OO-btn--reject" onClick={() => setRejectingId(order.id)}>
-                            <XCircle size={14} /> رفض / إرجاع
+                            <XCircle size={14} /> رفض
+                          </button>
+                          <button className="OO-btn OO-btn--danger" onClick={() => handleDelete(order.id)} title="حذف نهائي">
+                            <X size={14} />
                           </button>
                         </>
                       )}
@@ -361,7 +432,7 @@ const OnlineOrdersPage = (): JSX.Element => {
         <div className="OO-overlay" onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
           <div className="OO-modal OO-modal--large">
             <div className="OO-modal-header">
-              <h2>طلب جديد أونلاين</h2>
+              <h2>{editOrderId ? `تعديل طلب #${editOrderId}` : 'طلب جديد أونلاين'}</h2>
               <button className="OO-closeBtn" onClick={() => setShowForm(false)}><X size={20} /></button>
             </div>
             
@@ -440,7 +511,8 @@ const OnlineOrdersPage = (): JSX.Element => {
                 <div className="OO-modal-actions">
                   <button className="OO-btn OO-btn--ghost" onClick={() => setShowForm(false)}>إلغاء</button>
                   <button className="OO-btn OO-btn--confirm OO-btn--block" disabled={submitting || cart.length === 0} onClick={handleSubmit}>
-                    {submitting ? <Loader2 size={16} className="spin" /> : <Plus size={16} />} حفظ كطلب قيد الانتظار
+                    {submitting ? <Loader2 size={16} className="spin" /> : (editOrderId ? <CheckCircle2 size={16} /> : <Plus size={16} />)} 
+                    {editOrderId ? 'حفظ التعديلات' : 'حفظ كطلب قيد الانتظار'}
                   </button>
                 </div>
               </div>

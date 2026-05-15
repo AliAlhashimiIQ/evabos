@@ -59,5 +59,28 @@ export function registerOnlineOrdersIpc(): void {
     }),
   );
 
+  ipcMain.handle(
+    'onlineOrders:update',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const orderId = args[0] as number;
+      const payload = args[1] as OnlineOrderInput;
+      // We will need to import updateOnlineOrder and deleteOnlineOrder from database.ts
+      const { updateOnlineOrder } = await import('../db/database');
+      return updateOnlineOrder(orderId, payload, session.userId);
+    }),
+  );
+
+  ipcMain.handle(
+    'onlineOrders:delete',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const orderId = args[0] as number;
+      const { deleteOnlineOrder } = await import('../db/database');
+      await deleteOnlineOrder(orderId, session.userId);
+      return true;
+    }),
+  );
+
   handlersRegistered = true;
 }

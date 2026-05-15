@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     create: (token: string, data: ProductInput) => ipcRenderer.invoke('inventory:products:create', token, data),
     update: (token: string, data: ProductUpdateInput) => ipcRenderer.invoke('inventory:products:update', token, data),
     updateVariant: (token: string, data: VariantUpdateInput) => ipcRenderer.invoke('inventory:variants:update', token, data),
+    getSeasons: (token: string) => ipcRenderer.invoke('inventory:products:seasons', token),
     deleteVariant: (token: string, variantId: number) => ipcRenderer.invoke('inventory:variants:delete', token, variantId),
     adjustStock: (token: string, payload: {
       variantId: number;
@@ -121,6 +122,8 @@ contextBridge.exposeInMainWorld('evaApi', {
     leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number }) => ipcRenderer.invoke('reports:leastProfitableItems', token, params),
     leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number }) => ipcRenderer.invoke('reports:leastProfitableSuppliers', token, params),
     inventoryAging: (token: string, params: { limit?: number }) => ipcRenderer.invoke('reports:inventoryAging', token, params),
+    expensesByCategory: (token: string, params: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:expensesByCategory', token, params),
+    salesBySeason: (token: string, params: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:salesBySeason', token, params),
   },
   email: {
     getSettings: (token: string) => ipcRenderer.invoke('email:getSettings', token),
@@ -183,6 +186,8 @@ contextBridge.exposeInMainWorld('evaApi', {
   onlineOrders: {
     list: (token: string, status?: string) => ipcRenderer.invoke('onlineOrders:list', token, status),
     create: (token: string, data: OnlineOrderInput) => ipcRenderer.invoke('onlineOrders:create', token, data),
+    update: (token: string, orderId: number, data: OnlineOrderInput) => ipcRenderer.invoke('onlineOrders:update', token, orderId, data),
+    delete: (token: string, orderId: number) => ipcRenderer.invoke('onlineOrders:delete', token, orderId),
     confirm: (token: string, orderId: number, exchangeRate: number) => ipcRenderer.invoke('onlineOrders:confirm', token, orderId, exchangeRate),
     reject: (token: string, orderId: number, reason?: string) => ipcRenderer.invoke('onlineOrders:reject', token, orderId, reason),
     getById: (token: string, orderId: number) => ipcRenderer.invoke('onlineOrders:getById', token, orderId),

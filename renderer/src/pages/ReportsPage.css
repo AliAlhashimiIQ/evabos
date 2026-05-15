@@ -1,13 +1,19 @@
-/* Reports Page - Clean Layout */
+/* ═══════════════════════════════════════════════════════════════════
+   EVA POS – Reports Dashboard
+   Uses theme CSS variables for light/dark mode compatibility
+   ═══════════════════════════════════════════════════════════════════ */
 
 .Reports {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1rem;
+  padding: 1.25rem 1.5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-/* Header with title and actions */
+/* ─── Header ─────────────────────────────────────────────────────── */
 .Reports-header {
   display: flex;
   justify-content: space-between;
@@ -15,367 +21,671 @@
   flex-wrap: wrap;
   gap: 1rem;
 }
-
-.Reports-header h1 {
-  margin: 0;
-}
-
-.Reports-header p {
-  margin: 0.25rem 0 0;
-  opacity: 0.7;
-  font-size: 0.9rem;
-}
+.Reports-header h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
+.Reports-header p { margin: 0.25rem 0 0; color: var(--text-secondary); font-size: 0.85rem; }
 
 .Reports-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-
 .Reports-actions button {
-  border: none;
-  border-radius: 0.65rem;
-  padding: 0.6rem 1rem;
-  background: rgba(59, 130, 246, 0.2);
-  color: #bfdbfe;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  padding: 0.55rem 1rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .Reports-actions button:hover {
-  background: rgba(59, 130, 246, 0.35);
+  background: var(--hover-bg);
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
-/* Filters Section - Compact Row */
+/* ─── Tab Bar ────────────────────────────────────────────────────── */
+.Reports-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--bg-secondary);
+  border-radius: 0.75rem;
+  padding: 0.3rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid var(--border-light);
+}
+.Reports-tabs::-webkit-scrollbar { display: none; }
+
+.Reports-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  border: none;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.Reports-tab:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+.Reports-tab--active {
+  background: #6366f1;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+/* ─── Quick Filters ──────────────────────────────────────────────── */
+.Reports-quickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.Reports-quickFilters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--border-color);
+  border-radius: 2rem;
+  padding: 0.38rem 0.8rem;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.Reports-quickFilters button:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+/* ─── Date/Season Filters ────────────────────────────────────────── */
 .Reports-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.85rem;
   align-items: flex-end;
-  padding: 1rem;
-  background: var(--bg-input);
-  border-radius: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 1rem 1.15rem;
+  background: var(--bg-card);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
 }
-
 .Reports-filters label {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8rem;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 500;
   min-width: 120px;
 }
-
-.Reports-filters input {
+.Reports-filters input,
+.Reports-filters select {
   border-radius: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
-  padding: 0.5rem 0.65rem;
+  padding: 0.55rem 0.75rem;
   font-size: 0.85rem;
+  min-height: 38px;
+  box-sizing: border-box;
 }
 
+.Reports-filters select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
+[dir="rtl"] .Reports-filters select {
+  padding-right: 0.75rem;
+  padding-left: 2.25rem;
+  background-position: left 0.75rem center;
+}
+.Reports-filters input:focus,
+.Reports-filters select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
 .Reports-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   border: none;
-  border-radius: 0.65rem;
-  padding: 0.65rem 1.25rem;
-  background: linear-gradient(120deg, #2563eb, #7c3aed);
+  border-radius: 0.6rem;
+  padding: 0.6rem 1.4rem;
+  background: #6366f1;
   color: white;
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .Reports-button:hover {
+  background: #4f46e5;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
+.Reports-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-.Reports-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Stats Cards - Main KPIs */
+/* ─── KPI Stats Cards ────────────────────────────────────────────── */
 .Reports-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.75rem;
 }
-
-.Reports-stats>div {
+.Reports-stats > div {
   border-radius: 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  transition: box-shadow 0.2s;
 }
-
+.Reports-stats > div:hover {
+  box-shadow: 0 4px 16px var(--shadow);
+}
 .Reports-stats span {
-  font-size: 0.75rem;
-  opacity: 0.7;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
-
 .Reports-stats strong {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  color: var(--text-primary);
 }
-
-.Reports-stats small {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
-.Reports-margin {
-  font-size: 0.75rem;
-  opacity: 0.75;
-  margin-left: 0.25rem;
-}
+.Reports-stats small { font-size: 0.7rem; color: var(--text-secondary); }
+.Reports-margin { font-size: 0.72rem; color: var(--text-secondary); margin-left: 0.2rem; }
 
 .Reports-stat--positive {
-  border-color: rgba(34, 197, 94, 0.35) !important;
-  background: rgba(34, 197, 94, 0.08) !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+  background: rgba(34, 197, 94, 0.06) !important;
 }
-
-.Reports-stat--positive strong {
-  color: #4ade80;
-}
+.Reports-stat--positive strong { color: #16a34a !important; }
 
 .Reports-stat--negative {
-  border-color: rgba(239, 68, 68, 0.35) !important;
-  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.06) !important;
 }
+.Reports-stat--negative strong { color: #dc2626 !important; }
 
-.Reports-stat--negative strong {
-  color: #f87171;
-}
-
-/* Reports Grid - 2 Column */
+/* ─── Section Grid (2-col for tables) ────────────────────────────── */
 .Reports-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
-
-@media (max-width: 900px) {
-  .Reports-grid {
-    grid-template-columns: 1fr;
-  }
-}
+@media (max-width: 900px) { .Reports-grid { grid-template-columns: 1fr; } }
 
 .Reports-grid header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-light);
   margin-bottom: 0.5rem;
 }
-
 .Reports-grid header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .Reports-grid article {
-  border-radius: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  background: var(--bg-input);
-  padding: 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  padding: 0.9rem;
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  max-height: 360px;
   min-height: 0;
-  /* Important for flex child scrolling */
 }
-
-/* Make table container scrollable with flex */
-.Reports-grid article>table {
+.Reports-grid article > table {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
+.Reports-grid article > table thead { flex-shrink: 0; display: table; width: 100%; table-layout: fixed; }
+.Reports-grid article > table tbody { flex: 1 1 auto; overflow-y: auto; display: block; }
+.Reports-grid article > table tbody tr { display: table; width: 100%; table-layout: fixed; }
+.Reports-grid article > div.Reports-empty { flex: 1; }
+.Reports-report--full, .Reports-grid article.Reports-fullWidth { grid-column: 1 / -1; max-height: 450px; }
 
-.Reports-grid article>table thead {
-  flex-shrink: 0;
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-
-.Reports-grid article>table tbody {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  display: block;
-}
-
-.Reports-grid article>table tbody tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-
-.Reports-grid article>div.Reports-empty {
-  flex: 1;
-}
-
-/* Full width report cards */
-.Reports-report--full,
-.Reports-grid article:nth-child(n+7) {
-  grid-column: 1 / -1;
-  max-height: 400px;
-}
-
-/* Table Styling */
-.Reports-grid table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
+/* ─── Table Styling ──────────────────────────────────────────────── */
+.Reports-grid table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .Reports-grid th {
   text-align: left;
-  padding: 0.5rem 0.4rem;
+  padding: 0.55rem 0.5rem;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-color);
   position: sticky;
   top: 0;
-  background: var(--bg-input);
+  background: var(--bg-card);
+  z-index: 1;
 }
-
 .Reports-grid td {
-  padding: 0.45rem 0.4rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  padding: 0.5rem 0.5rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
 }
+.Reports-grid tbody tr { transition: background 0.15s; }
+.Reports-grid tbody tr:hover { background: var(--hover-bg); }
+.Reports-grid td:nth-child(n+2) { text-align: right; white-space: nowrap; }
+.Reports-grid td:first-child { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
-.Reports-grid tbody tr:hover {
-  background: rgba(148, 163, 184, 0.04);
+/* Scrollbar in tables */
+.Reports-grid article > table tbody::-webkit-scrollbar { width: 5px; }
+.Reports-grid article > table tbody::-webkit-scrollbar-track { background: transparent; }
+.Reports-grid article > table tbody::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+/* ─── Chart Containers ───────────────────────────────────────────── */
+.Reports-chartRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
+@media (max-width: 900px) { .Reports-chartRow { grid-template-columns: 1fr; } }
 
-/* Number columns right aligned */
-.Reports-grid td:nth-child(n+2) {
-  text-align: right;
-  white-space: nowrap;
+.Reports-chartCard {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
-
-/* First column (names) can wrap */
-.Reports-grid td:first-child {
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.Reports-chartCard--full { grid-column: 1 / -1; }
+.Reports-chartCard h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
+.Reports-chartWrap { width: 100%; height: 280px; min-height: 220px; direction: ltr; }
+.Reports-chartWrap--small { height: 200px; min-height: 160px; direction: ltr; }
 
-/* Empty State */
+/* ─── Recharts Theme Overrides ───────────────────────────────────── */
+.Reports-chartCard .recharts-cartesian-axis-tick text,
+.Reports-chartCard .recharts-label { fill: var(--text-primary) !important; font-size: 11px; font-weight: 500; }
+.Reports-chartCard .recharts-legend-item-text { color: var(--text-primary) !important; font-size: 12px !important; }
+.Reports-chartCard .recharts-default-tooltip {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px var(--shadow) !important;
+  padding: 8px 12px !important;
+}
+.Reports-chartCard .recharts-tooltip-label { color: var(--text-primary) !important; font-weight: 600 !important; }
+.Reports-chartCard .recharts-tooltip-item { color: var(--text-primary) !important; font-weight: 500 !important; }
+.Reports-chartCard .recharts-tooltip-item-name { color: var(--text-secondary) !important; }
+.Reports-chartCard .recharts-surface { overflow: visible; }
+.Reports-chartCard .recharts-pie-label-text { fill: var(--text-primary) !important; font-size: 11px; font-weight: 600; }
+.Reports-chartCard .recharts-text { fill: var(--text-primary); }
+.Reports-chartCard .recharts-legend-wrapper { padding-top: 6px !important; }
+.Reports-chartCard .recharts-cartesian-grid line { stroke: var(--border-light); }
+
+/* ─── P&L Statement ──────────────────────────────────────────────── */
+.Reports-pnl {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  padding: 1.5rem;
+  max-width: 650px;
+}
+.Reports-pnl h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.Reports-pnlRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+.Reports-pnlRow--indent { padding-left: 1.5rem; font-size: 0.83rem; color: var(--text-secondary); }
+.Reports-pnlRow--total {
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-top: 2px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
+  padding: 0.7rem 0;
+  margin-top: 0.25rem;
+}
+.Reports-pnlRow--subtotal { font-weight: 600; font-size: 0.88rem; }
+.Reports-pnlGreen { color: #16a34a; }
+.Reports-pnlRed { color: #dc2626; }
+
+/* ─── Empty & Alert ──────────────────────────────────────────────── */
 .Reports-empty {
   text-align: center;
-  padding: 1.5rem;
-  opacity: 0.6;
+  padding: 2rem;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
-
-/* Alert */
-.Reports-alert {
-  border-radius: 0.65rem;
-  padding: 0.65rem 1rem;
-  font-size: 0.85rem;
-}
-
+.Reports-alert { border-radius: 0.6rem; padding: 0.7rem 1rem; font-size: 0.85rem; }
 .Reports-alert--error {
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.5);
-  color: #fecaca;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: #dc2626;
 }
 
-/* Quick Filters */
-.Reports-quickFilters {
+/* ─── Table Row Highlights ───────────────────────────────────────── */
+.Reports-negative { background: rgba(220, 38, 38, 0.04) !important; }
+.Reports-negativeValue { color: #dc2626 !important; font-weight: 600; }
+.Reports-lowMargin { color: #d97706 !important; font-weight: 600; }
+.Reports-aging-warning { background: rgba(217, 119, 6, 0.05) !important; }
+.Reports-aging-critical { background: rgba(220, 38, 38, 0.05) !important; }
+.Reports-daysMedium { color: #d97706 !important; font-weight: 600; }
+.Reports-daysHigh { color: #dc2626 !important; font-weight: 700; }
+
+/* ─── Season Badge ───────────────────────────────────────────────── */
+.Reports-seasonBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2rem;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
+/* ─── Mini KPI Cards ─────────────────────────────────────────────── */
+.Reports-miniKpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 0.75rem;
+}
+.Reports-miniKpi {
+  border-radius: 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.8rem 0.9rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
+.Reports-miniKpi span {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.Reports-miniKpi strong { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
 
-.Reports-quickFilters button {
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 0.4rem;
-  padding: 0.35rem 0.7rem;
-  background: transparent;
-  color: var(--text-primary);
+/* ─── Clear Selection ────────────────────────────────────────────── */
+.Reports-clearSelection {
+  margin-left: auto;
   font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 2rem;
+  color: #dc2626;
   cursor: pointer;
-  transition: all 0.2s;
+}
+.Reports-clearSelection:hover { background: rgba(220, 38, 38, 0.1); }
+
+/* ─── Monthly Analysis Cards ─────────────────────────────────────── */
+.Monthly-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.Monthly-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.Monthly-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+}
+.Monthly-card--best {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, rgba(34,197,94,0.04), var(--bg-card));
+}
+.Monthly-card--worst {
+  border-color: #f87171;
+  background: linear-gradient(135deg, rgba(248,113,113,0.04), var(--bg-card));
 }
 
-.Reports-quickFilters button:hover {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
+.Monthly-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-
-/* Analytics Report Colors */
-.Reports-negative {
-  background: rgba(239, 68, 68, 0.08);
+.Monthly-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-
-.Reports-negativeValue {
-  color: #ef4444 !important;
-  font-weight: 600;
-}
-
-.Reports-lowMargin {
-  color: #f59e0b !important;
-  font-weight: 600;
-}
-
-/* Inventory Aging */
-.Reports-aging-warning {
-  background: rgba(234, 179, 8, 0.08);
-}
-
-.Reports-aging-critical {
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.Reports-daysMedium {
-  color: #eab308 !important;
-  font-weight: 600;
-}
-
-.Reports-daysHigh {
-  color: #ef4444 !important;
+.Monthly-card-month {
   font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.Monthly-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.Monthly-badge--best {
+  background: rgba(34,197,94,0.12);
+  color: #16a34a;
+}
+.Monthly-badge--worst {
+  background: rgba(248,113,113,0.12);
+  color: #dc2626;
 }
 
-/* Responsive */
+.Monthly-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2rem;
+  color: #94a3b8;
+  background: rgba(148,163,184,0.08);
+}
+.Monthly-change--up {
+  color: #16a34a;
+  background: rgba(34,197,94,0.08);
+}
+.Monthly-change--down {
+  color: #dc2626;
+  background: rgba(239,68,68,0.08);
+}
+
+/* Revenue progress bar */
+.Monthly-bar-track {
+  width: 100%;
+  height: 5px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.Monthly-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.Monthly-card--best .Monthly-bar-fill {
+  background: linear-gradient(90deg, #22c55e, #06b6d4);
+}
+.Monthly-card--worst .Monthly-bar-fill {
+  background: linear-gradient(90deg, #f87171, #fb923c);
+}
+
+/* Stats grid inside card */
+.Monthly-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+}
+.Monthly-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.Monthly-stat svg {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.Monthly-stat-label {
+  flex-shrink: 0;
+}
+.Monthly-stat-value {
+  margin-inline-start: auto;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Net profit footer */
+.Monthly-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.82rem;
+}
+.Monthly-card-footer span {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.Monthly-card-footer strong {
+  font-variant-numeric: tabular-nums;
+}
+.Monthly-card-footer--pos strong { color: #16a34a; }
+.Monthly-card-footer--neg strong { color: #dc2626; }
+
+/* Totals Summary Card */
+.Monthly-totals {
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  margin-top: 0.5rem;
+}
+.Monthly-totals-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+.Monthly-totals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+.Monthly-totals-grid > div {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(148,163,184,0.04);
+  border: 1px solid var(--border-light);
+}
+.Monthly-totals-grid > div span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+.Monthly-totals-grid > div strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.Monthly-totals--pos strong { color: #16a34a !important; }
+.Monthly-totals--neg strong { color: #dc2626 !important; }
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .Reports {
-    padding: 0.75rem;
-    gap: 1rem;
-  }
-
-  .Reports-header {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .Reports-filters {
-    padding: 0.85rem;
-  }
-
-  .Reports-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .Reports { padding: 0.85rem; gap: 1.1rem; }
+  .Reports-header { flex-direction: column; text-align: center; }
+  .Reports-stats { grid-template-columns: repeat(2, 1fr); }
+  .Reports-chartRow { grid-template-columns: 1fr; }
+  .Reports-tabs { gap: 0.15rem; padding: 0.2rem; }
+  .Reports-tab { padding: 0.5rem 0.7rem; font-size: 0.75rem; }
+  .Monthly-cards { grid-template-columns: 1fr; }
 }
+
+/* ─── Spin animation ─────────────────────────────────────────────── */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }

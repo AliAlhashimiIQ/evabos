@@ -255,6 +255,13 @@ export async function listSuppliers(): Promise<Supplier[]> {
   );
 }
 
+export async function getUniqueSeasons(): Promise<string[]> {
+  const rows = await all<{ season: string }>(
+    `SELECT DISTINCT season FROM products WHERE season IS NOT NULL AND season != '' ORDER BY season ASC`
+  );
+  return rows.map(r => r.season);
+}
+
 export async function createSupplier(input: SupplierInput): Promise<Supplier> {
   const result = await runWithResult(
     `
@@ -372,12 +379,21 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     WITH daily_sales AS (
       SELECT
-        date(saleDate) as date,
-        IFNULL(SUM(totalIQD), 0) as grossIQD,
+        date(s.saleDate) as date,
+        IFNULL(SUM(s.totalIQD), 0) as grossIQD,
         COUNT(*) as orders
-      FROM sales
-      WHERE date(saleDate) BETWEEN date(?) AND date(?)
-      GROUP BY date(saleDate)
+      FROM sales s
+      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      GROUP BY date(s.saleDate)
+    ),
+    daily_items AS (
+      SELECT
+        date(s.saleDate) as date,
+        IFNULL(SUM(si.quantity), 0) as itemsSold
+      FROM sale_items si
+      JOIN sales s ON s.id = si.saleId
+      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      GROUP BY date(s.saleDate)
     ),
     daily_returns AS (
       SELECT
@@ -396,13 +412,15 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       ad.date,
       IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0) as totalIQD,
       IFNULL(ds.orders, 0) as orders,
+      IFNULL(di.itemsSold, 0) as itemsSold,
       CASE WHEN IFNULL(ds.orders, 0) = 0 THEN 0 ELSE (IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0)) / ds.orders END as avgTicket
     FROM all_dates ad
     LEFT JOIN daily_sales ds ON ds.date = ad.date
+    LEFT JOIN daily_items di ON di.date = ad.date
     LEFT JOIN daily_returns dr ON dr.date = ad.date
     ORDER BY ad.date
   `,
-    [range.startDate, range.endDate, range.startDate, range.endDate],
+    [range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate],
   );
 
   const bestSellingItems = await all<NamedMetric>(
@@ -680,6 +698,58 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     totalItemsInStock: totalStockCountRow?.count || 0,
     totalItemsSold: totalItemsSold,
   };
+}
+
+// Expense breakdown by category for the Financial tab
+export async function getExpensesByCategory(
+  startDate: string,
+  endDate: string
+): Promise<Array<{ category: string; totalIQD: number; count: number }>> {
+  return all<{ category: string; totalIQD: number; count: number }>(
+    `
+    SELECT
+      category,
+      IFNULL(SUM(amountIQD), 0) as totalIQD,
+      COUNT(*) as count
+    FROM expenses
+    WHERE date(expenseDate) BETWEEN date(?) AND date(?)
+    GROUP BY category
+    ORDER BY totalIQD DESC
+    `,
+    [startDate, endDate]
+  );
+}
+
+// Sales grouped by season for the Season Analysis
+export async function getSalesBySeason(
+  startDate: string,
+  endDate: string
+): Promise<Array<{ season: string; quantity: number; revenueIQD: number; profitIQD: number; itemCount: number }>> {
+  const rows = await all<{ season: string; quantity: number; revenueIQD: number; costIQD: number; itemCount: number }>(
+    `
+    SELECT
+      COALESCE(p.season, 'بدون موسم') as season,
+      IFNULL(SUM(si.quantity), 0) as quantity,
+      IFNULL(SUM(si.lineTotalIQD), 0) as revenueIQD,
+      IFNULL(SUM(si.quantity * IFNULL(si.unitCostIQDAtSale, 0)), 0) as costIQD,
+      COUNT(DISTINCT p.id) as itemCount
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    GROUP BY p.season
+    ORDER BY revenueIQD DESC
+    `,
+    [startDate, endDate]
+  );
+  return rows.map(r => ({
+    season: r.season,
+    quantity: r.quantity,
+    revenueIQD: r.revenueIQD,
+    profitIQD: r.revenueIQD - r.costIQD,
+    itemCount: r.itemCount,
+  }));
 }
 
 // Peak Hours Analytics - Get sales count and revenue by hour of day
@@ -3191,4 +3261,75 @@ export async function rejectOnlineOrder(
 
   await logActivity(userId, 'reject', 'online_order', orderId);
   return (await getOnlineOrderById(orderId))!;
+}
+
+export async function updateOnlineOrder(
+  orderId: number,
+  input: OnlineOrderInput,
+  userId: number,
+): Promise<OnlineOrder> {
+  const order = await getOnlineOrderById(orderId);
+  if (!order) throw new Error('Online order not found');
+  if (order.status !== 'pending') throw new Error('Cannot edit non-pending orders');
+
+  await run('BEGIN TRANSACTION');
+  try {
+    // Update main order
+    await run(
+      `UPDATE online_orders 
+       SET customerName = ?, customerPhone = ?, source = ?, note = ?, 
+           subtotalIQD = ?, discountIQD = ?, totalIQD = ?
+       WHERE id = ?`,
+      [
+        input.customerName ?? null,
+        input.customerPhone ?? null,
+        input.source,
+        input.note ?? null,
+        input.subtotalIQD,
+        input.discountIQD,
+        input.totalIQD,
+        orderId,
+      ]
+    );
+
+    // Replace items
+    await run(`DELETE FROM online_order_items WHERE orderId = ?`, [orderId]);
+
+    for (const item of input.items) {
+      await run(
+        `INSERT INTO online_order_items (orderId, variantId, quantity, unitPriceIQD, lineTotalIQD)
+         VALUES (?, ?, ?, ?, ?)`,
+        [orderId, item.variantId, item.quantity, item.unitPriceIQD, item.lineTotalIQD],
+      );
+    }
+
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK');
+    throw err;
+  }
+
+  await logActivity(userId, 'update', 'online_order', orderId);
+  return (await getOnlineOrderById(orderId))!;
+}
+
+export async function deleteOnlineOrder(
+  orderId: number,
+  userId: number,
+): Promise<void> {
+  const order = await getOnlineOrderById(orderId);
+  if (!order) throw new Error('Online order not found');
+  if (order.status !== 'pending') throw new Error('Cannot delete non-pending orders');
+
+  await run('BEGIN TRANSACTION');
+  try {
+    await run(`DELETE FROM online_order_items WHERE orderId = ?`, [orderId]);
+    await run(`DELETE FROM online_orders WHERE id = ?`, [orderId]);
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK');
+    throw err;
+  }
+
+  await logActivity(userId, 'delete', 'online_order', orderId);
 }

@@ -13,6 +13,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  getUniqueSeasons,
 } from '../db/database';
 import { importProductsFromExcel } from '../db/excelImport';
 import type { ProductInput, ProductUpdateInput, VariantUpdateInput, SupplierInput, PaginationParams } from '../db/types';
@@ -45,6 +46,13 @@ export function registerInventoryIpc(): void {
     'inventory:products:count',
     requireRole(['admin', 'manager', 'cashier'])(async () => {
       return getProductCount();
+    }),
+  );
+
+  ipcMain.handle(
+    'inventory:products:seasons',
+    requireRole(['admin', 'manager', 'cashier'])(async () => {
+      return getUniqueSeasons();
     }),
   );
 

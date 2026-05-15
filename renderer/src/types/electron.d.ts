@@ -108,6 +108,20 @@ export interface InventoryAgingItem {
   lastSoldAt: string | null;
 }
 
+export interface ExpenseByCategoryItem {
+  category: string;
+  totalIQD: number;
+  count: number;
+}
+
+export interface SeasonSalesItem {
+  season: string;
+  quantity: number;
+  revenueIQD: number;
+  profitIQD: number;
+  itemCount: number;
+}
+
 export interface Sale {
   id: number;
   branchId: number;
@@ -287,6 +301,7 @@ export interface DailySalesEntry {
   date: string;
   totalIQD: number;
   orders: number;
+  itemsSold: number;
   avgTicket: number;
 }
 
@@ -410,6 +425,7 @@ export interface EvaApi {
     create: (token: string, data: ProductInput) => Promise<Product>;
     update: (token: string, data: ProductUpdateInput) => Promise<Product>;
     updateVariant: (token: string, data: VariantUpdateInput) => Promise<boolean>;
+    getSeasons: (token: string) => Promise<string[]>;
     deleteVariant: (token: string, variantId: number) => Promise<boolean>;
     adjustStock: (token: string, payload: {
       variantId: number;
@@ -469,6 +485,8 @@ export interface EvaApi {
     leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number }) => Promise<LeastProfitableItem[]>;
     leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number }) => Promise<LeastProfitableSupplier[]>;
     inventoryAging: (token: string, params: { limit?: number }) => Promise<InventoryAgingItem[]>;
+    expensesByCategory: (token: string, params: { startDate: string; endDate: string }) => Promise<ExpenseByCategoryItem[]>;
+    salesBySeason: (token: string, params: { startDate: string; endDate: string }) => Promise<SeasonSalesItem[]>;
   };
   printing: {
     getPrinters: () => Promise<Array<{ name: string; description: string; status: number; isDefault: boolean }>>;

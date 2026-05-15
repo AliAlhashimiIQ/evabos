@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { getAdvancedReports, getPeakHoursData, getPeakDaysData, getLeastProfitableItems, getLeastProfitableSuppliers, getInventoryAging } from '../db/database';
+import { getAdvancedReports, getPeakHoursData, getPeakDaysData, getLeastProfitableItems, getLeastProfitableSuppliers, getInventoryAging, getExpensesByCategory, getSalesBySeason } from '../db/database';
 import type { DateRange } from '../db/types';
 import { requireRole } from './auth';
 
@@ -55,6 +55,22 @@ export function registerReportsIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
       const { limit } = args[0] as { limit?: number };
       return getInventoryAging(limit);
+    }),
+  );
+
+  ipcMain.handle(
+    'reports:expensesByCategory',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const { startDate, endDate } = args[0] as { startDate: string; endDate: string };
+      return getExpensesByCategory(startDate, endDate);
+    }),
+  );
+
+  ipcMain.handle(
+    'reports:salesBySeason',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const { startDate, endDate } = args[0] as { startDate: string; endDate: string };
+      return getSalesBySeason(startDate, endDate);
     }),
   );
 
