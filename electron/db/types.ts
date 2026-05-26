@@ -258,6 +258,8 @@ export interface DailySalesEntry {
   date: string;
   totalIQD: number;
   orders: number;
+  itemsSold: number;
+  costIQD: number;
   avgTicket: number;
 }
 

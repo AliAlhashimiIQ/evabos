@@ -386,6 +386,14 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
       GROUP BY date(s.saleDate)
     ),
+    daily_cost AS (
+      SELECT
+        date(s.saleDate) as date,
+        IFNULL(SUM(s.totalIQD - IFNULL(s.profitIQD, 0)), 0) as costIQD
+      FROM sales s
+      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      GROUP BY date(s.saleDate)
+    ),
     daily_items AS (
       SELECT
         date(s.saleDate) as date,
@@ -413,14 +421,16 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0) as totalIQD,
       IFNULL(ds.orders, 0) as orders,
       IFNULL(di.itemsSold, 0) as itemsSold,
+      IFNULL(dc.costIQD, 0) as costIQD,
       CASE WHEN IFNULL(ds.orders, 0) = 0 THEN 0 ELSE (IFNULL(ds.grossIQD, 0) - IFNULL(dr.returnedIQD, 0)) / ds.orders END as avgTicket
     FROM all_dates ad
     LEFT JOIN daily_sales ds ON ds.date = ad.date
+    LEFT JOIN daily_cost dc ON dc.date = ad.date
     LEFT JOIN daily_items di ON di.date = ad.date
     LEFT JOIN daily_returns dr ON dr.date = ad.date
     ORDER BY ad.date
   `,
-    [range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate],
+    [range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate],
   );
 
   const bestSellingItems = await all<NamedMetric>(
@@ -1625,8 +1635,8 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
   s.*,
     (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
     FROM sales s
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
-    ORDER BY s.saleDate DESC
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
+    ORDER BY s.id DESC
     `,
     [range.startDate, range.endDate],
   );
@@ -3198,13 +3208,15 @@ export async function confirmOnlineOrder(
     const profitIQD = order.totalIQD - totalCostIQD;
 
     // Create a real sale with correct profitIQD
+    const saleDate = new Date().toISOString();
     const saleResult = await runWithResult(
       `INSERT INTO sales (branchId, cashierId, customerId, saleDate, subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 'online', ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'online', ?)`,
       [
         order.branchId,
         userId,
         order.customerId ?? null,
+        saleDate,
         order.subtotalIQD,
         order.discountIQD,
         order.totalIQD,

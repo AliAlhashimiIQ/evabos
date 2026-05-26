@@ -585,51 +585,79 @@
   background: linear-gradient(90deg, #f87171, #fb923c);
 }
 
-/* Stats grid inside card */
-.Monthly-card-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1rem;
-}
-.Monthly-stat {
+/* Stats grid inside card - Clean 2-column rows */
+.Monthly-rows {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
 }
-.Monthly-stat svg {
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-.Monthly-stat-label {
-  flex-shrink: 0;
-}
-.Monthly-stat-value {
-  margin-inline-start: auto;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Net profit footer */
-.Monthly-card-footer {
+.Monthly-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-light);
-  font-size: 0.82rem;
-}
-.Monthly-card-footer span {
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  font-weight: 500;
 }
-.Monthly-card-footer strong {
+.Monthly-row span {
+  flex-shrink: 0;
+}
+.Monthly-row strong {
+  color: var(--text-primary);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  margin-inline-start: auto;
 }
-.Monthly-card-footer--pos strong { color: #16a34a; }
-.Monthly-card-footer--neg strong { color: #dc2626; }
+.Monthly-row--profit {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed var(--border-light);
+  margin-bottom: 0.2rem;
+}
+.Monthly-row--profit strong {
+  font-weight: 700;
+}
+.Monthly-row--profit strong.pos {
+  color: #16a34a;
+}
+.Monthly-row--profit strong.neg {
+  color: #dc2626;
+}
+.Monthly-row--divider {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 0.4rem;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+/* Net footer */
+.Monthly-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.85rem;
+}
+.Monthly-net span {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.Monthly-net strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+.Monthly-net--pos strong { color: #16a34a; }
+.Monthly-net--neg strong { color: #dc2626; }
+
+/* Change badge label */
+.Monthly-change-label {
+  font-size: 0.65rem;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-inline-start: 3px;
+  white-space: nowrap;
+}
 
 /* Totals Summary Card */
 .Monthly-totals {

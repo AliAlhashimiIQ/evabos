@@ -15,10 +15,13 @@ interface MonthData {
   label: string;
   shortLabel: string;
   orders: number;
+  itemsSold: number;
   revenueIQD: number;
   avgTicketIQD: number;
-  expensesIQD: number;
-  netIQD: number;
+  costIQD: number;       // COGS (cost of goods sold)
+  expensesIQD: number;   // Operating expenses from expenses table
+  grossProfitIQD: number; // revenue - COGS
+  netIQD: number;        // revenue - COGS - operatingExpenses  ← correct صافي
 }
 
 const fmt = (n: number) => n.toLocaleString('en-IQ');
@@ -46,7 +49,9 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
         itemsSold: 0,
         revenueIQD: 0,
         avgTicketIQD: 0,
+        costIQD: 0,
         expensesIQD: 0,
+        grossProfitIQD: 0,
         netIQD: 0,
       });
     }
@@ -55,8 +60,10 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
     m.orders += day.orders;
     m.revenueIQD += day.totalIQD;
     m.itemsSold += day.itemsSold || 0;
+    m.costIQD += day.costIQD || 0;
   }
 
+  // Add operating expenses (from expenses table) per month
   for (const day of reports.expensesVsSales) {
     const [year, month] = day.date.split('-');
     const key = `${year}-${month}`;
@@ -65,9 +72,11 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
     }
   }
 
+  // Compute derived values with correct formula
   for (const m of monthMap.values()) {
     m.avgTicketIQD = m.orders > 0 ? Math.round(m.revenueIQD / m.orders) : 0;
-    m.netIQD = m.revenueIQD - m.expensesIQD;
+    m.grossProfitIQD = m.revenueIQD - m.costIQD;
+    m.netIQD = m.revenueIQD - m.costIQD - m.expensesIQD; // ✅ correct: revenue - COGS - opex
   }
 
   const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
@@ -76,9 +85,11 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
     orders: acc.orders + m.orders,
     itemsSold: acc.itemsSold + m.itemsSold,
     revenueIQD: acc.revenueIQD + m.revenueIQD,
+    costIQD: acc.costIQD + m.costIQD,
     expensesIQD: acc.expensesIQD + m.expensesIQD,
+    grossProfitIQD: acc.grossProfitIQD + m.grossProfitIQD,
     netIQD: acc.netIQD + m.netIQD,
-  }), { orders: 0, itemsSold: 0, revenueIQD: 0, expensesIQD: 0, netIQD: 0 });
+  }), { orders: 0, itemsSold: 0, revenueIQD: 0, costIQD: 0, expensesIQD: 0, grossProfitIQD: 0, netIQD: 0 });
 
   const getChange = (current: number, previous: number) => {
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -180,8 +191,11 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
                   {isWorst && <span className="Monthly-badge Monthly-badge--worst">الأقل</span>}
                 </div>
                 {change !== null && (
-                  <div className={`Monthly-change ${change > 0 ? 'Monthly-change--up' : change < 0 ? 'Monthly-change--down' : ''}`}>
-                    {change > 0 ? <ArrowUpRight size={14} /> : change < 0 ? <ArrowDownRight size={14} /> : <Minus size={14} />}
+                  <div
+                    className={`Monthly-change ${change > 0 ? 'Monthly-change--up' : change < 0 ? 'Monthly-change--down' : ''}`}
+                    title="نسبة تغيّر الإيرادات مقارنةً بالشهر السابق"
+                  >
+                    {change > 0 ? <ArrowUpRight size={13} /> : change < 0 ? <ArrowDownRight size={13} /> : <Minus size={13} />}
                     {change > 0 ? '+' : ''}{change}%
                   </div>
                 )}
@@ -192,44 +206,42 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
                 <div className="Monthly-bar-fill" style={{ width: `${barWidth}%` }} />
               </div>
 
-              {/* Stats Grid */}
-              <div className="Monthly-card-stats">
-                <div className="Monthly-stat">
-                  <Receipt size={13} />
-                  <span className="Monthly-stat-label">الإيرادات</span>
-                  <span className="Monthly-stat-value">{fmt(m.revenueIQD)}</span>
+              {/* Stats — clean 2-col rows */}
+              <div className="Monthly-rows">
+                <div className="Monthly-row">
+                  <span>الإيرادات</span>
+                  <strong>{fmt(Math.round(m.revenueIQD))}</strong>
                 </div>
-                <div className="Monthly-stat">
-                  <Wallet size={13} />
-                  <span className="Monthly-stat-label">المصاريف</span>
-                  <span className="Monthly-stat-value">{fmt(m.expensesIQD)}</span>
+                <div className="Monthly-row">
+                  <span>تكلفة البضاعة</span>
+                  <strong>{fmt(Math.round(m.costIQD))}</strong>
                 </div>
-                <div className="Monthly-stat">
-                  <ShoppingCart size={13} />
-                  <span className="Monthly-stat-label">الطلبات</span>
-                  <span className="Monthly-stat-value">{fmt(m.orders)}</span>
+                <div className="Monthly-row Monthly-row--profit">
+                  <span>إجمالي الربح</span>
+                  <strong className={m.grossProfitIQD >= 0 ? 'pos' : 'neg'}>{fmt(Math.round(m.grossProfitIQD))}</strong>
                 </div>
-                <div className="Monthly-stat">
-                  <Package size={13} />
-                  <span className="Monthly-stat-label">القطع المباعة</span>
-                  <span className="Monthly-stat-value">{fmt(m.itemsSold)}</span>
+                <div className="Monthly-row Monthly-row--divider">
+                  <span>الطلبات</span>
+                  <strong>{fmt(m.orders)}</strong>
+                  <span>القطع</span>
+                  <strong>{fmt(m.itemsSold)}</strong>
                 </div>
-                <div className="Monthly-stat">
-                  <BarChart3 size={13} />
-                  <span className="Monthly-stat-label">متوسط الطلب</span>
-                  <span className="Monthly-stat-value">{fmt(m.avgTicketIQD)}</span>
+                <div className="Monthly-row">
+                  <span>المصاريف التشغيلية</span>
+                  <strong>{fmt(Math.round(m.expensesIQD))}</strong>
                 </div>
               </div>
 
-              {/* Net profit footer */}
-              <div className={`Monthly-card-footer ${m.netIQD >= 0 ? 'Monthly-card-footer--pos' : 'Monthly-card-footer--neg'}`}>
-                <span>الصافي</span>
-                <strong>{fmt(m.netIQD)} IQD</strong>
+              {/* Net footer */}
+              <div className={`Monthly-net ${m.netIQD >= 0 ? 'Monthly-net--pos' : 'Monthly-net--neg'}`}>
+                <span>صافي الربح</span>
+                <strong>{fmt(Math.round(m.netIQD))} IQD</strong>
               </div>
             </div>
           );
         })}
       </div>
+
 
       {/* Totals Summary Card */}
       <div className="Monthly-totals">
@@ -251,11 +263,19 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
             <strong>{fmt(totals.revenueIQD)} IQD</strong>
           </div>
           <div>
-            <span>المصاريف</span>
+            <span>تكلفة البضاعة</span>
+            <strong>{fmt(totals.costIQD)} IQD</strong>
+          </div>
+          <div className={totals.grossProfitIQD >= 0 ? 'Monthly-totals--pos' : 'Monthly-totals--neg'}>
+            <span>إجمالي الربح</span>
+            <strong>{fmt(totals.grossProfitIQD)} IQD</strong>
+          </div>
+          <div>
+            <span>المصاريف التشغيلية</span>
             <strong>{fmt(totals.expensesIQD)} IQD</strong>
           </div>
           <div className={totals.netIQD >= 0 ? 'Monthly-totals--pos' : 'Monthly-totals--neg'}>
-            <span>الصافي</span>
+            <span>صافي الربح</span>
             <strong>{fmt(totals.netIQD)} IQD</strong>
           </div>
           <div>
