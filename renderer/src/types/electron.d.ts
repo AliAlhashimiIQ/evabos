@@ -500,9 +500,9 @@ export interface EvaApi {
     advanced: (token: string, range: DateRange) => Promise<AdvancedReports>;
     peakHours: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => Promise<PeakHourData[]>;
     peakDays: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => Promise<PeakDayData[]>;
-    leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number }) => Promise<LeastProfitableItem[]>;
-    leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number }) => Promise<LeastProfitableSupplier[]>;
-    inventoryAging: (token: string, params: { limit?: number }) => Promise<InventoryAgingItem[]>;
+    leastProfitableItems: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; limit?: number; season?: string | null }) => Promise<LeastProfitableItem[]>;
+    leastProfitableSuppliers: (token: string, params: { startDate: string; endDate: string; exchangeRate?: number; season?: string | null }) => Promise<LeastProfitableSupplier[]>;
+    inventoryAging: (token: string, params: { limit?: number; season?: string | null }) => Promise<InventoryAgingItem[]>;
     expensesByCategory: (token: string, params: { startDate: string; endDate: string }) => Promise<ExpenseByCategoryItem[]>;
     salesBySeason: (token: string, params: { startDate: string; endDate: string }) => Promise<SeasonSalesItem[]>;
   };

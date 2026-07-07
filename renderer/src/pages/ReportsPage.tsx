@@ -77,9 +77,9 @@ const ReportsPage = (): JSX.Element => {
       setError(null);
       const [response, leastItems, leastSuppliers, aging, hours, days, expCat, seasSales, empSales] = await Promise.all([
         window.evaApi.reports.advanced(token, { ...range, season: range.season || null }),
-        window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate }),
-        window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate }),
-        window.evaApi.reports.inventoryAging(token, { limit: 50 }),
+        window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate, season: range.season || null }),
+        window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate, season: range.season || null }),
+        window.evaApi.reports.inventoryAging(token, { limit: 50, season: range.season || null }),
         window.evaApi.reports.peakHours(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.peakDays(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.expensesByCategory(token, { startDate: range.startDate, endDate: range.endDate }),

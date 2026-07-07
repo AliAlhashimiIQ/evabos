@@ -848,7 +848,8 @@ export async function getLeastProfitableItems(
   startDate: string,
   endDate: string,
   exchangeRate: number = 1500,
-  limit: number = 20
+  limit: number = 20,
+  season?: string | null
 ): Promise<Array<{
   productName: string;
   sku: string;
@@ -860,6 +861,9 @@ export async function getLeastProfitableItems(
   profitIQD: number;
   marginPercent: number;
 }>> {
+  const seasonFilter = season ? ' AND p.season = ? ' : '';
+  const seasonParam = season ? [season] : [];
+
   const rows = await all<{
     productName: string;
     sku: string;
@@ -887,21 +891,22 @@ export async function getLeastProfitableItems(
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
     GROUP BY pv.id
     HAVING totalSold > 0
     ORDER BY marginPercent ASC
     LIMIT ?
     `,
-    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, limit]
+    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, ...seasonParam, limit]
   );
   return rows;
 }
 
-// Least Profitable Suppliers - Suppliers with lowest profit margin
 export async function getLeastProfitableSuppliers(
   startDate: string,
   endDate: string,
-  exchangeRate: number = 1500
+  exchangeRate: number = 1500,
+  season?: string | null
 ): Promise<Array<{
   supplierName: string;
   totalSold: number;
@@ -910,6 +915,9 @@ export async function getLeastProfitableSuppliers(
   profitIQD: number;
   marginPercent: number;
 }>> {
+  const seasonFilter = season ? ' AND p.season = ? ' : '';
+  const seasonParam = season ? [season] : [];
+
   const rows = await all<{
     supplierName: string;
     totalSold: number;
@@ -932,18 +940,19 @@ export async function getLeastProfitableSuppliers(
     JOIN products p ON p.id = pv.productId
     LEFT JOIN suppliers sup ON sup.id = p.defaultSupplierId
     WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    ${seasonFilter}
     GROUP BY p.defaultSupplierId
     HAVING totalSold > 0
     ORDER BY marginPercent ASC
     `,
-    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate]
+    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, ...seasonParam]
   );
   return rows;
 }
 
-// Inventory Aging Report - Items that have been in stock longest without selling
 export async function getInventoryAging(
-  limit: number = 50
+  limit: number = 50,
+  season?: string | null
 ): Promise<Array<{
   productName: string;
   sku: string;
@@ -955,6 +964,9 @@ export async function getInventoryAging(
   daysInStock: number;
   lastSoldAt: string | null;
 }>> {
+  const seasonFilter = season ? ' AND p.season = ? ' : '';
+  const seasonParam = season ? [season] : [];
+
   const rows = await all<{
     productName: string;
     sku: string;
@@ -986,10 +998,11 @@ export async function getInventoryAging(
     JOIN product_variants pv ON pv.id = vs.variantId
     JOIN products p ON p.id = pv.productId
     WHERE vs.quantity > 0 AND p.isActive = 1 AND pv.isActive = 1
+    ${seasonFilter}
     GROUP BY pv.id
     ORDER BY daysInStock DESC
     LIMIT ?`,
-    [limit]
+    [...seasonParam, limit]
   );
   return rows;
 }

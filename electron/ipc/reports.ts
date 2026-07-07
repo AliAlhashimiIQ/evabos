@@ -37,24 +37,24 @@ export function registerReportsIpc(): void {
   ipcMain.handle(
     'reports:leastProfitableItems',
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
-      const { startDate, endDate, exchangeRate, limit } = args[0] as { startDate: string; endDate: string; exchangeRate?: number; limit?: number };
-      return getLeastProfitableItems(startDate, endDate, exchangeRate, limit);
+      const { startDate, endDate, exchangeRate, limit, season } = args[0] as { startDate: string; endDate: string; exchangeRate?: number; limit?: number; season?: string | null };
+      return getLeastProfitableItems(startDate, endDate, exchangeRate, limit, season);
     }),
   );
 
   ipcMain.handle(
     'reports:leastProfitableSuppliers',
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
-      const { startDate, endDate, exchangeRate } = args[0] as { startDate: string; endDate: string; exchangeRate?: number };
-      return getLeastProfitableSuppliers(startDate, endDate, exchangeRate);
+      const { startDate, endDate, exchangeRate, season } = args[0] as { startDate: string; endDate: string; exchangeRate?: number; season?: string | null };
+      return getLeastProfitableSuppliers(startDate, endDate, exchangeRate, season);
     }),
   );
 
   ipcMain.handle(
     'reports:inventoryAging',
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
-      const { limit } = args[0] as { limit?: number };
-      return getInventoryAging(limit);
+      const { limit, season } = args[0] as { limit?: number; season?: string | null };
+      return getInventoryAging(limit, season);
     }),
   );
 
