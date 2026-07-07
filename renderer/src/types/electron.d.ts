@@ -6,6 +6,7 @@ export interface ElectronAPI {
   getAllSettings: () => Promise<Array<{ key: string; value: string }>>;
   relaunch: () => Promise<void>;
   resetFocus: () => Promise<void>;
+  getAppVersion: () => Promise<string>;
 
   // Auto Updater
   checkForUpdates: () => Promise<any>;
@@ -127,6 +128,8 @@ export interface Sale {
   branchId: number;
   cashierId: number;
   customerId?: number | null;
+  employeeId?: number | null;
+  employeeName?: string | null;
   saleDate: string;
   subtotalIQD: number;
   discountIQD: number;
@@ -137,7 +140,21 @@ export interface Sale {
   items: SaleItem[];
 }
 
-export type SaleInput = Omit<Sale, 'id' | 'items'> & { items: SaleItemInput[] };
+export type SaleInput = Omit<Sale, 'id' | 'items' | 'employeeName'> & { items: SaleItemInput[] };
+
+export interface Employee {
+  id: number;
+  name: string;
+  phone?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface EmployeeInput {
+  name: string;
+  phone?: string | null;
+  isActive?: boolean;
+}
 
 export interface Supplier {
   id: number;

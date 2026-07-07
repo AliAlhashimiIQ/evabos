@@ -1,328 +1,272 @@
+/* ============================================================
+   POS PAGE REDESIGN — PREMIUM TWO-COLUMN LAYOUT
+   ============================================================ */
+
+/* ── Main Layout Wrapper ────────────────────────────────────── */
 .Pos {
-  display: flex;
-  justify-content: center;
   width: 100%;
   height: 100%;
   background: transparent;
+  padding: 0;
+  display: flex;
 }
 
-.Pos-cartPanel {
-  background: var(--bg-input);
-  border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 1rem;
+.Pos-layout {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 120px);
+  gap: 1.5rem;
+  overflow: hidden;
+}
+
+/* ── Left Column: Scanner, Tabs, Cart Table ────────────────── */
+.Pos-left {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 140px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  gap: 1rem;
 }
 
-.Pos-profileTabs {
+/* ── Right Column: Sidebar controls ────────────────────────── */
+.Pos-sidebar {
+  width: 380px;
   flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: 1.25rem;
+}
+
+/* ── SEARCH / SCANNER BAR ───────────────────────────────────── */
+.Pos-search {
+  display: flex;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-tertiary);
+  gap: 0.5rem;
+  background: var(--bg-input);
+  border: 1.5px solid rgba(148, 163, 184, 0.15);
   border-radius: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+[dir="rtl"] .Pos-search {
+  padding: 0.25rem 1rem 0.25rem 0.5rem;
+}
+
+.Pos-search:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.Pos-searchIcon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.Pos-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+  outline: none;
+}
+
+.Pos-search input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
+.Pos-searchButton {
+  padding: 0.5rem 1.25rem;
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.Pos-searchButton:hover {
+  background: #2563eb;
+}
+
+.Pos-searchButton:active {
+  transform: scale(0.97);
+}
+
+/* ── PROFILE TABS ────────────────────────────────────────────── */
+.Pos-profileTabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(148, 163, 184, 0.05);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  gap: 1rem;
 }
 
 .Pos-profileTabs-label {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  min-width: 90px;
 }
 
 .Pos-profileTabs-label strong {
+  font-size: 0.9rem;
   color: var(--text-primary);
-  font-size: 0.95rem;
+}
+
+.Pos-profileTabs-label span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
 .Pos-profileTabs-buttons {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   gap: 0.5rem;
-  max-width: 600px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .Pos-profileTab {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 0.5rem;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  padding: 0.35rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  align-items: flex-start;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 45px;
-  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 85px;
 }
 
 .Pos-profileTab span {
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.88rem;
 }
 
 .Pos-profileTab small {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: 0.72rem;
+  opacity: 0.8;
 }
 
 .Pos-profileTab.active {
-  border-color: rgba(59, 130, 246, 0.8);
-  background: rgba(59, 130, 246, 0.2);
-  color: #fff;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.05);
+}
+
+.Pos-profileTab.active span {
+  color: #60a5fa;
 }
 
 .Pos-profileTab.filled:not(.active) {
-  border-color: rgba(74, 222, 128, 0.5);
+  border-color: rgba(74, 222, 128, 0.4);
 }
 
-.Pos-profileTab:hover {
-  border-color: rgba(59, 130, 246, 0.5);
-  transform: translateY(-1px);
+.Pos-profileTab:hover:not(.active) {
+  background: var(--hover-bg);
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
-.Pos-panelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.Pos-fastToggle {
-  border: 1px solid rgba(59, 130, 246, 0.5);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-primary);
-  padding: 0.35rem 0.9rem;
-  cursor: pointer;
-}
-
-.Pos-fastToggle.active {
-  background: rgba(59, 130, 246, 0.2);
-  color: #fff;
-}
-
-.Pos-search {
-  flex-shrink: 0;
-  display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
-}
-
-.Pos-search input {
-  flex: 1;
-  max-width: none;
-  border-radius: 0.75rem;
-  border: 2px solid rgba(59, 130, 246, 0.4);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.Pos-search input:focus {
-  outline: none;
-  border-color: rgba(59, 130, 246, 0.8);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.Pos-searchButton {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  border: 2px solid rgba(59, 130, 246, 0.6);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.3));
-  color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.Pos-searchButton:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.4));
-  border-color: rgba(59, 130, 246, 0.8);
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-
-.Pos-searchButton:active {
-  transform: translateY(0);
-}
-
-.Pos-scannerMessage {
-  margin-bottom: 0.5rem;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(74, 222, 128, 0.4);
-  background: rgba(74, 222, 128, 0.15);
-  color: #10b981;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-}
-
-.Pos-scanHint {
-  margin-bottom: 0.75rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.75rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: var(--text-primary);
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-.Pos-scanHint strong {
-  color: var(--text-primary);
-}
-
-.Pos-productsList {
-  flex: 1;
-  overflow-y: auto;
-  display: grid;
-  gap: 0.75rem;
-  padding-right: 0.5rem;
-}
-
-.Pos-productCard {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1rem;
-  padding: 1rem;
-  background: var(--bg-card);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.Pos-productCard:hover {
-  border-color: rgba(59, 130, 246, 0.7);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-
-.Pos-productCard-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-}
-
-.Pos-productCard-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.Pos-productName {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.Pos-productVariant {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.Pos-productSku {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-family: 'Courier New', monospace;
-}
-
-.Pos-productCard-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  text-align: right;
-}
-
-.Pos-productPrice {
-  color: var(--text-primary);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.Pos-productStock {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  padding: 0.2rem 0.5rem;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 0.5rem;
-}
-
+/* ── CART HEADER ─────────────────────────────────────────────── */
 .Pos-cartHeader {
-  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
 }
 
-.Pos-cartHeader>div:first-child {
+.Pos-cartHeaderTitle {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.Pos-cartCount {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: normal;
+.Pos-cartTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.Pos-cartBadge {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
 }
 
 .Pos-cartHeaderActions {
   display: flex;
   gap: 0.5rem;
-  align-items: center;
 }
 
 .Pos-clearButton {
-  border: none;
-  background: transparent;
-  color: rgba(248, 113, 113, 0.9);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s;
+}
+
+.Pos-clearButton:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .Pos-returnsButton {
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  border-radius: 0.75rem;
-  background: transparent;
-  color: var(--text-primary);
-  padding: 0.35rem 0.9rem;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s;
 }
 
+.Pos-returnsButton:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+/* ── CART TABLE ──────────────────────────────────────────────── */
 .Pos-cartTableWrapper {
   flex: 1;
-  min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 0.75rem;
-  background: var(--bg-tertiary);
+  min-height: 0;
 }
 
 .Pos-cartTable {
@@ -330,161 +274,210 @@
   border-collapse: collapse;
 }
 
-.Pos-cartTable th,
+.Pos-cartTable th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  padding: 0.65rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  text-align: start;
+}
+
 .Pos-cartTable td {
-  padding: 0.5rem 0.6rem;
+  padding: 0.75rem 0.5rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.Pos-cartTable tbody tr:hover {
+  background: rgba(148, 163, 184, 0.04);
 }
 
 .Pos-cartItem {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
 }
 
 .Pos-cartItemName {
   font-weight: 600;
-  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 .Pos-cartItemVariant {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  font-style: italic;
-}
-
-.Pos-lineTotal {
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .Pos-qtyControls {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
 .Pos-qtyControls button {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
+  width: 26px;
+  height: 26px;
   border: none;
-  background: rgba(59, 130, 246, 0.2);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.Pos-qtyControls button:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.Pos-qtyControls span {
+  padding: 0 0.5rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 24px;
+  text-align: center;
+}
+
+.Pos-priceCell {
+  font-variant-numeric: tabular-nums;
+}
+
+.Pos-lineTotal {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .Pos-deleteButton {
   border: none;
   background: transparent;
-  color: rgba(248, 113, 113, 0.9);
-  font-size: 1.1rem;
+  color: rgba(148, 163, 184, 0.4);
   cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
-.Pos-bottomSection {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 0.75rem;
-  max-width: 100%;
+.Pos-deleteButton:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
-.Pos-controls {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
-  padding: 0.65rem;
-  background: var(--bg-tertiary);
-  border-radius: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-}
-
-.Pos-controls label {
+/* ── SIDEBAR FORM FIELDS ─────────────────────────────────────── */
+.Pos-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  font-size: 0.85rem;
+  gap: 0.35rem;
+}
+
+.Pos-fieldLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
 }
 
-.Pos-controls label>span:first-child {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.Pos-controls input,
-.Pos-controls select {
+.Pos-field input,
+.Pos-field select {
+  width: 100%;
   border-radius: 0.65rem;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border: 1.5px solid rgba(148, 163, 184, 0.25);
   background: var(--bg-input);
   color: var(--text-primary);
-  padding: 0.55rem 0.65rem;
-  font-size: 0.85rem;
-  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.88rem;
+  outline: none;
   transition: all 0.2s;
 }
 
-.Pos-controls input:focus,
-.Pos-controls select:focus {
-  outline: none;
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+.Pos-field input:focus,
+.Pos-field select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-/* Customer Search Dropdown */
+.Pos-fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ── Customer Search Input ───────────────────────────────────── */
 .Pos-customerSearch {
   position: relative;
 }
 
 .Pos-customerSearch input {
-  width: 100%;
-  padding-right: 2rem;
+  padding-right: 2.25rem;
+}
+
+[dir="rtl"] .Pos-customerSearch input {
+  padding-right: 0.85rem;
+  padding-left: 2.25rem;
 }
 
 .Pos-clearCustomer {
   position: absolute;
-  right: 0.5rem;
+  right: 0.65rem;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: transparent;
-  color: rgba(248, 113, 113, 0.8);
+  color: var(--text-secondary);
+  opacity: 0.6;
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+[dir="rtl"] .Pos-clearCustomer {
+  right: auto;
+  left: 0.65rem;
 }
 
 .Pos-clearCustomer:hover {
-  color: #f87171;
+  opacity: 1;
+  color: #ef4444;
 }
 
 .Pos-customerDropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 220px;
+  max-height: 180px;
   overflow-y: auto;
   background: var(--bg-input);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 0.65rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 100;
-  margin-top: 0.25rem;
 }
 
 .Pos-customerOption {
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
   transition: background 0.15s;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  font-size: 0.85rem;
 }
 
 .Pos-customerOption:last-child {
@@ -492,171 +485,246 @@
 }
 
 .Pos-customerOption:hover {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .Pos-customerOption.selected {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
   font-weight: 600;
 }
 
 .Pos-customerName {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .Pos-customerPhone {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
-  opacity: 0.8;
 }
 
+/* ── Discount Modes Toggle ───────────────────────────────────── */
 .Pos-discountModes {
-  display: inline-flex;
-  gap: 0.5rem;
+  display: flex;
+  background: rgba(148, 163, 184, 0.08);
+  padding: 3px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  gap: 2px;
 }
 
 .Pos-discountModes button {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 999px;
-  padding: 0.2rem 0.8rem;
+  flex: 1;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.35rem;
   background: transparent;
   color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
 }
 
 .Pos-discountModes button.active {
-  background: rgba(59, 130, 246, 0.2);
-  color: #fff;
-  border-color: rgba(59, 130, 246, 0.5);
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.Pos-discountModes button:not(.active):hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
 }
 
 .Pos-discountInput {
   position: relative;
-  display: flex;
-  align-items: center;
+  margin-top: 0.4rem;
 }
 
 .Pos-discountInput input {
-  flex: 1;
+  padding-right: 2.25rem;
+}
+
+[dir="rtl"] .Pos-discountInput input {
+  padding-right: 0.85rem;
+  padding-left: 2.25rem;
 }
 
 .Pos-clearDiscount {
   position: absolute;
-  right: 0.5rem;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
   border: none;
   background: transparent;
-  color: rgba(248, 113, 113, 0.9);
+  color: var(--text-secondary);
+  opacity: 0.6;
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0.25rem 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.15s;
+}
+
+[dir="rtl"] .Pos-clearDiscount {
+  right: auto;
+  left: 0.65rem;
 }
 
 .Pos-clearDiscount:hover {
-  color: #f87171;
+  opacity: 1;
+  color: #ef4444;
 }
 
-.Pos-summary {
+/* ── Divider ─────────────────────────────────────────────────── */
+.Pos-divider {
+  border-top: 1px dashed var(--border-color);
+  margin: 0.25rem 0;
   flex-shrink: 0;
-  border-radius: 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  padding: 0.65rem 0.85rem;
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  min-width: 0;
 }
 
-.Pos-profit {
-  border-top: 1px dashed rgba(148, 163, 184, 0.3);
-  padding-top: 0.5rem;
+/* ── Summary Details ─────────────────────────────────────────── */
+.Pos-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .Pos-summaryRow {
   display: flex;
   justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.Pos-summaryRow span {
+  display: flex;
   align-items: center;
+  gap: 0.3rem;
 }
 
 .Pos-discountRow {
-  color: rgba(74, 222, 128, 0.9);
+  color: #34d399;
 }
 
-.Pos-total {
-  border-top: 1px solid rgba(148, 163, 184, 0.3);
+.Pos-summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
   padding-top: 0.5rem;
-  margin-top: 0.35rem;
+  margin-top: 0.15rem;
+  font-size: 1rem;
 }
 
-.Pos-total strong {
-  font-size: 1.1rem;
-  color: #06b6d4;
+.Pos-summaryTotal span {
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.Pos-profit {
-  border-top: 1px dashed rgba(148, 163, 184, 0.3);
-  padding-top: 0.5rem;
-  margin-top: 0.35rem;
+.Pos-summaryTotal strong {
+  font-size: 1.25rem;
+  color: #2563eb;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-theme='dark'] .Pos-summaryTotal strong {
+  color: #22d3ee;
+}
+
+.Pos-profitRow {
   color: #f59e0b;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 0.4rem;
 }
 
+/* ── Complete Sale Button ────────────────────────────────────── */
 .Pos-completeButton {
-  flex-shrink: 0;
-  margin-top: 0;
-  padding: 0.85rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, #0284c7, #3b82f6);
+  color: #ffffff;
   border: none;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #22d3ee, #3b82f6);
-  color: white;
-  font-weight: 700;
   font-size: 0.95rem;
+  font-weight: 800;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.4);
-  letter-spacing: 0.5px;
-  max-width: 100%;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .Pos-completeButton:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(34, 211, 238, 0.4);
+  background: linear-gradient(135deg, #0369a1, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+}
+
+.Pos-completeButton:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .Pos-completeButton:disabled {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-secondary);
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-.Pos-empty {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: 2rem;
-}
-
-.Pos-alert {
-  border-radius: 0.85rem;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  flex-shrink: 0;
-}
-
-.Pos-alert--error {
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.6);
-  color: #dc2626;
-}
-
-.Pos-alert--success {
-  background: rgba(74, 222, 128, 0.12);
-  border: 1px solid rgba(74, 222, 128, 0.5);
+/* ── Scanner Hints & Messages ────────────────────────────────── */
+.Pos-scannerMessage {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
   color: #10b981;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 0.5rem;
+}
+
+.Pos-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  gap: 0.75rem;
+}
+
+.Pos-empty p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Scrollbars */
+.Pos-cartTableWrapper::-webkit-scrollbar,
+.Pos-customerDropdown::-webkit-scrollbar,
+.Pos-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.Pos-cartTableWrapper::-webkit-scrollbar-track,
+.Pos-customerDropdown::-webkit-scrollbar-track,
+.Pos-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.Pos-cartTableWrapper::-webkit-scrollbar-thumb,
+.Pos-customerDropdown::-webkit-scrollbar-thumb,
+.Pos-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 2px;
 }

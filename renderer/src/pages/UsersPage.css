@@ -1,34 +1,88 @@
+/* ============================================================
+   USERS / STAFF MANAGEMENT PAGE — PREMIUM REDESIGN
+   ============================================================ */
+
 .Users {
-  padding: 20px;
+  padding: 1.5rem;
 }
 
+/* ── Page Header & Action Buttons ───────────────────────────── */
 .Users-addButton {
-  padding: 10px 20px;
-  background: #4a90e2;
+  padding: 0.6rem 1.25rem;
+  background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
-  font-size: 14px;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .Users-addButton:hover {
-  background: #357abd;
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
 }
 
+.Users-addButton:active {
+  transform: translateY(0);
+}
+
+/* ── Error Banner ───────────────────────────────────────────── */
 .Users-error {
-  background: #2a1f1f;
-  border: 1px solid #e74c3c;
-  color: #e74c3c;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.65rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
+/* ── Tab Switcher Segmented Control ─────────────────────────── */
+.Users-tabs {
+  display: inline-flex;
+  background: var(--bg-input);
+  padding: 4px;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border-color);
+  gap: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.Users-tab {
+  border: none;
+  border-radius: 0.45rem;
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.Users-tab.active {
+  background: var(--bg-card);
+  color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.Users-tab:not(.active):hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+/* ── Theme-Aware Table Styles ───────────────────────────────── */
 .Users-table {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
   overflow: hidden;
 }
 
@@ -38,103 +92,132 @@
 }
 
 .Users-table th {
-  background: #252525;
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #fff;
-  border-bottom: 1px solid #333;
+  background: rgba(148, 163, 184, 0.04);
+  padding: 0.75rem 1rem;
+  text-align: start;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.05em;
+}
+
+[dir="rtl"] .Users-table th {
+  text-align: start;
 }
 
 .Users-table td {
-  padding: 12px;
-  border-bottom: 1px solid #2a2a2a;
-  color: #ccc;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  vertical-align: middle;
 }
 
 .Users-table tr:hover {
-  background: #252525;
+  background: rgba(148, 163, 184, 0.02);
 }
 
+.Users-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Badges: Roles ──────────────────────────────────────────── */
 .Users-role {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: inline-block;
 }
 
 .Users-role-admin {
-  background: #e74c3c;
-  color: white;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .Users-role-manager {
-  background: #f39c12;
-  color: white;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
 }
 
 .Users-role-cashier {
-  background: #3498db;
-  color: white;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
+/* ── Badges: Status ─────────────────────────────────────────── */
 .Users-status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-block;
 }
 
 .Users-status-active {
-  background: #27ae60;
-  color: white;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
 }
 
 .Users-status-locked {
-  background: #7f8c8d;
-  color: white;
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
 }
 
+/* ── Actions ────────────────────────────────────────────────── */
 .Users-actions {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .Users-edit,
 .Users-delete {
-  padding: 6px 12px;
+  padding: 0.35rem 0.75rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.4rem;
+  font-weight: 600;
+  font-size: 0.75rem;
   cursor: pointer;
-  font-size: 12px;
+  transition: all 0.15s ease;
 }
 
 .Users-edit {
-  background: #4a90e2;
-  color: white;
+  background: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.15);
 }
 
 .Users-edit:hover {
-  background: #357abd;
+  background: #3b82f6;
+  color: white;
+  border-color: transparent;
 }
 
 .Users-delete {
-  background: #e74c3c;
-  color: white;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.15);
 }
 
 .Users-delete:hover {
-  background: #c0392b;
+  background: #ef4444;
+  color: white;
+  border-color: transparent;
 }
 
+/* ── Modals & Forms ─────────────────────────────────────────── */
 .Users-modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,12 +225,13 @@
 }
 
 .Users-modal {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
   width: 90%;
-  max-width: 500px;
+  max-width: 460px;
   max-height: 90vh;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
 }
 
@@ -155,57 +239,74 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #333;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .Users-modalHeader h2 {
   margin: 0;
-  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .Users-modalClose {
   background: none;
   border: none;
-  color: #999;
-  font-size: 24px;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
   cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  transition: all 0.15s ease;
 }
 
 .Users-modalClose:hover {
-  color: #fff;
+  background: var(--hover-bg);
+  color: var(--text-primary);
 }
 
 .Users-form {
-  padding: 20px;
+  padding: 1.5rem;
 }
 
 .Users-formGroup {
-  margin-bottom: 20px;
+  margin-bottom: 1.25rem;
 }
 
 .Users-formGroup label {
   display: block;
-  margin-bottom: 8px;
-  color: #ccc;
-  font-size: 14px;
+  margin-bottom: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.Users-formGroup input,
+.Users-formGroup input[type="text"],
+.Users-formGroup input[type="password"],
 .Users-formGroup select {
   width: 100%;
-  padding: 10px;
-  background: #252525;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 14px;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-input);
+  border: 1.5px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.65rem;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.Users-formGroup input[type="text"]:focus,
+.Users-formGroup input[type="password"]:focus,
+.Users-formGroup select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .Users-formGroup input:disabled {
@@ -213,47 +314,68 @@
   cursor: not-allowed;
 }
 
+.Users-formGroup label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: normal;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
 .Users-formGroup input[type="checkbox"] {
-  width: auto;
-  margin-right: 8px;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 1.5px solid rgba(148, 163, 184, 0.3);
+  cursor: pointer;
 }
 
 .Users-formActions {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 24px;
-}
-
-.Users-cancel,
-.Users-save {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+  margin-top: 1.75rem;
 }
 
 .Users-cancel {
-  background: #444;
-  color: #fff;
+  padding: 0.6rem 1.25rem;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
 .Users-cancel:hover {
-  background: #555;
+  background: var(--hover-bg);
+  color: var(--text-primary);
 }
 
 .Users-save {
-  background: #4a90e2;
+  padding: 0.6rem 1.25rem;
+  background: #3b82f6;
   color: white;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .Users-save:hover:not(:disabled) {
-  background: #357abd;
+  background: #2563eb;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
 }
 
 .Users-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
-

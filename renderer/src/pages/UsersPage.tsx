@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './UsersPage.css';
 
@@ -7,20 +8,36 @@ type User = import('../types/electron').User;
 type UserInput = import('../types/electron').UserInput;
 type UserUpdateInput = import('../types/electron').UserUpdateInput;
 type Branch = import('../types/electron').Branch;
+type Employee = import('../types/electron').Employee;
+type EmployeeInput = import('../types/electron').EmployeeInput;
 
 const UsersPage = (): JSX.Element => {
   const { token } = useAuth();
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'users' | 'employees'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
+
+  // User modal state
+  const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<Partial<UserInput & { id?: number; isLocked?: boolean }>>({
+  const [userFormData, setUserFormData] = useState<Partial<UserInput & { id?: number; isLocked?: boolean }>>({
     username: '',
     password: '',
     role: 'cashier',
     branchId: null,
+  });
+
+  // Employee modal state
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [employeeFormData, setEmployeeFormData] = useState<Partial<EmployeeInput & { id?: number }>>({
+    name: '',
+    phone: '',
+    isActive: true,
   });
 
   useEffect(() => {
@@ -35,12 +52,14 @@ const UsersPage = (): JSX.Element => {
 
     try {
       setLoading(true);
-      const [usersData, branchesData] = await Promise.all([
+      const [usersData, branchesData, employeesData] = await Promise.all([
         window.evaApi.users.list(token),
         window.evaApi.branches.list(token),
+        window.evaApi.employees.list(token, true), // include inactive
       ]);
       setUsers(usersData);
       setBranches(branchesData);
+      setEmployees(employeesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data.');
     } finally {
@@ -48,10 +67,11 @@ const UsersPage = (): JSX.Element => {
     }
   };
 
-  const handleOpenModal = (user?: User) => {
+  // User Actions
+  const handleOpenUserModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
-      setFormData({
+      setUserFormData({
         id: user.id,
         username: user.username,
         role: user.role,
@@ -61,20 +81,20 @@ const UsersPage = (): JSX.Element => {
       });
     } else {
       setEditingUser(null);
-      setFormData({
+      setUserFormData({
         username: '',
         password: '',
         role: 'cashier',
         branchId: null,
       });
     }
-    setShowModal(true);
+    setShowUserModal(true);
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
+  const handleCloseUserModal = () => {
+    setShowUserModal(false);
     setEditingUser(null);
-    setFormData({
+    setUserFormData({
       username: '',
       password: '',
       role: 'cashier',
@@ -82,7 +102,7 @@ const UsersPage = (): JSX.Element => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!window.evaApi || !token) return;
 
@@ -91,30 +111,30 @@ const UsersPage = (): JSX.Element => {
       if (editingUser) {
         const updateData: UserUpdateInput = {
           id: editingUser.id,
-          username: formData.username,
-          role: formData.role,
-          branchId: formData.branchId ?? null,
-          isLocked: formData.isLocked,
+          username: userFormData.username,
+          role: userFormData.role,
+          branchId: userFormData.branchId ?? null,
+          isLocked: userFormData.isLocked,
         };
-        if (formData.password && formData.password.trim()) {
-          updateData.password = formData.password;
+        if (userFormData.password && userFormData.password.trim()) {
+          updateData.password = userFormData.password;
         }
         await window.evaApi.users.update(token, updateData);
       } else {
-        if (!formData.username || !formData.password) {
+        if (!userFormData.username || !userFormData.password) {
           alert('Username and password are required');
           return;
         }
         const createData: UserInput = {
-          username: formData.username,
-          password: formData.password,
-          role: formData.role || 'cashier',
-          branchId: formData.branchId ?? null,
+          username: userFormData.username,
+          password: userFormData.password,
+          role: userFormData.role || 'cashier',
+          branchId: userFormData.branchId ?? null,
         };
         await window.evaApi.users.create(token, createData);
       }
       await loadData();
-      handleCloseModal();
+      handleCloseUserModal();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to save user');
     } finally {
@@ -122,7 +142,7 @@ const UsersPage = (): JSX.Element => {
     }
   };
 
-  const handleDelete = async (userId: number, username: string) => {
+  const handleUserDelete = async (userId: number, username: string) => {
     if (!window.evaApi || !token) return;
     if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
 
@@ -137,13 +157,95 @@ const UsersPage = (): JSX.Element => {
     }
   };
 
-  if (loading && users.length === 0) {
+  // Employee Actions
+  const handleOpenEmployeeModal = (emp?: Employee) => {
+    if (emp) {
+      setEditingEmployee(emp);
+      setEmployeeFormData({
+        id: emp.id,
+        name: emp.name,
+        phone: emp.phone ?? '',
+        isActive: emp.isActive,
+      });
+    } else {
+      setEditingEmployee(null);
+      setEmployeeFormData({
+        name: '',
+        phone: '',
+        isActive: true,
+      });
+    }
+    setShowEmployeeModal(true);
+  };
+
+  const handleCloseEmployeeModal = () => {
+    setShowEmployeeModal(false);
+    setEditingEmployee(null);
+    setEmployeeFormData({
+      name: '',
+      phone: '',
+      isActive: true,
+    });
+  };
+
+  const handleEmployeeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!window.evaApi || !token) return;
+
+    if (!employeeFormData.name || !employeeFormData.name.trim()) {
+      alert(t('employeeNameRequired'));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (editingEmployee) {
+        await window.evaApi.employees.update(token, editingEmployee.id, {
+          name: employeeFormData.name.trim(),
+          phone: employeeFormData.phone?.trim() || null,
+          isActive: employeeFormData.isActive,
+        });
+      } else {
+        await window.evaApi.employees.create(token, {
+          name: employeeFormData.name.trim(),
+          phone: employeeFormData.phone?.trim() || null,
+          isActive: employeeFormData.isActive !== false,
+        });
+      }
+      await loadData();
+      handleCloseEmployeeModal();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save employee');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmployeeDelete = async (empId: number, name: string) => {
+    if (!window.evaApi || !token) return;
+    if (!confirm(`Are you sure you want to delete employee "${name}"?`)) return;
+
+    try {
+      setLoading(true);
+      const hardDeleted = await window.evaApi.employees.delete(token, empId);
+      if (!hardDeleted) {
+        alert(t('employeeLinkedToSales') || 'Employee has sale records, so they have been marked as Inactive instead of deleted.');
+      }
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete employee');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && users.length === 0 && employees.length === 0) {
     return (
       <div className="Page">
         <div className="Page-header">
-          <h1>User Management</h1>
+          <h1>{t('users') || 'User Management'}</h1>
         </div>
-        <div className="Page-content">Loading...</div>
+        <div className="Page-content">{t('loading')}</div>
       </div>
     );
   }
@@ -151,102 +253,179 @@ const UsersPage = (): JSX.Element => {
   return (
     <div className="Page Users">
       <div className="Page-header">
-        <h1>User Management</h1>
-        <button className="Users-addButton" onClick={() => handleOpenModal()}>
-          + Add User
-        </button>
+        <h1>{activeTab === 'users' ? t('users') : t('employees')}</h1>
+        {activeTab === 'users' ? (
+          <button className="Users-addButton" onClick={() => handleOpenUserModal()}>
+            + {t('addUser') || 'Add User'}
+          </button>
+        ) : (
+          <button className="Users-addButton" onClick={() => handleOpenEmployeeModal()}>
+            + {t('addEmployee')}
+          </button>
+        )}
       </div>
 
       {error && <div className="Users-error">{error}</div>}
 
       <div className="Page-content">
-        <div className="Users-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Branch</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.username}</td>
-                  <td>
-                    <span className={`Users-role Users-role-${user.role}`}>{user.role}</span>
-                  </td>
-                  <td>{user.branchName || 'No Branch'}</td>
-                  <td>
-                    {user.isLocked ? (
-                      <span className="Users-status Users-status-locked">Locked</span>
-                    ) : (
-                      <span className="Users-status Users-status-active">Active</span>
-                    )}
-                  </td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <div className="Users-actions">
-                      <button className="Users-edit" onClick={() => handleOpenModal(user)}>
-                        Edit
-                      </button>
-                      {user.username !== 'admin' && (
+        {/* Tab Selection */}
+        <div className="Users-tabs">
+          <button
+            type="button"
+            className={`Users-tab ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            {t('users') || 'System Logins'}
+          </button>
+          <button
+            type="button"
+            className={`Users-tab ${activeTab === 'employees' ? 'active' : ''}`}
+            onClick={() => setActiveTab('employees')}
+          >
+            {t('employees')}
+          </button>
+        </div>
+
+        {activeTab === 'users' ? (
+          <div className="Users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('username') || 'Username'}</th>
+                  <th>{t('role') || 'Role'}</th>
+                  <th>{t('branch') || 'Branch'}</th>
+                  <th>{t('status') || 'Status'}</th>
+                  <th>{t('created') || 'Created'}</th>
+                  <th>{t('actions') || 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.username}</td>
+                    <td>
+                      <span className={`Users-role Users-role-${user.role}`}>{user.role}</span>
+                    </td>
+                    <td>{user.branchName || t('notAssigned') || 'No Branch'}</td>
+                    <td>
+                      {user.isLocked ? (
+                        <span className="Users-status Users-status-locked">{t('locked') || 'Locked'}</span>
+                      ) : (
+                        <span className="Users-status Users-status-active">{t('active') || 'Active'}</span>
+                      )}
+                    </td>
+                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div className="Users-actions">
+                        <button className="Users-edit" onClick={() => handleOpenUserModal(user)}>
+                          {t('edit')}
+                        </button>
+                        {user.username !== 'admin' && (
+                          <button
+                            className="Users-delete"
+                            onClick={() => handleUserDelete(user.id, user.username)}
+                          >
+                            {t('delete')}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="Users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('employeeName')}</th>
+                  <th>{t('phone')}</th>
+                  <th>{t('status')}</th>
+                  <th>{t('created')}</th>
+                  <th>{t('actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((emp) => (
+                  <tr key={emp.id}>
+                    <td>{emp.name}</td>
+                    <td>{emp.phone || '-'}</td>
+                    <td>
+                      {emp.isActive ? (
+                        <span className="Users-status Users-status-active">{t('active')}</span>
+                      ) : (
+                        <span className="Users-status Users-status-locked">{t('inactive')}</span>
+                      )}
+                    </td>
+                    <td>{new Date(emp.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div className="Users-actions">
+                        <button className="Users-edit" onClick={() => handleOpenEmployeeModal(emp)}>
+                          {t('edit')}
+                        </button>
                         <button
                           className="Users-delete"
-                          onClick={() => handleDelete(user.id, user.username)}
+                          onClick={() => handleEmployeeDelete(emp.id, emp.name)}
                         >
-                          Delete
+                          {t('delete')}
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {employees.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                      {t('noEmployeesYet')}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {showModal && (
-        <div className="Users-modalOverlay" onClick={handleCloseModal}>
+      {/* User Modal */}
+      {showUserModal && (
+        <div className="Users-modalOverlay" onClick={handleCloseUserModal}>
           <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Users-modalHeader">
-              <h2>{editingUser ? 'Edit User' : 'Add User'}</h2>
-              <button className="Users-modalClose" onClick={handleCloseModal}>
+              <h2>{editingUser ? t('edit') : t('add')} {t('users')}</h2>
+              <button className="Users-modalClose" onClick={handleCloseUserModal}>
                 ✕
               </button>
             </div>
-            <form className="Users-form" onSubmit={handleSubmit}>
+            <form className="Users-form" onSubmit={handleUserSubmit}>
               <div className="Users-formGroup">
-                <label>Username *</label>
+                <label>{t('username')} *</label>
                 <input
                   type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  value={userFormData.username}
+                  onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
                   required
                   disabled={!!editingUser}
                 />
               </div>
 
               <div className="Users-formGroup">
-                <label>Password {editingUser ? '(leave blank to keep current)' : '*'}</label>
+                <label>{t('password')} {editingUser ? '(leave blank to keep current)' : '*'}</label>
                 <input
                   type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
                   required={!editingUser}
                 />
               </div>
 
               <div className="Users-formGroup">
-                <label>Role *</label>
+                <label>{t('role') || 'Role'} *</label>
                 <select
-                  value={formData.role}
+                  value={userFormData.role}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as 'admin' | 'manager' | 'cashier' })
+                    setUserFormData({ ...userFormData, role: e.target.value as 'admin' | 'manager' | 'cashier' })
                   }
                   required
                 >
@@ -257,12 +436,12 @@ const UsersPage = (): JSX.Element => {
               </div>
 
               <div className="Users-formGroup">
-                <label>Branch</label>
+                <label>{t('branch') || 'Branch'}</label>
                 <select
-                  value={formData.branchId ?? ''}
+                  value={userFormData.branchId ?? ''}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
+                    setUserFormData({
+                      ...userFormData,
                       branchId: e.target.value ? parseInt(e.target.value) : null,
                     })
                   }
@@ -281,20 +460,74 @@ const UsersPage = (): JSX.Element => {
                   <label>
                     <input
                       type="checkbox"
-                      checked={formData.isLocked || false}
-                      onChange={(e) => setFormData({ ...formData, isLocked: e.target.checked })}
+                      checked={userFormData.isLocked || false}
+                      onChange={(e) => setUserFormData({ ...userFormData, isLocked: e.target.checked })}
                     />
-                    Lock Account
+                    {t('lockPOS') || 'Lock Account'}
                   </label>
                 </div>
               )}
 
               <div className="Users-formActions">
-                <button type="button" className="Users-cancel" onClick={handleCloseModal}>
-                  Cancel
+                <button type="button" className="Users-cancel" onClick={handleCloseUserModal}>
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="Users-save" disabled={loading}>
-                  {loading ? 'Saving...' : editingUser ? 'Update' : 'Create'}
+                  {loading ? t('saving') : editingUser ? t('save') : t('add')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Modal */}
+      {showEmployeeModal && (
+        <div className="Users-modalOverlay" onClick={handleCloseEmployeeModal}>
+          <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="Users-modalHeader">
+              <h2>{editingEmployee ? t('editEmployee') : t('addEmployee')}</h2>
+              <button className="Users-modalClose" onClick={handleCloseEmployeeModal}>
+                ✕
+              </button>
+            </div>
+            <form className="Users-form" onSubmit={handleEmployeeSubmit}>
+              <div className="Users-formGroup">
+                <label>{t('employeeName')} *</label>
+                <input
+                  type="text"
+                  value={employeeFormData.name || ''}
+                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="Users-formGroup">
+                <label>{t('phone')}</label>
+                <input
+                  type="text"
+                  value={employeeFormData.phone || ''}
+                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="Users-formGroup">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={employeeFormData.isActive !== false}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, isActive: e.target.checked })}
+                  />
+                  {t('active') || 'Active'}
+                </label>
+              </div>
+
+              <div className="Users-formActions">
+                <button type="button" className="Users-cancel" onClick={handleCloseEmployeeModal}>
+                  {t('cancel')}
+                </button>
+                <button type="submit" className="Users-save" disabled={loading}>
+                  {loading ? t('saving') : editingEmployee ? t('save') : t('add')}
                 </button>
               </div>
             </form>

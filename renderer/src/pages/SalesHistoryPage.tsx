@@ -237,6 +237,12 @@ const SalesHistoryPage = (): JSX.Element => {
                   <label>{t('date')}:</label>
                   <span>{new Date(selectedSale.saleDate).toLocaleString()}</span>
                 </div>
+                {selectedSale.employeeName && (
+                  <div>
+                    <label>{t('assistedBy')}:</label>
+                    <span>{selectedSale.employeeName}</span>
+                  </div>
+                )}
                 <div>
                   <label>{t('paymentMethod')}:</label>
                   <span>{selectedSale.paymentMethod || 'N/A'}</span>

@@ -86,6 +86,8 @@ export interface Sale {
   branchId: number;
   cashierId: number;
   customerId?: number | null;
+  employeeId?: number | null;
+  employeeName?: string | null;
   saleDate: string;
   subtotalIQD: number;
   discountIQD: number;
@@ -96,7 +98,7 @@ export interface Sale {
   isReturned?: boolean;
 }
 
-export type SaleInput = Omit<Sale, 'id' | 'items' | 'profitIQD'> & {
+export type SaleInput = Omit<Sale, 'id' | 'items' | 'profitIQD' | 'employeeName'> & {
   items: SaleItemInput[];
 };
 
@@ -588,4 +590,18 @@ export interface OnlineOrderInput {
   discountIQD: number;
   totalIQD: number;
   items: OnlineOrderItemInput[];
+}
+
+export interface Employee {
+  id: number;
+  name: string;
+  phone?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface EmployeeInput {
+  name: string;
+  phone?: string | null;
+  isActive?: boolean;
 }

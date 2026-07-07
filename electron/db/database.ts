@@ -76,6 +76,8 @@ import {
   OnlineOrder,
   OnlineOrderInput,
   OnlineOrderItem,
+  Employee,
+  EmployeeInput,
 } from './types';
 
 // â”€â”€â”€ Session State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -100,12 +102,13 @@ const fetchCustomerById = async (id: number): Promise<Customer | null> => {
 // ─── Domain Business Logic ────────────────────────────────────────────────────
 
 export async function getSaleDetail(saleId: number): Promise<SaleDetail | null> {
-  const sale = await get<Sale>(
+  const sale = await get<any>(
     `
-    SELECT *
-    FROM sales
-    WHERE id = ?
-  `,
+    SELECT s.*, e.name AS employeeName
+    FROM sales s
+    LEFT JOIN employees e ON e.id = s.employeeId
+    WHERE s.id = ?
+    `,
     [saleId],
   );
 
@@ -1544,15 +1547,16 @@ export async function createSale(input: SaleInput): Promise<SaleDetail> {
     const saleResult = await runWithResult(
       `
       INSERT INTO sales(
-        branchId, cashierId, customerId, saleDate,
+        branchId, cashierId, customerId, employeeId, saleDate,
         subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD
       )
-  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.branchId,
         input.cashierId,
         input.customerId ?? null,
+        input.employeeId ?? null,
         input.saleDate,
         input.subtotalIQD,
         input.discountIQD ?? 0,
@@ -1629,12 +1633,14 @@ interface SaleRow {
 }
 
 export async function listSalesByDateRange(range: DateRange): Promise<SalesListResponse> {
-  const salesRows = await all<SaleRow & { isReturned: number }>(
+  const salesRows = await all<any>(
     `
-  SELECT
-  s.*,
-    (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
+    SELECT
+      s.*,
+      e.name AS employeeName,
+      (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
     FROM sales s
+    LEFT JOIN employees e ON e.id = s.employeeId
     WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ORDER BY s.id DESC
     `,
@@ -3344,4 +3350,102 @@ export async function deleteOnlineOrder(
   }
 
   await logActivity(userId, 'delete', 'online_order', orderId);
+}
+
+// ─── Employees CRUD & Reports ──────────────────────────────────────────────────
+
+export async function listEmployees(includeInactive = false): Promise<Employee[]> {
+  const query = includeInactive
+    ? 'SELECT * FROM employees ORDER BY name ASC'
+    : 'SELECT * FROM employees WHERE isActive = 1 ORDER BY name ASC';
+  const rows = await all<any>(query);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    phone: r.phone ?? null,
+    isActive: r.isActive === 1,
+    createdAt: r.createdAt,
+  }));
+}
+
+export async function createEmployee(input: EmployeeInput): Promise<Employee> {
+  const result = await runWithResult(
+    'INSERT INTO employees (name, phone, isActive) VALUES (?, ?, ?)',
+    [input.name, input.phone ?? null, input.isActive !== false ? 1 : 0]
+  );
+  const employeeId = result.lastID as number;
+  const newEmp = await get<any>('SELECT * FROM employees WHERE id = ?', [employeeId]);
+  if (!newEmp) throw new Error('Failed to retrieve created employee');
+  return {
+    id: newEmp.id,
+    name: newEmp.name,
+    phone: newEmp.phone ?? null,
+    isActive: newEmp.isActive === 1,
+    createdAt: newEmp.createdAt,
+  };
+}
+
+export async function updateEmployee(id: number, input: Partial<EmployeeInput>): Promise<Employee> {
+  const existing = await get<any>('SELECT * FROM employees WHERE id = ?', [id]);
+  if (!existing) throw new Error('Employee not found');
+
+  const name = input.name !== undefined ? input.name : existing.name;
+  const phone = input.phone !== undefined ? input.phone : existing.phone;
+  const isActive = input.isActive !== undefined ? (input.isActive ? 1 : 0) : existing.isActive;
+
+  await run(
+    'UPDATE employees SET name = ?, phone = ?, isActive = ? WHERE id = ?',
+    [name, phone, isActive, id]
+  );
+
+  const updated = await get<any>('SELECT * FROM employees WHERE id = ?', [id]);
+  return {
+    id: updated.id,
+    name: updated.name,
+    phone: updated.phone ?? null,
+    isActive: updated.isActive === 1,
+    createdAt: updated.createdAt,
+  };
+}
+
+export async function deleteEmployee(id: number): Promise<boolean> {
+  const linkedSales = await get<{ count: number }>(
+    'SELECT COUNT(*) as count FROM sales WHERE employeeId = ?',
+    [id]
+  );
+
+  if (linkedSales && linkedSales.count > 0) {
+    // Has sales, soft delete (mark as inactive)
+    await run('UPDATE employees SET isActive = 0 WHERE id = ?', [id]);
+    return false; // Soft deleted
+  } else {
+    // No sales, hard delete
+    await run('DELETE FROM employees WHERE id = ?', [id]);
+    return true; // Hard deleted
+  }
+}
+
+export interface EmployeeSalesReportEntry {
+  employeeId: number | null;
+  employeeName: string;
+  salesCount: number;
+  itemsSold: number;
+  totalRevenueIQD: number;
+}
+
+export async function getEmployeeSalesReport(startDate: string, endDate: string): Promise<EmployeeSalesReportEntry[]> {
+  const query = `
+    SELECT 
+      s.employeeId,
+      IFNULL(e.name, 'Unassigned') as employeeName,
+      COUNT(s.id) as salesCount,
+      IFNULL(SUM((SELECT SUM(si.quantity) FROM sale_items si WHERE si.saleId = s.id)), 0) as itemsSold,
+      IFNULL(SUM(s.totalIQD), 0) as totalRevenueIQD
+    FROM sales s
+    LEFT JOIN employees e ON e.id = s.employeeId
+    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    GROUP BY s.employeeId, e.name
+    ORDER BY totalRevenueIQD DESC
+  `;
+  return all<EmployeeSalesReportEntry>(query, [startDate, endDate]);
 }

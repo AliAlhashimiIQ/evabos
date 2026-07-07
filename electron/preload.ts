@@ -19,6 +19,7 @@ import type {
   BranchInput,
   BranchUpdateInput,
   OnlineOrderInput,
+  EmployeeInput,
 } from './db/types';
 
 // Expose protected methods that allow the renderer process to use
@@ -32,6 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAllSettings: () => ipcRenderer.invoke('db:get-all-settings'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   resetFocus: () => ipcRenderer.invoke('app:reset-focus'),
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
 
   // Auto Updater
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
@@ -77,6 +79,13 @@ contextBridge.exposeInMainWorld('evaApi', {
     listByDateRange: (token: string, range: DateRange) => ipcRenderer.invoke('sales:listByDateRange', token, range),
     getDetail: (token: string, saleId: number) => ipcRenderer.invoke('sales:getDetail', token, saleId),
     delete: (token: string, saleId: number) => ipcRenderer.invoke('sales:delete', token, saleId),
+  },
+  employees: {
+    list: (token: string, includeInactive?: boolean) => ipcRenderer.invoke('employees:list', token, includeInactive),
+    create: (token: string, data: EmployeeInput) => ipcRenderer.invoke('employees:create', token, data),
+    update: (token: string, id: number, data: Partial<EmployeeInput>) => ipcRenderer.invoke('employees:update', token, { id, data }),
+    delete: (token: string, id: number) => ipcRenderer.invoke('employees:delete', token, id),
+    salesReport: (token: string, range: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:employeeSales', token, range),
   },
   exchangeRates: {
     getCurrent: () => ipcRenderer.invoke('exchangeRates:getCurrent'),

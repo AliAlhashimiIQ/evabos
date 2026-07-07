@@ -30,6 +30,7 @@ import { registerLicensingIpc } from './ipc/licensing';
 import { registerSettingsIpc } from './ipc/settings';
 import { registerEmailIpc } from './ipc/email';
 import { registerOnlineOrdersIpc } from './ipc/onlineOrders';
+import { registerEmployeesIpc } from './ipc/employees';
 import { createBackup } from './db/backup';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -224,6 +225,10 @@ const registerIpcHandlers = (): void => {
   ipcMain.handle('app:relaunch', () => {
     app.relaunch();
     app.exit(0);
+  });
+
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion();
   });
 
   ipcMain.handle('app:quit-and-install', () => {
@@ -430,6 +435,7 @@ app.whenReady().then(async () => {
   registerSettingsIpc();
   registerEmailIpc();
   registerOnlineOrdersIpc();
+  registerEmployeesIpc();
   scheduleDailyBackup();
   scheduleDailyEmailReport();
   await createWindow();

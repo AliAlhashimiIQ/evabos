@@ -157,6 +157,7 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, passwordHash TEXT NOT NULL, role TEXT NOT NULL, branchId INTEGER, isLocked INTEGER DEFAULT 0, requiresPasswordChange INTEGER DEFAULT 0, createdAt TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (branchId) REFERENCES branches(id) ON DELETE SET NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS exchange_rates (id INTEGER PRIMARY KEY AUTOINCREMENT, rate REAL NOT NULL, effectiveDate TEXT NOT NULL, note TEXT, branchId INTEGER, FOREIGN KEY (branchId) REFERENCES branches(id))`);
   await run(`CREATE TABLE IF NOT EXISTS suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, contactName TEXT, phone TEXT, email TEXT, address TEXT, notes TEXT, isActive INTEGER DEFAULT 1)`);
+  await run(`CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, isActive INTEGER DEFAULT 1, createdAt TEXT DEFAULT CURRENT_TIMESTAMP)`);
   await run(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, baseCode TEXT, category TEXT, season TEXT, description TEXT, defaultSupplierId INTEGER, isActive INTEGER DEFAULT 1, createdAt TEXT DEFAULT CURRENT_TIMESTAMP, updatedAt TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (defaultSupplierId) REFERENCES suppliers(id))`);
   await run(`CREATE TABLE IF NOT EXISTS product_variants (id INTEGER PRIMARY KEY AUTOINCREMENT, productId INTEGER NOT NULL, size TEXT, color TEXT, sku TEXT NOT NULL UNIQUE, barcode TEXT UNIQUE, defaultPriceIQD REAL NOT NULL, purchaseCostUSD REAL DEFAULT 0, avgCostUSD REAL DEFAULT 0, lastPurchaseCostUSD REAL DEFAULT 0, isActive INTEGER DEFAULT 1, FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE)`);
   await run(`CREATE TABLE IF NOT EXISTS variant_stock (variantId INTEGER NOT NULL, branchId INTEGER NOT NULL, quantity REAL NOT NULL DEFAULT 0, lowStockThreshold REAL NOT NULL DEFAULT 1, PRIMARY KEY (variantId, branchId), FOREIGN KEY (variantId) REFERENCES product_variants(id) ON DELETE CASCADE, FOREIGN KEY (branchId) REFERENCES branches(id) ON DELETE CASCADE)`);
@@ -164,7 +165,7 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, notes TEXT, totalVisits INTEGER NOT NULL DEFAULT 0, totalSpentIQD REAL NOT NULL DEFAULT 0, lastVisitAt TEXT, loyaltyPoints REAL NOT NULL DEFAULT 0, discountPercent REAL DEFAULT NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS purchase_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, supplierId INTEGER NOT NULL, branchId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft', reference TEXT, orderedAt TEXT, receivedAt TEXT, subtotalUSD REAL NOT NULL DEFAULT 0, shippingUSD REAL NOT NULL DEFAULT 0, taxesUSD REAL NOT NULL DEFAULT 0, notes TEXT, FOREIGN KEY (supplierId) REFERENCES suppliers(id), FOREIGN KEY (branchId) REFERENCES branches(id))`);
   await run(`CREATE TABLE IF NOT EXISTS purchase_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, purchaseOrderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, costUSD REAL NOT NULL, costIQD REAL NOT NULL, FOREIGN KEY (purchaseOrderId) REFERENCES purchase_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
-  await run(`CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, saleDate TEXT NOT NULL, subtotalIQD REAL NOT NULL, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL, paymentMethod TEXT, profitIQD REAL DEFAULT 0, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id))`);
+  await run(`CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, employeeId INTEGER, saleDate TEXT NOT NULL, subtotalIQD REAL NOT NULL, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL, paymentMethod TEXT, profitIQD REAL DEFAULT 0, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE SET NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS sale_items (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, unitCostIQDAtSale REAL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
   await run(`CREATE TABLE IF NOT EXISTS returns (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER, branchId INTEGER NOT NULL, processedBy INTEGER NOT NULL, customerId INTEGER, reason TEXT, refundAmountIQD REAL NOT NULL, totalCostIQD REAL DEFAULT 0, type TEXT NOT NULL, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (saleId) REFERENCES sales(id), FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (processedBy) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id))`);
   await run(`CREATE TABLE IF NOT EXISTS return_items (id INTEGER PRIMARY KEY AUTOINCREMENT, returnId INTEGER NOT NULL, saleItemId INTEGER, variantId INTEGER NOT NULL, quantity REAL NOT NULL, amountIQD REAL NOT NULL, FOREIGN KEY (returnId) REFERENCES returns(id) ON DELETE CASCADE, FOREIGN KEY (saleItemId) REFERENCES sale_items(id), FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
@@ -204,6 +205,13 @@ const seedInitialData = async (): Promise<void> => {
 export async function initDatabase(): Promise<void> {
   await createTables();
   // Migrations
+  try {
+    const sCols = await all<{ name: string }>('PRAGMA table_info(sales)');
+    if (!sCols.some(c => c.name === 'employeeId')) {
+      await run('ALTER TABLE sales ADD COLUMN employeeId INTEGER REFERENCES employees(id) ON DELETE SET NULL');
+      log.info('[db] Added employeeId to sales');
+    }
+  } catch (err) { log.error('[db] Sales migration failed:', err); }
   try {
     const cols = await all<{ name: string }>('PRAGMA table_info(returns)');
     if (!cols.some(c => c.name === 'totalCostIQD')) { await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0'); log.info('[db] Added totalCostIQD'); }
@@ -268,7 +276,8 @@ export const mapVariantRow = (row: ProductVariantRow): Product => ({
 
 export const mapSaleRow = (row: any): Sale => ({
   id: row.id, branchId: row.branchId, cashierId: row.cashierId,
-  customerId: row.customerId ?? null, saleDate: row.saleDate,
+  customerId: row.customerId ?? null, employeeId: row.employeeId ?? null,
+  employeeName: row.employeeName ?? null, saleDate: row.saleDate,
   subtotalIQD: row.subtotalIQD ?? 0, discountIQD: row.discountIQD ?? 0,
   totalIQD: row.totalIQD ?? 0, paymentMethod: row.paymentMethod ?? null,
   profitIQD: row.profitIQD ?? null, items: [],

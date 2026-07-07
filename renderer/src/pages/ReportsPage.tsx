@@ -17,6 +17,7 @@ import { FinancialTab } from './reports/FinancialTab';
 import { CustomersTab } from './reports/CustomersTab';
 import { ActivityTab } from './reports/ActivityTab';
 import { MonthlyTab } from './reports/MonthlyTab';
+import { EmployeesTab } from './reports/EmployeesTab';
 
 type AdvancedReports = import('../types/electron').AdvancedReports;
 type LeastProfitableItem = import('../types/electron').LeastProfitableItem;
@@ -27,7 +28,7 @@ type PeakDayData = import('../types/electron').PeakDayData;
 type ExpenseByCategoryItem = import('../types/electron').ExpenseByCategoryItem;
 type SeasonSalesItem = import('../types/electron').SeasonSalesItem;
 
-type TabId = 'overview' | 'sales' | 'monthly' | 'inventory' | 'financial' | 'customers' | 'activity';
+type TabId = 'overview' | 'sales' | 'monthly' | 'inventory' | 'financial' | 'customers' | 'activity' | 'employees';
 
 const defaultStart = new Date();
 defaultStart.setDate(defaultStart.getDate() - 7);
@@ -40,6 +41,7 @@ const TABS: { id: TabId; icon: typeof LayoutDashboard; labelKey: string }[] = [
   { id: 'inventory', icon: Package, labelKey: 'inventoryHealth' },
   { id: 'financial', icon: DollarSign, labelKey: 'financial' },
   { id: 'customers', icon: Users, labelKey: 'customers' },
+  { id: 'employees', icon: Users, labelKey: 'employees' },
   { id: 'activity', icon: ClipboardList, labelKey: 'activityLogs' },
 ];
 
@@ -63,6 +65,7 @@ const ReportsPage = (): JSX.Element => {
   const [expensesByCategory, setExpensesByCategory] = useState<ExpenseByCategoryItem[]>([]);
   const [seasonSales, setSeasonSales] = useState<SeasonSalesItem[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<string[]>([]);
+  const [employeeSales, setEmployeeSales] = useState<any[]>([]);
 
   const loadReports = async () => {
     if (!window.evaApi || !token) {
@@ -72,7 +75,7 @@ const ReportsPage = (): JSX.Element => {
     try {
       setLoading(true);
       setError(null);
-      const [response, leastItems, leastSuppliers, aging, hours, days, expCat, seasSales] = await Promise.all([
+      const [response, leastItems, leastSuppliers, aging, hours, days, expCat, seasSales, empSales] = await Promise.all([
         window.evaApi.reports.advanced(token, { ...range, season: range.season || null }),
         window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate }),
@@ -81,6 +84,9 @@ const ReportsPage = (): JSX.Element => {
         window.evaApi.reports.peakDays(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.expensesByCategory(token, { startDate: range.startDate, endDate: range.endDate }),
         window.evaApi.reports.salesBySeason(token, { startDate: range.startDate, endDate: range.endDate }),
+        window.evaApi.employees?.salesReport
+          ? window.evaApi.employees.salesReport(token, { startDate: range.startDate, endDate: range.endDate })
+          : Promise.resolve([]),
       ]);
       setReports(response);
       setLeastProfitableItems(leastItems);
@@ -90,6 +96,7 @@ const ReportsPage = (): JSX.Element => {
       setPeakDays(days);
       setExpensesByCategory(expCat);
       setSeasonSales(seasSales);
+      setEmployeeSales(empSales || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadReports'));
     } finally {
@@ -248,6 +255,7 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
           {activeTab === 'inventory' && <InventoryTab reports={reports} leastProfitableItems={leastProfitableItems} leastProfitableSuppliers={leastProfitableSuppliers} inventoryAging={inventoryAging} t={t} />}
           {activeTab === 'financial' && <FinancialTab reports={reports} expensesByCategory={expensesByCategory} t={t} />}
           {activeTab === 'customers' && <CustomersTab reports={reports} t={t} />}
+          {activeTab === 'employees' && <EmployeesTab employeeSales={employeeSales} t={t} />}
           {activeTab === 'activity' && <ActivityTab reports={reports} t={t} />}
         </>
       )}

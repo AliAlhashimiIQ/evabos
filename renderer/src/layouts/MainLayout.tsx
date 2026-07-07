@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { PageTransition } from '../components/PageTransition';
 import { ShortcutOverlay } from '../components/ShortcutOverlay';
@@ -30,6 +31,13 @@ const MainLayout = (): JSX.Element => {
   const { user, logout, posLocked, lockPos, unlockPos, hasRole } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    if (window.electronAPI && window.electronAPI.getAppVersion) {
+      window.electronAPI.getAppVersion().then(setAppVersion);
+    }
+  }, []);
 
   // Cashiers can only see: POS, Products, Returns, Customers
   const cashierNavItems = [
@@ -80,7 +88,10 @@ const MainLayout = (): JSX.Element => {
       <aside className="Layout-sidebar">
         <div className="Layout-brand">
           <Store size={24} className="Layout-brandIcon" />
-          <span>{t('appName')}</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span>{t('appName')}</span>
+            {appVersion && <span style={{ fontSize: '0.75rem', opacity: 0.65, marginTop: '2px' }}>v{appVersion}</span>}
+          </div>
         </div>
         <nav className="Layout-nav">
           {navItems.map((item) => (
