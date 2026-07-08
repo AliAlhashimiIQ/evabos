@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Users, Loader2, X, ShoppingBag } from 'lucide-react';
 import type { EmployeeDetailedSalesEntry } from '../../types/electron';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -47,15 +47,15 @@ const formatDate = (dateStr: string) => {
 const groupSalesByTransaction = (entries: EmployeeDetailedSalesEntry[]): GroupedSale[] => {
   const groups: Record<number, GroupedSale> = {};
   
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     if (!groups[entry.saleId]) {
       groups[entry.saleId] = {
         saleId: entry.saleId,
         saleDate: entry.saleDate,
         items: [],
-        subtotalIQD: entry.subtotalIQD,
-        discountIQD: entry.discountIQD,
-        totalIQD: entry.totalIQD
+        subtotalIQD: entry.saleSubtotalIQD ?? 0,
+        discountIQD: entry.saleDiscountIQD ?? 0,
+        totalIQD: entry.saleTotalIQD ?? 0,
       };
     }
     groups[entry.saleId].items.push(entry);
@@ -113,6 +113,10 @@ export const EmployeesTab = ({ employeeSales, startDate, endDate, token }: Props
         <div className="Reports-miniKpi">
           <span>{t('employees') || 'Employees'}</span>
           <strong>{employeeSales.length}</strong>
+        </div>
+        <div className="Reports-miniKpi">
+          <span>{t('salesCount') || 'Sales Count'}</span>
+          <strong>{fmt(totalSalesCount)}</strong>
         </div>
         <div className="Reports-miniKpi">
           <span>{t('totalRevenue') || 'Total Revenue'}</span>

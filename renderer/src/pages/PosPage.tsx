@@ -197,12 +197,7 @@ const PosPage = (): JSX.Element => {
     }
   }, [token, nextCursor]);
 
-  const loadMore = useCallback(async () => {
-    if (!hasMore || isLoadingMore) return;
-    setIsLoadingMore(true);
-    await loadProducts(false);
-    setIsLoadingMore(false);
-  }, [hasMore, isLoadingMore, loadProducts]);
+
 
   useEffect(() => {
     const loadData = async () => {

@@ -261,7 +261,6 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
               startDate={range.startDate} 
               endDate={range.endDate} 
               token={token} 
-              t={t} 
             />
           )}
           {activeTab === 'activity' && <ActivityTab reports={reports} t={t} />}

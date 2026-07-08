@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Ticket, X, Check, Printer, Trash2, Calendar, Award, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, Ticket, Printer, Trash2, Calendar, Award, DollarSign } from 'lucide-react';
 import './Pages.css';
 import './CustomersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -450,9 +450,9 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                     onClick={async () => {
                                         const c = customers.find(cust => cust.id === voucherCustomerId);
                                         const html = generateVoucherHtml(voucherDiscount, voucherValidityDays, c?.name);
-                                        if (window.evaApi) {
+                                        if (window.evaApi && window.evaApi.printing) {
                                             try {
-                                                await window.evaApi.printHtml(html, preferredPrinter);
+                                                await window.evaApi.printing.print({ html });
                                                 setVoucherModalOpen(false);
                                             } catch (err) {
                                                 console.error('Failed to print voucher', err);
