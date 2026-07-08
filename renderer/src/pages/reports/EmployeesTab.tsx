@@ -53,9 +53,9 @@ const groupSalesByTransaction = (entries: EmployeeDetailedSalesEntry[]): Grouped
         saleId: entry.saleId,
         saleDate: entry.saleDate,
         items: [],
-        subtotalIQD: entry.saleSubtotalIQD ?? 0,
-        discountIQD: entry.saleDiscountIQD ?? 0,
-        totalIQD: entry.saleTotalIQD ?? 0,
+        subtotalIQD: entry.subtotalIQD ?? 0,
+        discountIQD: entry.discountIQD ?? 0,
+        totalIQD: entry.totalIQD ?? 0,
       };
     }
     groups[entry.saleId].items.push(entry);

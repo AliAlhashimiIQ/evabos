@@ -45,6 +45,16 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
   const [exchangeRate, setExchangeRate] = useState<number>(1470); // Default exchange rate
 
   const [initialStockStr, setInitialStockStr] = useState('');
+  const [supplierSearch, setSupplierSearch] = useState('');
+
+  useEffect(() => {
+    if (formState.supplierId) {
+      const name = suppliers.find((s) => s.id === formState.supplierId)?.name ?? '';
+      setSupplierSearch(name);
+    } else {
+      setSupplierSearch('');
+    }
+  }, [formState.supplierId, suppliers]);
 
   const handleChange =
     (field: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -128,8 +138,10 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
     try {
       setFormError(null);
 
+      const selectedSupplier = suppliers.find((s) => s.name === supplierSearch);
       const payload: ProductInput = {
         ...formState,
+        supplierId: selectedSupplier ? selectedSupplier.id : undefined,
         salePriceIQD,
         purchaseCostUSD: Number.isFinite(purchaseCostUSD) ? purchaseCostUSD : 0,
       };
@@ -137,6 +149,7 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
       // Pass initialStock as part of the payload (casting to any to avoid type error for now, or update interface)
       await onSubmit({ ...payload, initialStock: Number(initialStockStr) || 0 } as any);
       setFormState(initialState);
+      setSupplierSearch('');
       setInitialStockStr('');
     } catch (error) {
       setFormError(error instanceof Error ? error.message : t('failedToCreateProduct'));
@@ -154,14 +167,8 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
         <label>
           <span>{t('supplier')}</span>
           <Combobox
-            value={suppliers.find((s) => s.id === formState.supplierId)?.name ?? ''}
-            onChange={(val) => {
-              const selected = suppliers.find((s) => s.name === val);
-              setFormState((prev) => ({
-                ...prev,
-                supplierId: selected ? selected.id : undefined,
-              }));
-            }}
+            value={supplierSearch}
+            onChange={(val) => setSupplierSearch(val)}
             options={suppliers.map((s) => s.name)}
             placeholder={t('selectSupplier') || 'Select supplier'}
           />
