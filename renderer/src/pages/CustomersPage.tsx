@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Ticket, X, Check, Printer } from 'lucide-react';
+import { Plus, Ticket, X, Check, Printer, Trash2, Calendar, Award, DollarSign, Loader2 } from 'lucide-react';
 import './Pages.css';
 import './CustomersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -207,8 +207,8 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                 <section className="CustomersPage-details">
                     {selectedCustomer ? (
                         <>
-                            <header>
-                                <div>
+                            <div className="CustomersPage-detailsHeader">
+                                <div className="CustomersPage-detailsInfo">
                                     <h2>{selectedCustomer.name}</h2>
                                     <p>{selectedCustomer.phone ?? t('noPhoneOnFile')}</p>
                                     <span className={`CustomersPage-tier tier-${loyaltyTier(selectedCustomer.loyaltyPoints).toLowerCase()}`}>
@@ -217,7 +217,20 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                 </div>
                                 <div className="CustomersPage-actions-header">
                                     <button
-                                        className="delete-btn"
+                                        style={{
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            color: '#ef4444',
+                                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                                            borderRadius: '0.5rem',
+                                            padding: '0.45rem 0.85rem',
+                                            fontSize: '0.82rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            transition: 'all 0.15s ease'
+                                        }}
                                         onClick={async () => {
                                             if (await confirmDialog({ message: t('confirmDeleteCustomer'), variant: 'danger', confirmText: t('delete') })) {
                                                 try {
@@ -230,24 +243,35 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                             }
                                         }}
                                     >
-                                        {t('delete')}
+                                        <Trash2 size={14} />
+                                        <span>{t('delete')}</span>
                                     </button>
                                 </div>
-                                <div className="CustomersPage-metrics">
-                                    <div>
-                                        <span>{t('totalSpent')}</span>
-                                        <strong>{selectedCustomer.totalSpentIQD.toLocaleString('en-IQ')} IQD</strong>
+                            </div>
+
+                            <div className="CustomersPage-metrics">
+                                <div className="CustomersPage-metricCard CustomersPage-metricCard--spent">
+                                    <div className="CustomersPage-metricCard-label">
+                                        <DollarSign size={14} />
+                                        <span>{t('totalSpent') || 'Total Spent'}</span>
                                     </div>
-                                    <div>
-                                        <span>{t('visits')}</span>
-                                        <strong>{selectedCustomer.totalVisits}</strong>
-                                    </div>
-                                    <div>
-                                        <span>{t('loyaltyPoints')}</span>
-                                        <strong>{selectedCustomer.loyaltyPoints.toFixed(1)}</strong>
-                                    </div>
+                                    <strong>{selectedCustomer.totalSpentIQD.toLocaleString('en-IQ')} IQD</strong>
                                 </div>
-                            </header>
+                                <div className="CustomersPage-metricCard">
+                                    <div className="CustomersPage-metricCard-label">
+                                        <Calendar size={14} />
+                                        <span>{t('visits') || 'Visits'}</span>
+                                    </div>
+                                    <strong>{selectedCustomer.totalVisits}</strong>
+                                </div>
+                                <div className="CustomersPage-metricCard CustomersPage-metricCard--points">
+                                    <div className="CustomersPage-metricCard-label">
+                                        <Award size={14} />
+                                        <span>{t('loyaltyPoints') || 'Loyalty Points'}</span>
+                                    </div>
+                                    <strong>{selectedCustomer.loyaltyPoints.toFixed(1)}</strong>
+                                </div>
+                            </div>
 
                             <section className="CustomersPage-history">
                                 <div className="CustomersPage-historyHeader">
@@ -298,29 +322,30 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                 </section>
             </div>
 
+            {/* New Customer Modal */}
             {modalOpen && (
-                <div className="CustomersPage-modalOverlay">
-                    <div className="CustomersPage-modal">
+                <div className="CustomersPage-modalOverlay" onClick={() => setModalOpen(false)}>
+                    <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
                         <header>
-                            <h3>{t('addCustomer')}</h3>
-                            <button onClick={() => setModalOpen(false)}><X size={20} /></button>
+                            <h3>{t('newCustomer')}</h3>
+                            <button onClick={() => setModalOpen(false)}>✕</button>
                         </header>
                         <form onSubmit={handleSubmit}>
                             <label>
                                 <span>{t('name')}</span>
                                 <input
                                     type="text"
-                                    value={formState.name}
-                                    onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
                                     required
+                                    value={formState.name}
+                                    onChange={(e) => setFormState(prev => ({ ...prev, name: e.target.value }))}
                                 />
                             </label>
                             <label>
                                 <span>{t('phone')}</span>
                                 <input
-                                    type="tel"
+                                    type="text"
                                     value={formState.phone ?? ''}
-                                    onChange={(event) => setFormState((prev) => ({ ...prev, phone: event.target.value }))}
+                                    onChange={(e) => setFormState(prev => ({ ...prev, phone: e.target.value }))}
                                 />
                             </label>
                             <label className="CustomersPage-span">
@@ -328,15 +353,15 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                 <textarea
                                     rows={3}
                                     value={formState.notes ?? ''}
-                                    onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
+                                    onChange={(e) => setFormState(prev => ({ ...prev, notes: e.target.value }))}
                                 />
                             </label>
-                            <div className="CustomersPage-actions">
-                                <button type="button" className="ghost" onClick={() => setModalOpen(false)}>
+                            <div className="CustomersPage-span" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                <button type="button" className="ghost" onClick={() => setModalOpen(false)} style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', background: 'transparent', color: 'var(--text-primary)' }}>
                                     {t('cancel')}
                                 </button>
-                                <button type="submit" disabled={submitting}>
-                                    {submitting ? t('saving') : t('saveCustomer')}
+                                <button type="submit" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: '0.5rem', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer' }} disabled={submitting}>
+                                    {submitting ? t('saving') : t('save')}
                                 </button>
                             </div>
                         </form>
@@ -346,64 +371,101 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
 
             {/* Voucher Modal */}
             {voucherModalOpen && (
-                <div className="CustomersPage-modalOverlay">
-                    <div className="CustomersPage-modal" style={{ maxWidth: '450px' }}>
-                        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h2 style={{ margin: 0 }}><Ticket size={24} /> {t('createVoucher')}</h2>
-                            <button type="button" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888' }}><X size={24} /></button>
+                <div className="CustomersPage-modalOverlay" onClick={() => setVoucherModalOpen(false)}>
+                    <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
+                        <header>
+                            <h3>{t('createVoucher')}</h3>
+                            <button onClick={() => setVoucherModalOpen(false)}>✕</button>
                         </header>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('searchCustomer') || 'Search Customer'}</span>
+                                <input
+                                    type="text"
+                                    placeholder={t('searchByNameOrPhone')}
+                                    value={voucherSearch}
+                                    onChange={(e) => setVoucherSearch(e.target.value)}
+                                    style={{ borderRadius: '0.5rem', border: '1px solid var(--border-color)', padding: '0.6rem 0.85rem', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                />
+                            </label>
 
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('searchCustomer')}</label>
-                            <input type="text" placeholder={t('searchByNameOrPhone')} value={voucherSearch} onChange={(e) => setVoucherSearch(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(30,41,59,0.5)', color: '#fff' }} />
-                        </div>
-
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                            {customers.filter(c => { if (!voucherSearch.trim()) return true; const term = voucherSearch.toLowerCase(); return c.name.toLowerCase().includes(term) || (c.phone && c.phone.toLowerCase().includes(term)); }).map(c => (
-                                <div key={c.id} onClick={() => setVoucherCustomerId(c.id)} style={{ padding: '0.75rem 1rem', cursor: 'pointer', background: voucherCustomerId === c.id ? 'rgba(59,130,246,0.3)' : 'transparent', borderBottom: '1px solid rgba(148,163,184,0.1)', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontWeight: voucherCustomerId === c.id ? 'bold' : 'normal' }}>{c.name}</span>
-                                    <span style={{ color: '#888', fontSize: '0.85rem' }}>{c.phone || ''}</span>
+                            {voucherSearch && (
+                                <div style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', maxHeight: '120px', overflowY: 'auto', background: 'var(--bg-input)' }}>
+                                    {customers
+                                        .filter(c => c.name.toLowerCase().includes(voucherSearch.toLowerCase()) || c.phone?.includes(voucherSearch))
+                                        .map(c => (
+                                            <div
+                                                key={c.id}
+                                                onClick={() => {
+                                                    setVoucherCustomerId(c.id);
+                                                    setVoucherSearch('');
+                                                }}
+                                                style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border-light)', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}
+                                            >
+                                                <span>{c.name}</span>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>{c.phone}</span>
+                                            </div>
+                                        ))
+                                    }
                                 </div>
-                            ))}
-                            {customers.filter(c => { if (!voucherSearch.trim()) return true; const term = voucherSearch.toLowerCase(); return c.name.toLowerCase().includes(term) || (c.phone && c.phone.toLowerCase().includes(term)); }).length === 0 && (
-                                <div style={{ padding: '1rem', textAlign: 'center', color: '#888' }}>{t('noCustomersFound')}</div>
                             )}
-                        </div>
 
-                        {voucherCustomerId && (
-                            <div style={{ padding: '0.5rem 1rem', background: 'rgba(34,197,94,0.1)', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Check size={16} /> {t('selected')}: <strong>{customers.find(c => c.id === voucherCustomerId)?.name}</strong>
-                            </div>
-                        )}
+                            {voucherCustomerId && (
+                                <div style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '0.5rem', padding: '0.6rem 0.85rem', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>{t('selected')}: <strong>{customers.find(c => c.id === voucherCustomerId)?.name}</strong></span>
+                                    <button onClick={() => setVoucherCustomerId('')} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.78rem' }}>{t('clear')}</button>
+                                </div>
+                            )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('discountPercent')}</label>
-                                <input type="number" min={1} max={100} value={voucherDiscount} onChange={(e) => setVoucherDiscount(Number(e.target.value))} style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(30,41,59,0.5)', color: '#fff', fontSize: '1.25rem', textAlign: 'center' }} />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('discountPercent')}</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={voucherDiscount}
+                                        onChange={(e) => setVoucherDiscount(Number(e.target.value))}
+                                        style={{ borderRadius: '0.5rem', border: '1px solid var(--border-color)', padding: '0.6rem 0.85rem', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('validityDays')}</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={voucherValidityDays}
+                                        onChange={(e) => setVoucherValidityDays(Number(e.target.value))}
+                                        style={{ borderRadius: '0.5rem', border: '1px solid var(--border-color)', padding: '0.6rem 0.85rem', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                    />
+                                </label>
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{t('validityDays')}</label>
-                                <input type="number" min={1} max={365} value={voucherValidityDays} onChange={(e) => setVoucherValidityDays(Number(e.target.value))} style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(30,41,59,0.5)', color: '#fff', fontSize: '1.25rem', textAlign: 'center' }} />
-                            </div>
-                        </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                            <button type="button" className="ghost" onClick={() => { setVoucherModalOpen(false); setVoucherSearch(''); setVoucherCustomerId(''); }}>{t('cancel')}</button>
-                            <button type="button" onClick={async () => {
-                                const customer = customers.find(c => c.id === voucherCustomerId);
-                                const name = customer?.name || (voucherSearch.trim() ? voucherSearch.trim() : undefined);
-                                const html = generateVoucherHtml(voucherDiscount, voucherValidityDays, name);
-                                try {
-                                    await window.evaApi.printing.print({ html, printerName: null, silent: false });
-                                    setVoucherModalOpen(false);
-                                    setVoucherSearch('');
-                                    setVoucherCustomerId('');
-                                    setVoucherDiscount(10);
-                                    setVoucherValidityDays(14);
-                                } catch (err) {
-                                    setError(t('failedToPrintVoucher') || 'Failed to print voucher');
-                                }
-                            }} style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', background: '#22c55e', color: '#fff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Printer size={18} /> {t('printVoucher')}</button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                <button type="button" style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', background: 'transparent', color: 'var(--text-primary)' }} onClick={() => setVoucherModalOpen(false)}>
+                                    {t('cancel')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const c = customers.find(cust => cust.id === voucherCustomerId);
+                                        const html = generateVoucherHtml(voucherDiscount, voucherValidityDays, c?.name);
+                                        if (window.evaApi) {
+                                            try {
+                                                await window.evaApi.printHtml(html, preferredPrinter);
+                                                setVoucherModalOpen(false);
+                                            } catch (err) {
+                                                console.error('Failed to print voucher', err);
+                                                setError(t('failedToPrintReport'));
+                                            }
+                                        }
+                                    }}
+                                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', borderRadius: '0.5rem', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                >
+                                    <Printer size={16} />
+                                    <span>{t('printVoucher')}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -413,4 +475,3 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
 };
 
 export default CustomersPage;
-

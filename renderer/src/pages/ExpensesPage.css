@@ -1,7 +1,12 @@
+/* ============================================================
+   EXPENSES DASHBOARD PAGE REDESIGN
+   ============================================================ */
+
 .ExpensesPage {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  padding: 1.5rem;
 }
 
 /* Header Section */
@@ -11,17 +16,20 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .ExpensesPage-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .ExpensesPage-header p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
   margin: 0.25rem 0 0;
-  opacity: 0.7;
-  font-size: 0.9rem;
 }
 
 .ExpensesPage-headerActions {
@@ -32,96 +40,164 @@
 
 .ExpensesPage-addBtn {
   border: none;
-  border-radius: 0.75rem;
-  padding: 0.7rem 1.2rem;
-  background: linear-gradient(120deg, #f97316, #ec4899);
+  border-radius: 0.6rem;
+  padding: 0.65rem 1.25rem;
+  background: linear-gradient(135deg, #f97316, #f43f5e);
   color: white;
   font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
 }
 
 .ExpensesPage-addBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 6px 15px rgba(244, 63, 94, 0.3);
 }
 
 .ExpensesPage-exportBtn {
   border: none;
-  border-radius: 0.75rem;
-  padding: 0.7rem 1.2rem;
-  background: linear-gradient(120deg, #14b8a6, #0ea5e9);
-  color: white;
+  border-radius: 0.6rem;
+  padding: 0.65rem 1.25rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
 }
 
 .ExpensesPage-exportBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  background: var(--hover-bg);
 }
 
 /* Alert */
 .ExpensesPage-alert {
   border-radius: 0.75rem;
-  border: 1px solid rgba(248, 113, 113, 0.5);
-  background: rgba(248, 113, 113, 0.1);
-  color: #fecaca;
-  padding: 0.85rem 1.1rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  padding: 0.8rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.ExpensesPage-alert::before {
-  content: '⚠️';
-}
-
-/* Summary Cards */
+/* Summary Dashboard Cards Grid */
 .ExpensesPage-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
 }
 
-.ExpensesPage-summary > div {
-  border-radius: 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: var(--bg-input);
-  padding: 1rem;
+@media (max-width: 768px) {
+  .ExpensesPage-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ExpensesPage-summaryCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-inline-start: 4px solid var(--border-color);
+  align-items: flex-start; /* Align contents to start (right in RTL) */
+  text-align: start;
+}
+
+.ExpensesPage-summaryCard--spent {
+  border-inline-start-color: #ef4444;
+}
+
+.ExpensesPage-summaryCard--count {
+  border-inline-start-color: #3b82f6;
+}
+
+.ExpensesPage-summaryCard--top {
+  border-inline-start-color: #f59e0b;
+}
+
+.ExpensesPage-summaryCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+.ExpensesPage-summaryCard-label {
+  display: flex;
+  align-items: center;
   gap: 0.4rem;
-}
-
-.ExpensesPage-summary span {
-  font-size: 0.8rem;
-  opacity: 0.7;
-}
-
-.ExpensesPage-summary strong {
-  font-size: 1.15rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 100%;
 }
 
-.ExpensesPage-summaryMain {
-  border-left: 3px solid #10b981;
+.ExpensesPage-summaryCard strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
-.ExpensesPage-summaryMain strong {
-  color: #10b981;
+.ExpensesPage-summaryCard--spent strong {
+  color: #ef4444; /* red/rose spent outflow */
 }
 
-/* Filters Section */
+/* Category Splitting Layout */
+.ExpensesPage-summaryCard-valueGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow: hidden;
+  align-items: flex-start;
+  text-align: start;
+  width: 100%;
+}
+
+.ExpensesPage-summaryCard-categoryName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.ExpensesPage-summaryCard-categoryAmount {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f59e0b;
+}
+
+/* Filters Section Card */
 .ExpensesPage-filtersSection {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1rem;
   border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: var(--bg-input);
-  padding: 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 .ExpensesPage-quickFilters {
@@ -129,30 +205,37 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   padding-bottom: 0.85rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .ExpensesPage-quickFilters button {
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  padding: 0.45rem 0.85rem;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 0.85rem;
+  padding: 0.45rem 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .ExpensesPage-quickFilters button:hover {
-  background: rgba(148, 163, 184, 0.1);
-  border-color: rgba(148, 163, 184, 0.4);
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.ExpensesPage-quickFilters button.active {
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
 }
 
 .ExpensesPage-filters {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
-  align-items: flex-end;
 }
 
 .ExpensesPage-filters label {
@@ -160,77 +243,92 @@
   flex-direction: column;
   gap: 0.35rem;
   flex: 1;
-  min-width: 140px;
-  font-size: 0.85rem;
-  opacity: 0.8;
+  min-width: 160px;
+}
+
+.ExpensesPage-filters label span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .ExpensesPage-filters input,
 .ExpensesPage-filters select {
-  border-radius: 0.6rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid rgba(148, 163, 184, 0.2);
+  padding: 0.55rem 0.85rem;
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .ExpensesPage-filters input:focus,
 .ExpensesPage-filters select:focus {
-  outline: none;
   border-color: #3b82f6;
 }
 
-/* Form Card (Collapsible) */
+/* Collapsible Form Card */
 .ExpensesPage-formCard {
   border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .ExpensesPage-formCard header {
-  padding: 0.85rem 1.1rem;
-  background: rgba(249, 115, 22, 0.08);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 1rem 1.25rem;
+  background: rgba(249, 115, 22, 0.06);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ExpensesPage-formCard header h3 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ExpensesPage-formCard form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  padding: 1.1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  padding: 1.25rem;
 }
 
 .ExpensesPage-formCard label {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  opacity: 0.85;
+  gap: 0.4rem;
+}
+
+.ExpensesPage-formCard label span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .ExpensesPage-formCard input,
 .ExpensesPage-formCard select,
 .ExpensesPage-formCard textarea {
-  border-radius: 0.6rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid rgba(148, 163, 184, 0.2);
+  padding: 0.6rem 0.85rem;
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .ExpensesPage-formCard input:focus,
 .ExpensesPage-formCard select:focus,
 .ExpensesPage-formCard textarea:focus {
-  outline: none;
   border-color: #f97316;
 }
 
@@ -244,63 +342,48 @@
   justify-content: flex-end;
   gap: 0.75rem;
   padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
 }
 
 .ExpensesPage-cancelBtn {
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 0.65rem;
-  padding: 0.6rem 1.2rem;
-  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--bg-secondary);
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .ExpensesPage-cancelBtn:hover {
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--hover-bg);
 }
 
-.ExpensesPage-actions button[type="submit"] {
-  border: none;
-  border-radius: 0.65rem;
-  padding: 0.6rem 1.4rem;
-  background: linear-gradient(120deg, #f97316, #ec4899);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ExpensesPage-actions button[type="submit"]:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-}
-
-.ExpensesPage-actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Expenses List */
+/* Expenses Table List Card */
 .ExpensesPage-list {
   border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .ExpensesPage-list header {
-  padding: 0.85rem 1.1rem;
-  background: rgba(59, 130, 246, 0.06);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ExpensesPage-list header h3 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ExpensesPage-list table {
@@ -309,79 +392,91 @@
 }
 
 .ExpensesPage-list th {
-  padding: 0.85rem 1rem;
-  text-align: left;
+  padding: 0.85rem 1.25rem;
+  text-align: start; /* FIXED RTL ALIGNMENT BUG! Flow matches direction */
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  font-weight: 700;
+  border-bottom: 1.5px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .ExpensesPage-list td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-  font-size: 0.9rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  vertical-align: middle;
 }
 
 .ExpensesPage-list tbody tr:hover {
-  background: rgba(148, 163, 184, 0.04);
+  background: var(--hover-bg);
 }
 
 .ExpensesPage-list tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Category Badge */
+/* Category Capsules */
 .ExpensesPage-categoryBadge {
   display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 0.4rem;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.2);
   font-size: 0.8rem;
-  font-weight: 500;
-}
-
-/* Amount styling */
-.ExpensesPage-amount {
   font-weight: 600;
-  color: #f97316;
 }
 
-/* Note styling */
+/* Amount (cash outflow) */
+.ExpensesPage-amount {
+  font-weight: 700;
+  color: #ef4444; /* red outflow text color */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Note Details text */
 .ExpensesPage-note {
-  max-width: 180px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.7;
+  color: var(--text-secondary);
 }
 
-/* Delete button */
+/* Circular Delete Row Button */
 .ExpensesPage-deleteBtn {
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.35rem 0.7rem;
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  font-size: 0.8rem;
+  background: transparent;
+  color: rgba(239, 68, 68, 0.6);
   cursor: pointer;
-  transition: all 0.2s;
+  padding: 0.35rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  width: 2.2rem;
+  height: 2.2rem;
 }
 
 .ExpensesPage-deleteBtn:hover {
-  background: rgba(248, 113, 113, 0.25);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
 
-/* Empty state */
+/* Empty View State */
 .ExpensesPage-empty {
   text-align: center;
-  padding: 2.5rem;
-  opacity: 0.6;
+  padding: 3rem 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
-/* Responsive */
+/* Responsive grid adjustments */
 @media (max-width: 640px) {
   .ExpensesPage-header {
     flex-direction: column;

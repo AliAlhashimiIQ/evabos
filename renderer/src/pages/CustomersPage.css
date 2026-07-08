@@ -1,313 +1,486 @@
- .CustomersPage-header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   margin-bottom: 1.5rem;
- }
+/* ============================================================
+   CUSTOMERS & LOYALTY PAGE REDESIGN
+   ============================================================ */
 
- .CustomersPage-actions {
-   display: flex;
-   gap: 0.75rem;
- }
-
- .CustomersPage-actions input {
-   border-radius: 0.9rem;
-   border: 1px solid rgba(148, 163, 184, 0.2);
-   padding: 0.65rem 0.9rem;
-   background: var(--bg-input);
-   color: var(--text-primary);
- }
-
- .CustomersPage-actions button {
-   border: none;
-   border-radius: 0.9rem;
-   padding: 0.65rem 1.25rem;
-   background: linear-gradient(120deg, #38bdf8, #6366f1);
-   color: white;
-   font-weight: 600;
-   cursor: pointer;
- }
-
- .CustomersPage-alert {
-   margin-bottom: 1rem;
-   border-radius: 0.9rem;
-   border: 1px solid rgba(248, 113, 113, 0.5);
-   background: rgba(248, 113, 113, 0.12);
-   color: #dc2626;
-   padding: 0.8rem 1rem;
- }
-
- .CustomersPage-content {
-   display: grid;
-   grid-template-columns: 320px 1fr;
-   gap: 1.5rem;
- }
-
- .CustomersPage-list {
-   background: var(--bg-card);
-   border: 1px solid rgba(148, 163, 184, 0.2);
-   border-radius: 1.25rem;
-   overflow: hidden;
-   max-height: calc(100vh - 250px);
- }
-
- .CustomersPage-list ul {
-   list-style: none;
-   margin: 0;
-   padding: 0;
-   max-height: calc(100vh - 250px);
-   overflow-y: auto;
- }
-
- .CustomersPage-list li {
-   padding: 1rem 1.2rem;
-   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-   cursor: pointer;
-   display: flex;
-   flex-direction: column;
-   gap: 0.2rem;
- }
-
- .CustomersPage-list li.active {
-   background: rgba(59, 130, 246, 0.15);
- }
-
- .CustomersPage-list small {
-   color: var(--text-secondary);
-   font-size: 0.8rem;
- }
-
- .CustomersPage-details {
-   background: var(--bg-card);
-   border: 1px solid rgba(148, 163, 184, 0.2);
-   border-radius: 1.25rem;
-   padding: 1.5rem;
-   min-height: calc(100vh - 250px);
-   display: flex;
-   flex-direction: column;
-   gap: 1.25rem;
- }
-
- .CustomersPage-metrics {
-   display: grid;
-
-   .CustomersPage-tier {
-     display: inline-block;
-     margin-top: 0.3rem;
-     padding: 0.2rem 0.8rem;
-     border-radius: 999px;
-     font-size: 0.8rem;
-     text-transform: uppercase;
-   }
-
-   .CustomersPage-tier.tier-platinum {
-     background: rgba(248, 250, 252, 0.2);
-     color: #e2e8f0;
-   }
-
-   .CustomersPage-tier.tier-gold {
-     background: rgba(250, 204, 21, 0.2);
-     color: #facc15;
-   }
-
-   .CustomersPage-tier.tier-silver {
-     background: rgba(148, 163, 184, 0.2);
-     color: #94a3b8;
-   }
-
-   .CustomersPage-tier.tier-bronze {
-     background: rgba(251, 191, 36, 0.2);
-     color: #fbbf24;
-   }
-
-   .CustomersPage-historyHeader {
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     margin-bottom: 0.75rem;
-   }
-
-   .CustomersPage-historyHeader select {
-     border-radius: 0.85rem;
-     border: 1px solid rgba(148, 163, 184, 0.2);
-     background: var(--bg-input);
-     color: var(--text-primary);
-     padding: 0.4rem 0.7rem;
-   }
-
-   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-   gap: 1rem;
- }
-
- .CustomersPage-metrics div {
-   background: var(--bg-tertiary);
-   border-radius: 0.9rem;
-   padding: 0.8rem 1rem;
-   border: 1px solid rgba(148, 163, 184, 0.15);
- }
-
- .CustomersPage-historyList {
-   display: flex;
-   flex-direction: column;
-   gap: 1rem;
-   max-height: 400px;
-   overflow-y: auto;
- }
-
- .CustomersPage-historyList article {
-   border-radius: 1rem;
-   border: 1px solid rgba(148, 163, 184, 0.15);
-   padding: 1rem;
-   background: var(--bg-tertiary);
- }
-
- .CustomersPage-historyList article header {
-   display: flex;
-   justify-content: space-between;
-   margin-bottom: 0.6rem;
- }
-
- .CustomersPage-historyList ul {
-   list-style: none;
-   margin: 0;
-   padding: 0;
- }
-
- .CustomersPage-historyList li {
-   display: flex;
-   justify-content: space-between;
-   padding: 0.25rem 0;
-   font-size: 0.9rem;
-   color: var(--text-secondary);
- }
-
- .CustomersPage-modalOverlay {
-   position: fixed;
-   inset: 0;
-   background: rgba(0, 0, 0, 0.6);
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   z-index: 1100;
- }
-
- .CustomersPage-modal {
-   width: min(500px, 90vw);
-   background: var(--bg-input);
-   border: 1px solid rgba(148, 163, 184, 0.2);
-   border-radius: 1.25rem;
-   padding: 1.5rem;
-   display: flex;
-   flex-direction: column;
-   gap: 1rem;
- }
-
- .CustomersPage-modal form {
-   display: grid;
-   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-   gap: 1rem;
- }
-
- .CustomersPage-modal label {
-   display: flex;
-   flex-direction: column;
-   gap: 0.4rem;
- }
-
- .CustomersPage-modal input,
- .CustomersPage-modal textarea {
-   border-radius: 0.85rem;
-   border: 1px solid rgba(148, 163, 184, 0.2);
-   padding: 0.6rem 0.85rem;
-   background: var(--bg-input);
-   color: var(--text-primary);
- }
-
- .CustomersPage-span {
-   grid-column: 1 / -1;
- }
-
- .CustomersPage-modal header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
- }
-
- .CustomersPage-modal header button {
-   background: transparent;
-   border: none;
-   font-size: 1.2rem;
-   color: var(--text-secondary);
-   cursor: pointer;
- }
-
- .CustomersPage-actions button.ghost {
-   background: transparent;
-   color: var(--text-primary);
-   border: 1px solid rgba(148, 163, 184, 0.4);
- }
-
- .CustomersPage-actions button:not(.ghost) {
-   background: linear-gradient(120deg, #34d399, #10b981);
-   color: white;
- }
-
- .CustomersPage-empty {
-   text-align: center;
-   padding: 2rem;
-   color: var(--text-secondary);
- }
-.link-sale-btn {
-  background: linear-gradient(120deg, #10b981, #059669);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-weight: 500;
-  margin-right: 0.5rem;
+.CustomersPage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1.5rem;
 }
 
-.link-sale-btn:hover {
+.CustomersPage-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.CustomersPage-header p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0 0;
+}
+
+.CustomersPage-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.CustomersPage-actions input {
+  border-radius: 0.6rem;
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  font-size: 0.88rem;
+  width: 240px;
+  transition: border-color 0.15s ease;
+}
+
+.CustomersPage-actions input:focus {
+  border-color: var(--text-secondary);
+}
+
+.CustomersPage-actions button {
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.6rem 1.2rem;
+  color: white;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: opacity 0.15s ease;
+}
+
+.CustomersPage-actions button:hover {
   opacity: 0.9;
+}
+
+.CustomersPage-actions button.ghost {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.CustomersPage-actions button:not(.ghost) {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.CustomersPage-alert {
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  padding: 0.8rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+/* ── Content Grid ────────────────────────────────────────────── */
+.CustomersPage-content {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .CustomersPage-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Customer List Sidebar ───────────────────────────────────── */
+.CustomersPage-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.CustomersPage-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.CustomersPage-list li {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: background 0.15s ease;
+}
+
+.CustomersPage-list li:hover {
+  background: var(--hover-bg);
+}
+
+.CustomersPage-list li.active {
+  background: rgba(59, 130, 246, 0.08);
+  border-inline-start: 4px solid #3b82f6;
+  padding-inline-start: calc(1.25rem - 4px);
+}
+
+.CustomersPage-list li strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.CustomersPage-list li span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.CustomersPage-list li small {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Customer Details Panel ──────────────────────────────────── */
+.CustomersPage-details {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  min-height: calc(100vh - 220px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.CustomersPage-detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1.25rem;
+}
+
+.CustomersPage-detailsInfo h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.CustomersPage-detailsInfo p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0.5rem 0;
+}
+
+/* Tiers Badge styling */
+.CustomersPage-tier {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tier-platinum {
+  background: rgba(147, 51, 234, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(147, 51, 234, 0.25);
+}
+
+.tier-gold {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.tier-silver {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.tier-bronze {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(180, 83, 9, 0.25);
+}
+
+.tier-new {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ── Metrics Cards Grid ──────────────────────────────────────── */
+.CustomersPage-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .CustomersPage-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+.CustomersPage-metricCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.CustomersPage-metricCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.CustomersPage-metricCard-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.CustomersPage-metricCard strong {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.CustomersPage-metricCard--spent strong {
+  color: #10b981;
+}
+
+.CustomersPage-metricCard--points strong {
+  color: #f59e0b;
+}
+
+/* ── Purchase History ────────────────────────────────────────── */
+.CustomersPage-history {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.CustomersPage-historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.CustomersPage-historyHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.CustomersPage-historyHeader select {
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.CustomersPage-historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 450px;
+  overflow-y: auto;
+  padding-inline-end: 0.25rem;
+}
+
+.CustomersPage-historyList article {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  background: var(--bg-secondary);
+}
+
+.CustomersPage-historyList article header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.CustomersPage-historyList article header strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.CustomersPage-historyList article header span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.CustomersPage-historyList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.CustomersPage-historyList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.CustomersPage-historyList li span:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ── Modal & Popups ──────────────────────────────────────────── */
+.CustomersPage-modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1.5rem;
+}
+
+.CustomersPage-modal {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.CustomersPage-modal header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.CustomersPage-modal header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.CustomersPage-modal header button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.CustomersPage-modal header button:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.CustomersPage-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.CustomersPage-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.CustomersPage-modal label span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.CustomersPage-modal input,
+.CustomersPage-modal textarea {
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.CustomersPage-modal input:focus,
+.CustomersPage-modal textarea:focus {
+  border-color: var(--text-secondary);
+}
+
+.CustomersPage-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-secondary);
 }
 
 /* Link Sale Button */
 .link-sale-btn {
-  background: linear-gradient(120deg, #2563eb, #7c3aed);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  padding: 0.4rem 0.85rem;
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
-  font-size: 0.9rem;
-  margin-right: 0.5rem;
+  font-size: 0.82rem;
+  transition: all 0.15s ease;
 }
 
 .link-sale-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Customer Actions Header */
-.CustomersPage-actions-header {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.CustomersPage-actions-header button {
-  cursor: pointer;
-}
-
-/* Details header with button */
-.CustomersPage-details > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.CustomersPage-details > header > div:first-child {
-  flex: 1;
+  background: rgba(37, 99, 235, 0.2);
 }

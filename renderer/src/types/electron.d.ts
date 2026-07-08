@@ -805,6 +805,9 @@ export interface EmployeeDetailedSalesEntry {
   quantity: number;
   unitPriceIQD: number;
   lineTotalIQD: number;
+  subtotalIQD: number;
+  discountIQD: number;
+  totalIQD: number;
 }
 
 declare global {

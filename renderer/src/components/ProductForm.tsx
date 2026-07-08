@@ -153,22 +153,18 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
         </label>
         <label>
           <span>{t('supplier')}</span>
-          <select
-            value={formState.supplierId ?? ''}
-            onChange={(event) =>
+          <Combobox
+            value={suppliers.find((s) => s.id === formState.supplierId)?.name ?? ''}
+            onChange={(val) => {
+              const selected = suppliers.find((s) => s.name === val);
               setFormState((prev) => ({
                 ...prev,
-                supplierId: event.target.value ? Number(event.target.value) : undefined,
-              }))
-            }
-          >
-            <option value="">{t('selectSupplier')}</option>
-            {suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+                supplierId: selected ? selected.id : undefined,
+              }));
+            }}
+            options={suppliers.map((s) => s.name)}
+            placeholder={t('selectSupplier') || 'Select supplier'}
+          />
         </label>
         <label>
           <span>{t('code')}</span>

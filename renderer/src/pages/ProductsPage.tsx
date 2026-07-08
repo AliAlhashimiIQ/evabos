@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { FileDown, Plus, X, Tag } from 'lucide-react';
+import { FileDown, Plus, X, Tag, Loader2 } from 'lucide-react';
 import ProductForm from '../components/ProductForm';
 import ProductVariantTable from '../components/ProductVariantTable';
 import InventoryAdjustModal from '../components/InventoryAdjustModal';
@@ -25,6 +25,9 @@ const ProductsPage = (): JSX.Element => {
   const { token } = useAuth();
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
+  const [, setNextCursor] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,40 +52,76 @@ const ProductsPage = (): JSX.Element => {
   const [showDeactivated, setShowDeactivated] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  const fetchProducts = useCallback(async () => {
+  // Refs to avoid hook dependency cycle
+  const nextCursorRef = useRef<number | null>(null);
+  const searchQueryRef = useRef<string>('');
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
+
+  const fetchProducts = useCallback(async (isLoadMore = false) => {
     if (!window.evaApi || !token) {
       setError('Desktop bridge is unavailable.');
       return;
     }
 
     try {
-      setLoading(true);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
-      const response = await window.evaApi.products.list(token);
-      const sortedProducts = [...response.products].sort((a, b) => b.id - a.id);
-      setProducts(sortedProducts);
+
+      const currentCursor = isLoadMore ? nextCursorRef.current : 0;
+      const limit = 100;
+      const queryToUse = searchQueryRef.current;
+
+      const response = await window.evaApi.products.list(token, {
+        limit,
+        cursor: currentCursor,
+        search: queryToUse,
+      });
+
+      if (isLoadMore) {
+        setProducts((prev) => {
+          const existingIds = new Set(prev.map((p: Product) => p.id));
+          const newItems = response.items.filter((p: Product) => !existingIds.has(p.id));
+          return [...prev, ...newItems];
+        });
+      } else {
+        setProducts(response.items);
+      }
+
+      setNextCursor(response.nextCursor ?? null);
+      nextCursorRef.current = response.nextCursor ?? null;
+      setHasMore(response.hasMore ?? false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadProducts'));
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [token]);
 
+  // Load suppliers once on mount
   useEffect(() => {
-    if (token) {
-      fetchProducts();
-      // Fetch suppliers for filter
+    if (token && window.evaApi) {
       window.evaApi.suppliers.list(token).then(setSuppliers).catch(console.error);
     }
-  }, [fetchProducts, token]);
+  }, [token]);
+
+  // Debounced search query fetching
+  useEffect(() => {
+    if (!token) return;
+    const timer = setTimeout(() => {
+      fetchProducts(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, token, fetchProducts]);
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
-
     const matchesSupplier =
       selectedSupplier === '' ||
       (product.supplierName && product.supplierName === selectedSupplier);
@@ -96,7 +135,7 @@ const ProductsPage = (): JSX.Element => {
     // Handle both boolean false and numeric 0 (SQLite)
     const isActive = showDeactivated ? true : (product.isActive !== false && (product.isActive as any) !== 0);
 
-    return matchesSearch && matchesSupplier && matchesPrice && isActive;
+    return matchesSupplier && matchesPrice && isActive;
   });
 
   const clearFilters = () => {
@@ -262,18 +301,12 @@ const ProductsPage = (): JSX.Element => {
 
         <div className="ProductsPage-filterGroup">
           <label>{t('supplier')}</label>
-          <select
-            className="ProductsPage-filterSelect"
+          <Combobox
             value={selectedSupplier}
-            onChange={(e) => setSelectedSupplier(e.target.value)}
-          >
-            <option value="">{t('allSuppliers') || 'All Suppliers'}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.name}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedSupplier(val)}
+            options={suppliers.map((s) => s.name)}
+            placeholder={t('allSuppliers') || 'All Suppliers'}
+          />
         </div>
 
         <div className="ProductsPage-filterGroup">
@@ -345,6 +378,25 @@ const ProductsPage = (): JSX.Element => {
           />
         )}
       </div>
+
+      {!loading && hasMore && (
+        <div className="ProductsPage-loadMoreContainer">
+          <button
+            className="ProductsPage-loadMoreBtn"
+            disabled={loadingMore}
+            onClick={() => fetchProducts(true)}
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 size={16} className="spin" />
+                <span>{t('loading') || 'Loading...'}</span>
+              </>
+            ) : (
+              <span>{t('loadMore') || 'Load More'}</span>
+            )}
+          </button>
+        </div>
+      )}
 
       {
         isModalOpen && (

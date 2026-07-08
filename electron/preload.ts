@@ -55,7 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 contextBridge.exposeInMainWorld('evaApi', {
   products: {
-    list: (token: string) => ipcRenderer.invoke('inventory:products:list', token),
+    list: (token: string, params?: any) => ipcRenderer.invoke('inventory:products:list', token, params),
     create: (token: string, data: ProductInput) => ipcRenderer.invoke('inventory:products:create', token, data),
     update: (token: string, data: ProductUpdateInput) => ipcRenderer.invoke('inventory:products:update', token, data),
     updateVariant: (token: string, data: VariantUpdateInput) => ipcRenderer.invoke('inventory:variants:update', token, data),

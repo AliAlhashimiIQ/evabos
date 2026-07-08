@@ -194,10 +194,14 @@ export async function listProducts(
       )`
     : '';
 
+  // For descending order, if cursor is 0 (first page), start from MAX ID.
+  // Otherwise, select ids less than the cursor.
+  const cursorVal = cursor > 0 ? cursor : 2147483647;
+
   const searchParam = `%${search}%`;
   const queryParams: SqlValue[] = search
-    ? [cursor, searchParam, searchParam, searchParam, searchParam, limit + 1]
-    : [cursor, limit + 1];
+    ? [cursorVal, searchParam, searchParam, searchParam, searchParam, limit + 1]
+    : [cursorVal, limit + 1];
 
   const rows = await all<ProductVariantRow>(
     `
@@ -223,9 +227,9 @@ export async function listProducts(
     JOIN products p ON p.id = pv.productId
     LEFT JOIN suppliers s ON s.id = p.defaultSupplierId
     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
-    WHERE pv.id > ? ${whereClause}
+    WHERE pv.id < ? ${whereClause}
     GROUP BY pv.id
-    ORDER BY pv.id ASC
+    ORDER BY pv.id DESC
     LIMIT ?
   `,
     queryParams
@@ -3473,6 +3477,9 @@ export interface EmployeeDetailedSalesEntry {
   quantity: number;
   unitPriceIQD: number;
   lineTotalIQD: number;
+  subtotalIQD: number;
+  discountIQD: number;
+  totalIQD: number;
 }
 
 export async function getEmployeeDetailedSales(
@@ -3493,7 +3500,10 @@ export async function getEmployeeDetailedSales(
       pv.size,
       si.quantity,
       si.unitPriceIQD,
-      si.lineTotalIQD
+      si.lineTotalIQD,
+      s.subtotalIQD,
+      s.discountIQD,
+      s.totalIQD
     FROM sale_items si
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId

@@ -472,6 +472,12 @@ const translations = {
     recentReturns: 'Recent Returns',
     loadingReturns: 'Loading returns…',
     noReturnsRecorded: 'No returns recorded.',
+    lookupSale: 'Search Sale Receipt',
+    returnDetails: 'Return Details',
+    direction: 'Action',
+    product: 'Product',
+    itemAlreadyAdded: 'This item is already in the return list.',
+    loadMore: 'Load More',
     // processing: 'Processing…', // Duplicate
     failedToLoadReports: 'Failed to load reports.',
     failedToPrintReport: 'Failed to print report',
@@ -570,6 +576,10 @@ const translations = {
     failedToLoadExpenses: 'Failed to load expenses.',
     failedToSaveExpense: 'Failed to save expense.',
     failedToDeleteExpense: 'Failed to delete expense.',
+    totalExpenses: 'Total Expenses',
+    transactionsCount: 'Transactions',
+    topCategory: 'Top Category',
+    writeNotes: 'Write expense notes...',
 
 
 
@@ -1144,6 +1154,12 @@ const translations = {
     recentReturns: 'المرتجعات الأخيرة',
     loadingReturns: 'جاري تحميل المرتجعات…',
     noReturnsRecorded: 'لا توجد مرتجعات مسجلة.',
+    lookupSale: 'البحث عن إيصال',
+    returnDetails: 'تفاصيل المرتجع',
+    direction: 'الإجراء',
+    product: 'المنتج',
+    itemAlreadyAdded: 'هذا العنصر مضاف بالفعل إلى قائمة المرتجعات.',
+    loadMore: 'تحميل المزيد',
     // processing: 'جاري المعالجة…', // Duplicate
     failedToLoadReports: 'فشل تحميل التقارير.',
     failedToPrintReport: 'فشل طباعة التقرير',
@@ -1247,8 +1263,12 @@ const translations = {
     noExpensesInRange: 'لا توجد مصروفات في هذا النطاق.',
     failedToLoadExpenses: 'فشل تحميل المصاريف.',
     failedToSaveExpense: 'فشل حفظ المصروف.',
-
     failedToDeleteExpense: 'فشل حذف المصروف.',
+    totalExpenses: 'إجمالي المصروفات',
+    transactionsCount: 'عدد العمليات',
+    topCategory: 'أعلى فئة مصروفات',
+    writeNotes: 'اكتب ملاحظات المصروف...',
+
 
 
     // Reports Page

@@ -725,7 +725,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -739,9 +739,9 @@
   border: 1px solid var(--border-color);
   border-radius: 1rem;
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   max-height: 85vh;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -757,7 +757,7 @@
 
 .Reports-modalHeader h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
@@ -766,8 +766,8 @@
 }
 
 .Reports-modalHeader p {
-  margin: 0.2rem 0 0;
-  font-size: 0.78rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
@@ -780,8 +780,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: 50%;
   transition: all 0.15s ease;
 }
@@ -798,7 +798,7 @@
 }
 
 .Reports-modalFooter {
-  padding: 1rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   background: rgba(148, 163, 184, 0.03);
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -808,16 +808,16 @@
 
 .Reports-modalFooter-info {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .Reports-modalFooter-info span {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   color: var(--text-secondary);
 }
 
 .Reports-modalFooter-info strong {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
 }
 
@@ -826,7 +826,212 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
+  padding: 4rem 2rem;
   gap: 1rem;
   color: var(--text-secondary);
+}
+
+/* ─── Detailed Sales Table inside Modal ──────────────────────────── */
+.Reports-modal--rtl {
+  direction: rtl;
+}
+
+.Reports-detailedTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.Reports-detailedTable th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1rem;
+  border-bottom: 2px solid var(--border-color);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.Reports-modal--rtl .Reports-detailedTable th {
+  text-align: right;
+}
+
+.Reports-detailedTable td {
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+  text-align: start;
+}
+
+.Reports-modal--rtl .Reports-detailedTable td {
+  text-align: right;
+}
+
+.Reports-detailedTable tr:hover {
+  background: var(--hover-bg);
+}
+
+.Reports-variantBadge {
+  display: inline-block;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.Reports-skuCode {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  background: rgba(148, 163, 184, 0.08);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.Reports-modalFooter-info {
+  display: flex;
+  gap: 1rem;
+}
+
+.Reports-modalFooter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--border-light);
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.Reports-modalFooter-pill span {
+  color: var(--text-secondary);
+}
+
+.Reports-modalFooter-pill strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.Reports-btnSecondary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.55rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.Reports-btnSecondary:hover {
+  background: var(--hover-bg);
+  border-color: var(--text-secondary);
+}
+
+/* ─── Grouped Transaction Cards ─────────────────────────────────── */
+.Reports-transactionCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.Reports-transactionHeader {
+  background: var(--bg-secondary);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.Reports-transactionHeader-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.Reports-transactionId {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(148, 163, 184, 0.15);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.Reports-transactionDate {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.Reports-transactionTotal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.Reports-transactionTotal span {
+  color: var(--text-secondary);
+}
+
+.Reports-transactionTotal strong {
+  color: #10b981;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.Reports-subtotalText {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border-inline-end: 1px solid var(--border-color);
+  padding-inline-end: 0.75rem;
+  margin-inline-end: 0.25rem;
+}
+
+.Reports-discountText {
+  font-size: 0.78rem;
+  color: #ef4444;
+  font-weight: 600;
+  border-inline-end: 1px solid var(--border-color);
+  padding-inline-end: 0.75rem;
+  margin-inline-end: 0.25rem;
+}
+
+.Reports-transactionBody {
+  padding: 0.5rem 1rem;
+}
+
+.Reports-transactionBody .Reports-detailedTable th {
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.Reports-transactionBody .Reports-detailedTable td {
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.Reports-transactionBody .Reports-detailedTable tr:last-child td {
+  border-bottom: none;
 }
