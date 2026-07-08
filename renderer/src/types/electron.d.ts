@@ -490,6 +490,14 @@ export interface EvaApi {
     create: (token: string, data: ReturnInput) => Promise<ReturnResponse>;
     saleInfo: (token: string, saleId: number) => Promise<SaleDetail | null>;
   };
+  employees: {
+    list: (token: string, includeInactive?: boolean) => Promise<Employee[]>;
+    create: (token: string, data: EmployeeInput) => Promise<Employee>;
+    update: (token: string, id: number, data: Partial<EmployeeInput>) => Promise<Employee>;
+    delete: (token: string, id: number) => Promise<boolean>;
+    salesReport: (token: string, range: { startDate: string; endDate: string }) => Promise<any[]>;
+    detailedSalesReport: (token: string, params: { employeeId: number | null; startDate: string; endDate: string }) => Promise<EmployeeDetailedSalesEntry[]>;
+  };
   expenses: {
     list: (token: string) => Promise<Expense[]>;
     create: (token: string, data: ExpenseInput) => Promise<Expense>;
@@ -771,6 +779,32 @@ export interface OnlineOrderInput {
   discountIQD: number;
   totalIQD: number;
   items: OnlineOrderItemInput[];
+}
+
+export interface Employee {
+  id: number;
+  name: string;
+  phone?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type EmployeeInput = {
+  name: string;
+  phone?: string | null;
+  isActive: boolean;
+};
+
+export interface EmployeeDetailedSalesEntry {
+  saleId: number;
+  saleDate: string;
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  quantity: number;
+  unitPriceIQD: number;
+  lineTotalIQD: number;
 }
 
 declare global {

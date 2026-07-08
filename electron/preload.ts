@@ -86,6 +86,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     update: (token: string, id: number, data: Partial<EmployeeInput>) => ipcRenderer.invoke('employees:update', token, { id, data }),
     delete: (token: string, id: number) => ipcRenderer.invoke('employees:delete', token, id),
     salesReport: (token: string, range: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:employeeSales', token, range),
+    detailedSalesReport: (token: string, params: { employeeId: number | null; startDate: string; endDate: string }) => ipcRenderer.invoke('reports:employeeDetailedSales', token, params),
   },
   exchangeRates: {
     getCurrent: () => ipcRenderer.invoke('exchangeRates:getCurrent'),

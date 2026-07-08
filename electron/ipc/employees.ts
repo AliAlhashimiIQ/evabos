@@ -5,6 +5,7 @@ import {
   updateEmployee,
   deleteEmployee,
   getEmployeeSalesReport,
+  getEmployeeDetailedSales,
   logActivity,
 } from '../db/database';
 import type { EmployeeInput } from '../db/types';
@@ -63,6 +64,14 @@ export function registerEmployeesIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
       const { startDate, endDate } = args[0] as { startDate: string; endDate: string };
       return getEmployeeSalesReport(startDate, endDate);
+    }),
+  );
+
+  ipcMain.handle(
+    'reports:employeeDetailedSales',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const { employeeId, startDate, endDate } = args[0] as { employeeId: number | null; startDate: string; endDate: string };
+      return getEmployeeDetailedSales(employeeId, startDate, endDate);
     }),
   );
 

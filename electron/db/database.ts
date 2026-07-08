@@ -3462,3 +3462,45 @@ export async function getEmployeeSalesReport(startDate: string, endDate: string)
   `;
   return all<EmployeeSalesReportEntry>(query, [startDate, endDate]);
 }
+
+export interface EmployeeDetailedSalesEntry {
+  saleId: number;
+  saleDate: string;
+  productName: string;
+  sku: string;
+  color: string | null;
+  size: string | null;
+  quantity: number;
+  unitPriceIQD: number;
+  lineTotalIQD: number;
+}
+
+export async function getEmployeeDetailedSales(
+  employeeId: number | null,
+  startDate: string,
+  endDate: string
+): Promise<EmployeeDetailedSalesEntry[]> {
+  const employeeFilter = employeeId === null ? 's.employeeId IS NULL' : 's.employeeId = ?';
+  const params = employeeId === null ? [startDate, endDate] : [employeeId, startDate, endDate];
+  
+  const query = `
+    SELECT 
+      s.id as saleId,
+      s.saleDate,
+      p.name as productName,
+      pv.sku,
+      pv.color,
+      pv.size,
+      si.quantity,
+      si.unitPriceIQD,
+      si.lineTotalIQD
+    FROM sale_items si
+    JOIN sales s ON s.id = si.saleId
+    JOIN product_variants pv ON pv.id = si.variantId
+    JOIN products p ON p.id = pv.productId
+    WHERE ${employeeFilter}
+      AND date(s.saleDate) BETWEEN date(?) AND date(?)
+    ORDER BY s.saleDate DESC, si.id ASC
+  `;
+  return all<EmployeeDetailedSalesEntry>(query, params);
+}

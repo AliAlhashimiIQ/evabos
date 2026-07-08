@@ -255,7 +255,15 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
           {activeTab === 'inventory' && <InventoryTab reports={reports} leastProfitableItems={leastProfitableItems} leastProfitableSuppliers={leastProfitableSuppliers} inventoryAging={inventoryAging} t={t} />}
           {activeTab === 'financial' && <FinancialTab reports={reports} expensesByCategory={expensesByCategory} t={t} />}
           {activeTab === 'customers' && <CustomersTab reports={reports} t={t} />}
-          {activeTab === 'employees' && <EmployeesTab employeeSales={employeeSales} t={t} />}
+          {activeTab === 'employees' && (
+            <EmployeesTab 
+              employeeSales={employeeSales} 
+              startDate={range.startDate} 
+              endDate={range.endDate} 
+              token={token} 
+              t={t} 
+            />
+          )}
           {activeTab === 'activity' && <ActivityTab reports={reports} t={t} />}
         </>
       )}
