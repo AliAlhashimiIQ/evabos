@@ -600,12 +600,14 @@ const PosPage = (): JSX.Element => {
   const isScanningRef = useRef(false);
 
   const handleScan = useCallback(
-    (value: string) => {
+    async (value: string) => {
       // Clear search term in case anything got typed
       setSearchTerm('');
       if (searchInputRef.current) {
         searchInputRef.current.value = '';
       }
+
+      if (!window.evaApi || !token) return;
 
       // Prevent double scanning (debounce)
       if (isScanningRef.current) return;
@@ -631,6 +633,37 @@ const PosPage = (): JSX.Element => {
         variant = products.find((p) => p.barcode === valueWithZero || p.sku === valueWithZero);
       }
 
+      // If still not found in memory (e.g. it is an older product not in the first 100 pages), query the database
+      if (!variant) {
+        try {
+          const response = await window.evaApi.products.list(token, { search: value, limit: 10 });
+          const items = response.products || response.items || [];
+          
+          variant = items.find((p: Product) => p.barcode === value || p.sku === value);
+          if (!variant) {
+            variant = items.find(
+              (p: Product) =>
+                p.barcode?.toLowerCase() === value.toLowerCase() ||
+                p.sku.toLowerCase() === value.toLowerCase(),
+            );
+          }
+          if (!variant) {
+            const valueWithZero = '0' + value;
+            variant = items.find((p: Product) => p.barcode === valueWithZero || p.sku === valueWithZero);
+          }
+
+          if (variant) {
+            const matched = variant;
+            setProducts((prev) => {
+              if (prev.some((p) => p.id === matched.id)) return prev;
+              return [...prev, matched];
+            });
+          }
+        } catch (err) {
+          console.error('Failed to query scanned product from database:', err);
+        }
+      }
+
       if (variant) {
         // Check stock before adding
         if (variant.stockOnHand <= 0) {
@@ -654,7 +687,7 @@ const PosPage = (): JSX.Element => {
         isScanningRef.current = false;
       }, 500);
     },
-    [products, addToCart, isSubmitting, setSearchTerm],
+    [products, addToCart, isSubmitting, setSearchTerm, token, t],
   );
 
   useBarcodeScanner({ onScan: handleScan });
