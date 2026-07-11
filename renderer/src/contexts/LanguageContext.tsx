@@ -273,9 +273,8 @@ const translations = {
     loadMoreProducts: 'Load More Products',
     productsLoadedTitle: '{count} products loaded. Click to load more.',
     loadMoreCount: 'Load More Products ({count} loaded)',
-    loaded: 'loaded',
-    tab: 'Tab',
     saleCompleted: 'Sale completed successfully!',
+    pleaseSelectEmployee: 'Please select an employee before completing the sale',
 
     // Settings
     configureSystem: 'Configure your system settings',
@@ -926,6 +925,7 @@ const translations = {
     loaded: 'تم تحميلها',
     tab: 'تبويب',
     saleCompleted: 'تمت عملية البيع بنجاح!',
+    pleaseSelectEmployee: 'يرجى اختيار الموظف أولاً قبل إتمام البيع',
 
     // Settings
     configureSystem: 'تكوين إعدادات النظام',

@@ -476,6 +476,14 @@ const PosPage = (): JSX.Element => {
         }));
         return;
       }
+      if (!targetProfile.selectedEmployeeId) {
+        updateProfileAtIndex(profileIndex, (profile) => ({
+          ...profile,
+          error: t('pleaseSelectEmployee'),
+          success: null,
+        }));
+        return;
+      }
 
       // Final stock validation before completing sale - check against latest product data
       const outOfStockItems: Array<{ item: CartItem; currentStock: number }> = [];
@@ -972,13 +980,24 @@ const PosPage = (): JSX.Element => {
           {/* Employee + Payment row */}
           <div className="Pos-fieldRow">
             <div className="Pos-field">
-              <label className="Pos-fieldLabel">{t('employee')}</label>
+              <label 
+                className="Pos-fieldLabel" 
+                style={{ color: !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '#ef4444' : undefined }}
+              >
+                {t('employee')} {!selectedEmployeeId && profileError === t('pleaseSelectEmployee') && '*'}
+              </label>
               <select
                 value={selectedEmployeeId}
+                style={{
+                  border: !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '1px solid #ef4444' : undefined,
+                  boxShadow: !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '0 0 0 2px rgba(239, 68, 68, 0.1)' : undefined,
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                }}
                 onChange={(event) =>
                   updateCurrentProfile((profile) => ({
                     ...profile,
                     selectedEmployeeId: event.target.value ? Number(event.target.value) : '',
+                    error: profile.error === t('pleaseSelectEmployee') ? null : profile.error,
                   }))
                 }
               >
