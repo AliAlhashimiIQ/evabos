@@ -22,7 +22,8 @@ import {
   RefreshCcw,
   XCircle,
   Loader2,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 import LabelSettingsSection from '../components/LabelSettingsSection';
 import NumberInput from '../components/NumberInput';
@@ -36,6 +37,16 @@ const SettingsPage = (): JSX.Element => {
   const { token, hasRole } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+
+  // POS Preferences
+  const [requireEmployeeCheckout, setRequireEmployeeCheckout] = useState(() => {
+    return localStorage.getItem('requireEmployeeCheckout') === 'true';
+  });
+
+  const handleToggleRequireEmployee = (val: boolean) => {
+    setRequireEmployeeCheckout(val);
+    localStorage.setItem('requireEmployeeCheckout', String(val));
+  };
 
   // Exchange Rate
   const [currentRate, setCurrentRate] = useState<number>(1500);
@@ -379,6 +390,31 @@ const SettingsPage = (): JSX.Element => {
               </div>
               {language === 'ar' && <span className="check"><Check size={16} /></span>}
             </button>
+          </div>
+        </div>
+
+        {/* General POS Preferences */}
+        <div className="SettingsPage-section">
+          <h2><User size={24} /> {t('posPreferences') || 'POS Preferences'}</h2>
+          <p>{t('posPreferencesDesc') || 'Customize checkout rules and validations'}</p>
+
+          <div style={{ marginTop: '1rem' }}>
+            <label className="SettingsPage-toggleRow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: '0.5rem', cursor: 'pointer', border: '1px solid var(--border-color)' }}>
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  {t('requireEmployeeLabel') || 'Require Employee Selection'}
+                </strong>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                  {t('requireEmployeeDesc') || 'Prevent completing sales if no cashier/employee is assigned'}
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={requireEmployeeCheckout}
+                onChange={(e) => handleToggleRequireEmployee(e.target.checked)}
+                style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#10b981' }}
+              />
+            </label>
           </div>
         </div>
 

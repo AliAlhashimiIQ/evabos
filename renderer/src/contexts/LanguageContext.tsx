@@ -275,6 +275,10 @@ const translations = {
     loadMoreCount: 'Load More Products ({count} loaded)',
     saleCompleted: 'Sale completed successfully!',
     pleaseSelectEmployee: 'Please select an employee before completing the sale',
+    posPreferences: 'POS Preferences',
+    posPreferencesDesc: 'Customize checkout rules and validations',
+    requireEmployeeLabel: 'Require Employee Selection before Checkout',
+    requireEmployeeDesc: 'Prevent completing a sale unless an active employee is assigned to the cart',
 
     // Settings
     configureSystem: 'Configure your system settings',
@@ -926,6 +930,10 @@ const translations = {
     tab: 'تبويب',
     saleCompleted: 'تمت عملية البيع بنجاح!',
     pleaseSelectEmployee: 'يرجى اختيار الموظف أولاً قبل إتمام البيع',
+    posPreferences: 'تفضيلات نقطة البيع',
+    posPreferencesDesc: 'تخصيص قواعد وإجراءات التحقق من البيع',
+    requireEmployeeLabel: 'فرض تحديد الموظف قبل إتمام البيع',
+    requireEmployeeDesc: 'منع إتمام البيع إلا في حال تحديد موظف مسؤول عن الفاتورة',
 
     // Settings
     configureSystem: 'تكوين إعدادات النظام',
