@@ -1502,8 +1502,28 @@ export async function createProduct(product: ProductInput): Promise<Product> {
     );
 
     const productId = productResult.lastID as number;
-    const sku = generateSku(product.name, product.color, product.size);
-    const barcode = product.barcode && product.barcode.trim().length > 0 ? product.barcode : generateBarcode();
+
+    // Generate unique SKU
+    let sku = generateSku(product.name, product.color, product.size);
+    let skuAttempts = 0;
+    while (skuAttempts < 100) {
+      const existingSku = await get<{ id: number }>('SELECT id FROM product_variants WHERE sku = ?', [sku]);
+      if (!existingSku) break;
+      sku = generateSku(product.name, product.color, product.size);
+      skuAttempts++;
+    }
+
+    // Generate unique barcode if none is provided in payload
+    let barcode = product.barcode && product.barcode.trim().length > 0 ? product.barcode : generateBarcode();
+    if (!product.barcode || product.barcode.trim().length === 0) {
+      let barcodeAttempts = 0;
+      while (barcodeAttempts < 100) {
+        const existingBarcode = await get<{ id: number }>('SELECT id FROM product_variants WHERE barcode = ?', [barcode]);
+        if (!existingBarcode) break;
+        barcode = generateBarcode();
+        barcodeAttempts++;
+      }
+    }
 
     const variantResult = await runWithResult(
       `
