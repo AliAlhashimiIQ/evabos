@@ -139,15 +139,15 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
       setFormError(null);
 
       const selectedSupplier = suppliers.find((s) => s.name === supplierSearch);
-      const payload: ProductInput = {
+      const payload: ProductInput & { initialStock?: number } = {
         ...formState,
         supplierId: selectedSupplier ? selectedSupplier.id : undefined,
         salePriceIQD,
         purchaseCostUSD: Number.isFinite(purchaseCostUSD) ? purchaseCostUSD : 0,
+        initialStock: Number(initialStockStr) || 0,
       };
 
-      // Pass initialStock as part of the payload (casting to any to avoid type error for now, or update interface)
-      await onSubmit({ ...payload, initialStock: Number(initialStockStr) || 0 } as any);
+      await onSubmit(payload as ProductInput);
       setFormState(initialState);
       setSupplierSearch('');
       setInitialStockStr('');
@@ -271,8 +271,6 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
         </div>
       )}
 
-      <div className="ProductForm-grid">
-      </div>
       <div className="ProductForm-actions">
         <button type="button" onClick={onCancel} className="ProductForm-button ProductForm-button--ghost" disabled={loading}>
           {t('cancel')}

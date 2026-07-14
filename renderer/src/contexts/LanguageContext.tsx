@@ -661,9 +661,13 @@ const translations = {
     bulkUpdateSeasonTitle: 'Bulk Update Season',
     bulkUpdateInfo: 'You are about to update {count} products.',
     newSeason: 'New Season',
-    bulkUpdateHelp: 'Leave empty to remove the season from selected products.',
     // updating: 'Updating...', // Duplicate
     updateProducts: 'Update Products',
+    overview: 'Overview',
+    salesAnalysis: 'Sales Analysis',
+    monthlyAnalysis: 'Monthly Analysis',
+    inventoryHealth: 'Inventory Health',
+    onlineOrders: 'Online Orders',
   },
 
   ar: {
@@ -1325,6 +1329,11 @@ const translations = {
     restartNow: 'إعادة التشغيل الآن',
     updateError: 'خطأ: {error}',
     devModeUpdate: 'التحديثات معطلة في وضع التطوير. قم ببناء التطبيق لاختبار التحديثات.',
+    overview: 'نظرة عامة',
+    salesAnalysis: 'تحليل المبيعات',
+    monthlyAnalysis: 'تحليل شهري',
+    inventoryHealth: 'حالة المخزون',
+    onlineOrders: 'الطلبات أونلاين',
   },
 };
 

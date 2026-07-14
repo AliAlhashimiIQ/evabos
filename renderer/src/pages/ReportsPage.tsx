@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { utils, writeFile } from 'xlsx';
 import {
   FileDown, Printer, Play, Calendar, History, BarChart, BarChart2,
   CalendarDays, CalendarRange, Loader2, Database,
-  LayoutDashboard, TrendingUp, Package, DollarSign, Users, ClipboardList
+  LayoutDashboard, TrendingUp, Package, DollarSign, Users, ClipboardList, UserCog
 } from 'lucide-react';
 import './Pages.css';
 import './ReportsPage.css';
@@ -41,7 +41,7 @@ const TABS: { id: TabId; icon: typeof LayoutDashboard; labelKey: string }[] = [
   { id: 'inventory', icon: Package, labelKey: 'inventoryHealth' },
   { id: 'financial', icon: DollarSign, labelKey: 'financial' },
   { id: 'customers', icon: Users, labelKey: 'customers' },
-  { id: 'employees', icon: Users, labelKey: 'employees' },
+  { id: 'employees', icon: UserCog, labelKey: 'employees' },
   { id: 'activity', icon: ClipboardList, labelKey: 'activityLogs' },
 ];
 
@@ -67,7 +67,7 @@ const ReportsPage = (): JSX.Element => {
   const [availableSeasons, setAvailableSeasons] = useState<string[]>([]);
   const [employeeSales, setEmployeeSales] = useState<any[]>([]);
 
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     if (!window.evaApi || !token) {
       setError('Desktop bridge unavailable.');
       return;
@@ -102,7 +102,7 @@ const ReportsPage = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, range, t]);
 
   useEffect(() => {
     if (token) {
@@ -111,7 +111,7 @@ const ReportsPage = (): JSX.Element => {
         window.evaApi.products.getSeasons(token).then(setAvailableSeasons).catch(console.error);
       }
     }
-  }, [token]);
+  }, [token, loadReports]);
 
   const exportToExcel = () => {
     if (!reports) return;
@@ -178,19 +178,7 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
     }
   };
 
-  // Fallback labels for new tab keys
-  const tFallback = (key: string): string => {
-    const fb: Record<string, string> = {
-      overview: 'نظرة عامة',
-      salesAnalysis: 'تحليل المبيعات',
-      monthlyAnalysis: 'تحليل شهري',
-      inventoryHealth: 'حالة المخزون',
-      financial: 'المالية',
-      customers: 'العملاء',
-    };
-    const result = t(key);
-    return result === key ? (fb[key] || key) : result;
-  };
+
 
   return (
     <div className="Page Page--transparent Reports">
@@ -210,7 +198,7 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
       <nav className="Reports-tabs">
         {TABS.map(({ id, icon: Icon, labelKey }) => (
           <button key={id} className={`Reports-tab ${activeTab === id ? 'Reports-tab--active' : ''}`} onClick={() => setActiveTab(id)}>
-            <Icon size={16} /> {tFallback(labelKey)}
+            <Icon size={16} /> {t(labelKey)}
           </button>
         ))}
       </nav>

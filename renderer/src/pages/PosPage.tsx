@@ -169,14 +169,19 @@ const PosPage = (): JSX.Element => {
       const productResponse = await window.evaApi.products.list(token, { limit: 100, cursor });
 
       // Handle both paginated and legacy responses
-      const newProducts = productResponse.products || productResponse.items || [];
+      const newProducts: Product[] = productResponse.products || productResponse.items || [];
       const cursor_next = productResponse.nextCursor ?? null;
       const more = productResponse.hasMore ?? false;
 
       if (reset) {
         setProducts(newProducts);
       } else {
-        setProducts(prev => [...prev, ...newProducts]);
+        // Deduplicate: newer fetched data always wins over stale cached data
+        setProducts(prev => {
+          const map = new Map(prev.map((p) => [p.id, p]));
+          newProducts.forEach((p) => map.set(p.id, p));
+          return Array.from(map.values());
+        });
       }
 
       setNextCursor(cursor_next);
@@ -486,22 +491,61 @@ const PosPage = (): JSX.Element => {
         return;
       }
 
-      // Final stock validation before completing sale - check against latest product data
+      // ── Fresh Stock Validation ──────────────────────────────────────────────
+      // Build a stock map from in-memory products. Newer data wins (map was deduped on insert).
+      const stockMap = new Map<number, number>(products.map((p) => [p.id, p.stockOnHand]));
+
+      // Find items that appear to have zero/missing stock in memory — these need a fresh DB check
+      // to avoid false "out of stock" errors caused by stale cached data.
+      const staleItems = targetCart.filter((item) => {
+        const stock = stockMap.get(item.product.id);
+        return stock === undefined || stock <= 0;
+      });
+
+      if (staleItems.length > 0) {
+        try {
+          // Fetch fresh stock for each potentially-stale item from the DB
+          await Promise.all(
+            staleItems.map(async (cartItem) => {
+              const searchTerm = cartItem.product.sku || cartItem.product.barcode || cartItem.product.productName;
+              const res = await window.evaApi!.products.list(token, { search: searchTerm, limit: 10 });
+              const freshList: Product[] = res.products || res.items || [];
+              const fresh = freshList.find((p) => p.id === cartItem.product.id);
+              if (fresh) {
+                stockMap.set(fresh.id, fresh.stockOnHand);
+                // Also update React state so UI reflects fresh data
+                setProducts((prev) => prev.map((p) => (p.id === fresh.id ? fresh : p)));
+              } else {
+                // Not found even after DB search — use cart item's own cached stockOnHand as
+                // a last-resort fallback (it was valid when the item was added to cart)
+                if (!stockMap.has(cartItem.product.id)) {
+                  stockMap.set(cartItem.product.id, cartItem.product.stockOnHand);
+                }
+              }
+            })
+          );
+        } catch (refreshErr) {
+          // If DB refresh fails, fall back to cart item's own cached data
+          console.warn('[POS] Stock refresh failed, using cached data:', refreshErr);
+          staleItems.forEach((item) => {
+            if (!stockMap.has(item.product.id)) {
+              stockMap.set(item.product.id, item.product.stockOnHand);
+            }
+          });
+        }
+      }
+
       const outOfStockItems: Array<{ item: CartItem; currentStock: number }> = [];
       const overStockItems: Array<{ item: CartItem; currentStock: number }> = [];
 
       for (const cartItem of targetCart) {
-        const currentProduct = products.find((p) => p.id === cartItem.product.id);
-        if (!currentProduct) {
-          // Product no longer exists
-          outOfStockItems.push({ item: cartItem, currentStock: 0 });
-          continue;
-        }
+        // Use the fresh stock map; fall back to cart item's own cached stockOnHand
+        const currentStock = stockMap.get(cartItem.product.id) ?? cartItem.product.stockOnHand;
 
-        if (currentProduct.stockOnHand <= 0) {
-          outOfStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
-        } else if (cartItem.quantity > currentProduct.stockOnHand) {
-          overStockItems.push({ item: cartItem, currentStock: currentProduct.stockOnHand });
+        if (currentStock <= 0) {
+          outOfStockItems.push({ item: cartItem, currentStock });
+        } else if (cartItem.quantity > currentStock) {
+          overStockItems.push({ item: cartItem, currentStock });
         }
       }
 
@@ -577,8 +621,25 @@ const PosPage = (): JSX.Element => {
         const created = await window.evaApi.sales.create(token, sale);
         setPrintSale(created);
 
-        // Refresh products to update stock levels
-        await loadProducts();
+        // Reset products to a fresh first page (correct stock after sale)
+        await loadProducts(true);
+
+        // Re-add products from OTHER profiles' carts that may not be in the fresh top-100
+        // (e.g. older products loaded via barcode scan)
+        setProfiles((currentProfiles) => {
+          const otherCartProducts = currentProfiles
+            .filter((_, idx) => idx !== profileIndex)
+            .flatMap((profile) => profile.cart.map((item) => item.product));
+
+          if (otherCartProducts.length > 0) {
+            setProducts((freshList) => {
+              const freshIds = new Set(freshList.map((p) => p.id));
+              const missing = otherCartProducts.filter((p) => !freshIds.has(p.id));
+              return missing.length > 0 ? [...freshList, ...missing] : freshList;
+            });
+          }
+          return currentProfiles; // profiles unchanged here
+        });
 
         updateProfileAtIndex(profileIndex, (profile) => ({
           ...profile,
@@ -685,16 +746,17 @@ const PosPage = (): JSX.Element => {
         setScannerMessage(`${t('noMatchFor')} ${value}`);
       }
 
-      // Keep the timeout as a backup for React render cycles
+      // Errors stay visible longer (2 s) so cashiers can read them; success clears fast (600 ms)
+      const clearDelay = variant && variant.stockOnHand > 0 ? 600 : 2000;
       setTimeout(() => {
         setScannerMessage(null);
         setSearchTerm('');
         if (searchInputRef.current) {
           searchInputRef.current.value = '';
         }
-        // Release lock after 500ms (ignoring any secondary Enters)
+        // Release lock after delay
         isScanningRef.current = false;
-      }, 500);
+      }, clearDelay);
     },
     [products, addToCart, isSubmitting, setSearchTerm, token, t],
   );
@@ -713,11 +775,18 @@ const PosPage = (): JSX.Element => {
         }
       },
       Delete: removeLastItem,
+      'Alt+1': () => setActiveProfileIndex(0),
+      'Alt+2': () => setActiveProfileIndex(1),
+      'Alt+3': () => setActiveProfileIndex(2),
+      'Alt+4': () => setActiveProfileIndex(3),
     }),
     [navigate, handleCompleteSale, isSubmitting, removeLastItem, cart.length],
   );
 
   useShortcutKeys(shortcutMap);
+
+  // Read once per render (avoids 4× repeated localStorage reads inside JSX)
+  const requireEmployeeCheckout = localStorage.getItem('requireEmployeeCheckout') === 'true';
 
   return (
     <div className="Pos">
@@ -980,20 +1049,12 @@ const PosPage = (): JSX.Element => {
 
           {/* Employee + Payment row */}
           <div className="Pos-fieldRow">
-            <div className="Pos-field">
-              <label 
-                className="Pos-fieldLabel" 
-                style={{ color: localStorage.getItem('requireEmployeeCheckout') === 'true' && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '#ef4444' : undefined }}
-              >
-                {t('employee')} {localStorage.getItem('requireEmployeeCheckout') === 'true' && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') && '*'}
+            <div className={`Pos-field ${requireEmployeeCheckout && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? 'Pos-field--error' : ''}`}>
+              <label className="Pos-fieldLabel">
+                {t('employee')} {requireEmployeeCheckout && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') && '*'}
               </label>
               <select
                 value={selectedEmployeeId}
-                style={{
-                  border: localStorage.getItem('requireEmployeeCheckout') === 'true' && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '1px solid #ef4444' : undefined,
-                  boxShadow: localStorage.getItem('requireEmployeeCheckout') === 'true' && !selectedEmployeeId && profileError === t('pleaseSelectEmployee') ? '0 0 0 2px rgba(239, 68, 68, 0.1)' : undefined,
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                }}
                 onChange={(event) =>
                   updateCurrentProfile((profile) => ({
                     ...profile,

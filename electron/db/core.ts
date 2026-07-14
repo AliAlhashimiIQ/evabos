@@ -62,29 +62,6 @@ export const getDb = (): sqlite3.Database => {
   if (!app.isReady()) throw new Error('Attempted to access database before Electron app was ready');
   if (!dbInstance) {
     dbInstance = connect();
-    if (app.isPackaged) {
-      try {
-        const dbPath = resolveDbPath();
-        const documentsPath = app.getPath('documents');
-        const backupDir = path.join(documentsPath, 'EVA_POS', 'Backups');
-        const fs = require('fs');
-        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;
-        const backupPath = path.join(backupDir, `eva-pos-autobackup-${timestamp}.db`);
-        fs.copyFile(dbPath, backupPath, (err: any) => {
-          if (err) log.error('[AutoBackup] Failed:', err);
-          else log.info('[AutoBackup] Success:', backupPath);
-        });
-        fs.readdir(backupDir, (err: any, files: string[]) => {
-          if (err) return;
-          const backups = files.filter(f => f.startsWith('eva-pos-autobackup-')).sort();
-          if (backups.length > 5) {
-            backups.slice(0, backups.length - 5).forEach(f => fs.unlink(path.join(backupDir, f), () => {}));
-          }
-        });
-      } catch (err) { log.error('[AutoBackup] Error:', err); }
-    }
   }
   return dbInstance;
 };
@@ -237,6 +214,36 @@ export async function initDatabase(): Promise<void> {
     }
   } catch (err) { log.error('[db] SMTP migration failed:', err); }
   await seedInitialData();
+  await runAutoBackup();
+}
+
+async function runAutoBackup(): Promise<void> {
+  if (!app.isPackaged) return;
+  try {
+    const dbPath = resolveDbPath();
+    const documentsPath = app.getPath('documents');
+    const backupDir = path.join(documentsPath, 'EVA_POS', 'Backups');
+    const fs = require('fs').promises;
+    await fs.mkdir(backupDir, { recursive: true });
+    
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;
+    const backupPath = path.join(backupDir, `eva-pos-autobackup-${timestamp}.db`);
+    
+    await fs.copyFile(dbPath, backupPath);
+    log.info('[AutoBackup] Success:', backupPath);
+    
+    const files: string[] = await fs.readdir(backupDir);
+    const backups = files.filter((f: string) => f.startsWith('eva-pos-autobackup-')).sort();
+    if (backups.length > 5) {
+      const toDelete = backups.slice(0, backups.length - 5);
+      for (const file of toDelete) {
+        await fs.unlink(path.join(backupDir, file)).catch(() => {});
+      }
+    }
+  } catch (err) {
+    log.error('[AutoBackup] Error:', err);
+  }
 }
 
 export async function closeDatabase(): Promise<void> {

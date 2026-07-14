@@ -84,13 +84,9 @@ const ExpensesPage = (): JSX.Element => {
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter((expense) => {
-      const matchesCategory = filterCategory === 'all' || expense.category === filterCategory;
-      const matchesDate =
-        new Date(expense.expenseDate).getTime() >= new Date(range.startDate).getTime() &&
-        new Date(expense.expenseDate).getTime() <= new Date(range.endDate).getTime();
-      return matchesCategory && matchesDate;
+      return filterCategory === 'all' || expense.category === filterCategory;
     });
-  }, [expenses, filterCategory, range]);
+  }, [expenses, filterCategory]);
 
   const topCategory = useMemo(() => {
     if (!summary.categories || summary.categories.length === 0) return null;

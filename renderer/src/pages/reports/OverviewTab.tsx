@@ -1,5 +1,6 @@
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, ShoppingBag, Package, RotateCcw, DollarSign } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type AdvancedReports = import('../../types/electron').AdvancedReports;
 type PeakDayData = import('../../types/electron').PeakDayData;
@@ -13,8 +14,16 @@ interface Props {
 const fmt = (n: number) => n.toLocaleString('en-IQ');
 
 export const OverviewTab = ({ reports, peakDays, t }: Props): JSX.Element => {
+  const { language } = useLanguage();
   const { profitAnalysis: pa } = reports;
   const margin = pa.profitMarginPercent;
+
+  const localizedPeakDays = peakDays.map(day => {
+    // 2026-07-12 is a Sunday (dayOfWeek = 0)
+    const date = new Date(2026, 6, 12 + day.dayOfWeek);
+    const dayName = date.toLocaleDateString(language === 'ar' ? 'ar-IQ' : 'en-US', { weekday: 'long' });
+    return { ...day, dayName };
+  });
 
   return (
     <>
@@ -127,13 +136,13 @@ export const OverviewTab = ({ reports, peakDays, t }: Props): JSX.Element => {
       </div>
 
       {/* Peak Days Chart */}
-      {peakDays.length > 0 && (
+      {localizedPeakDays.length > 0 && (
         <div className="Reports-chartRow">
           <div className="Reports-chartCard Reports-chartCard--full">
             <h3>{t('peakDays') || 'Peak Days'}</h3>
             <div className="Reports-chartWrap--small" style={{ width: '100%', height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={peakDays}>
+                <BarChart data={localizedPeakDays}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                   <XAxis dataKey="dayName" tick={{ fontSize: 12, fill: '#94a3b8' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />

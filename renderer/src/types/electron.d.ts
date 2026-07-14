@@ -49,6 +49,8 @@ export type ProductInput = {
   salePriceIQD: number;
   purchaseCostUSD: number;
   supplierId?: number | null;
+  /** Initial stock quantity to add when creating a new product */
+  initialStock?: number;
 };
 
 export interface SaleItem {

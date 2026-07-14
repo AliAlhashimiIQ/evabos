@@ -390,7 +390,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         IFNULL(SUM(s.totalIQD), 0) as grossIQD,
         COUNT(*) as orders
       FROM sales s
-      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
       GROUP BY date(s.saleDate)
     ),
     daily_cost AS (
@@ -398,7 +398,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         date(s.saleDate) as date,
         IFNULL(SUM(s.totalIQD - IFNULL(s.profitIQD, 0)), 0) as costIQD
       FROM sales s
-      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
       GROUP BY date(s.saleDate)
     ),
     daily_items AS (
@@ -407,7 +407,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         IFNULL(SUM(si.quantity), 0) as itemsSold
       FROM sale_items si
       JOIN sales s ON s.id = si.saleId
-      WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
       GROUP BY date(s.saleDate)
     ),
     daily_returns AS (
@@ -415,7 +415,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         date(createdAt) as date,
         IFNULL(SUM(refundAmountIQD), 0) as returnedIQD
       FROM returns
-      WHERE date(createdAt) BETWEEN date(?) AND date(?)
+      WHERE date(createdAt) BETWEEN date(?1) AND date(?2)
       GROUP BY date(createdAt)
     ),
     all_dates AS (
@@ -437,7 +437,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     LEFT JOIN daily_returns dr ON dr.date = ad.date
     ORDER BY ad.date
   `,
-    [range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate, range.startDate, range.endDate],
+    [range.startDate, range.endDate],
   );
 
   const bestSellingItems = await all<NamedMetric>(

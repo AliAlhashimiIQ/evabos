@@ -43,7 +43,7 @@ const MainLayout = (): JSX.Element => {
   const cashierNavItems = [
     { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
     { to: '/products', label: t('products'), icon: Package },
-    { to: '/online-orders', label: 'الطلبات أونلاين', icon: Globe },
+    { to: '/online-orders', label: t('onlineOrders') || 'الطلبات أونلاين', icon: Globe },
     { to: '/returns', label: t('returns'), icon: RotateCcw },
     { to: '/customers', label: t('customers'), icon: Users },
   ];
@@ -53,7 +53,7 @@ const MainLayout = (): JSX.Element => {
     { to: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
     { to: '/pos', label: t('pointOfSale'), icon: ShoppingCart },
     { to: '/sales', label: t('sales'), icon: Receipt },
-    { to: '/online-orders', label: 'الطلبات أونلاين', icon: Globe },
+    { to: '/online-orders', label: t('onlineOrders') || 'الطلبات أونلاين', icon: Globe },
     { to: '/products', label: t('products'), icon: Package },
     { to: '/suppliers', label: t('suppliers'), icon: Truck },
     { to: '/purchase-orders', label: t('purchasing'), icon: ShoppingBag },
