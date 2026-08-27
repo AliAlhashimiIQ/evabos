@@ -518,7 +518,7 @@ export interface EvaApi {
   };
   printing: {
     getPrinters: () => Promise<Array<{ name: string; description: string; status: number; isDefault: boolean }>>;
-    print: (payload: { html: string; printerName?: string | null; silent?: boolean }) => Promise<boolean>;
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) => Promise<boolean>;
   };
   auth: {
     login: (username: string, password: string) => Promise<LoginResponse | null>;

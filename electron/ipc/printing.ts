@@ -11,7 +11,10 @@ const logError = (...args: any[]) => {
   console.error(...args); // Always log errors
 };
 
-const createPrintWindow = async (html: string, options?: { printerName?: string | null; silent?: boolean }) => {
+const createPrintWindow = async (
+  html: string,
+  options?: { printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }
+) => {
   log('[Print] Starting print job');
 
   // Create window
@@ -58,6 +61,15 @@ const createPrintWindow = async (html: string, options?: { printerName?: string 
       landscape: false,
       margins: { marginType: 'none' },
     };
+
+    if (options?.pageSize) {
+      printOptions.pageSize = options.pageSize;
+    } else if (options?.isLabel) {
+      // Barcode stickers use native label driver sizing
+    } else {
+      // Standard thermal receipt roll paper (72mm width continuous roll)
+      printOptions.pageSize = { width: 72000, height: 2000000 };
+    }
 
     if (hasPrinter) {
       printOptions.deviceName = options.printerName!;

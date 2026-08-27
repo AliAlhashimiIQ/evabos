@@ -313,7 +313,7 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
         try {
 
 
-          await window.evaApi.printing.print({ html: labelHtml, printerName, silent: true });
+          await window.evaApi.printing.print({ html: labelHtml, printerName, silent: true, isLabel: true });
 
 
           // For PDF, show message after first print

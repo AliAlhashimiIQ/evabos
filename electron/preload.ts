@@ -165,7 +165,7 @@ contextBridge.exposeInMainWorld('evaApi', {
   },
   printing: {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),
-    print: (payload: { html: string; printerName?: string | null; silent?: boolean }) =>
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) =>
       ipcRenderer.invoke('printing:print', payload),
   },
   users: {

@@ -874,7 +874,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       window.electronAPI.setSetting('receipt_printer_name', printerName);
     }
 
-    await window.evaApi.printing.print({ html, printerName, silent });
+    await window.evaApi.printing.print({ html, printerName, silent, isLabel: false });
 
     if (onPrinterChange) {
       onPrinterChange(printerName ?? null);
@@ -919,7 +919,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         const targetPrinter = printerName;
 
         try {
-          await window.evaApi.printing.print({ html, printerName: targetPrinter, silent: true });
+          await window.evaApi.printing.print({ html, printerName: targetPrinter, silent: true, isLabel: false });
         } catch (err) {
           console.error('Auto-print failed:', err);
         }
