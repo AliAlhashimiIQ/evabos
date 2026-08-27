@@ -83,6 +83,26 @@ function setupAutoUpdater() {
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
+let isClosingWindow = false;
+let hasExitTelegramRun = false;
+
+async function performExitTelegramRoutine(): Promise<void> {
+  if (hasExitTelegramRun) {
+    return;
+  }
+  hasExitTelegramRun = true;
+
+  try {
+    const settings = await getTelegramSettings();
+    if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
+      log.info('[main] Sending Telegram daily report & backup on application exit/shutdown...');
+      await sendTelegramDailyReportAndBackup();
+      log.info('[main] Telegram daily report & backup completed.');
+    }
+  } catch (tgErr) {
+    log.error('[main] Failed to send Telegram daily report on exit:', tgErr);
+  }
+}
 
 async function loadWindowContent(targetWindow: BrowserWindow): Promise<void> {
   if (isDev) {
@@ -156,22 +176,6 @@ async function createWindow(): Promise<void> {
     }
   });
 
-  // Perform graceful Telegram daily report on exit
-  let isClosingWindow = false;
-
-  async function performExitTelegramRoutine(): Promise<void> {
-    try {
-      const settings = await getTelegramSettings();
-      if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
-        log.info('[main] Sending Telegram daily report & backup on application exit/shutdown...');
-        await sendTelegramDailyReportAndBackup();
-        log.info('[main] Telegram daily report & backup completed.');
-      }
-    } catch (tgErr) {
-      log.error('[main] Failed to send Telegram daily report on exit:', tgErr);
-    }
-  }
-
   // Intercept window close (X button or Alt+F4)
   mainWindow.on('close', (event) => {
     if (isClosingWindow) {
@@ -199,12 +203,6 @@ async function createWindow(): Promise<void> {
         app.quit();
       }
     })();
-  });
-
-  // Windows system shutdown / restart listener
-  powerMonitor.on('shutdown', async () => {
-    log.info('[main] Windows system shutdown detected by powerMonitor');
-    await performExitTelegramRoutine();
   });
 
   mainWindow.on('closed', () => {
@@ -500,6 +498,17 @@ app.whenReady().then(async () => {
   registerEmployeesIpc();
   scheduleDailyBackup();
   scheduleDailyEmailReport();
+  scheduleTelegramPeriodicSync();
+  powerMonitor.on('shutdown', () => {
+    log.info('[main] Windows powerMonitor shutdown detected');
+    performExitTelegramRoutine();
+  });
+
+  powerMonitor.on('suspend', () => {
+    log.info('[main] Windows powerMonitor suspend detected');
+    performExitTelegramRoutine();
+  });
+
   await createWindow();
   checkTelegramRecoveryOnStartup().catch((err) => {
     log.error('[main] checkTelegramRecoveryOnStartup error:', err);
@@ -517,6 +526,27 @@ app.whenReady().then(async () => {
   });
 });
 
+let telegramPeriodicSyncInterval: NodeJS.Timeout | null = null;
+
+function scheduleTelegramPeriodicSync(): void {
+  // Sync periodically every 30 minutes in the evening (>= 18:00) so report & backup are already delivered
+  telegramPeriodicSyncInterval = setInterval(async () => {
+    try {
+      const settings = await getTelegramSettings();
+      if (!settings.enabled || !settings.notifyOnClose || !settings.botToken || !settings.chatId) {
+        return;
+      }
+      const hour = new Date().getHours();
+      if (hour >= 18) {
+        log.info('[telegram] Periodic evening sync running...');
+        await sendTelegramDailyReportAndBackup();
+      }
+    } catch (err) {
+      log.error('[telegram] Error in periodic sync:', err);
+    }
+  }, 30 * 60 * 1000);
+}
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -532,5 +562,10 @@ app.on('before-quit', async () => {
     clearInterval(dailyBackupInterval);
     dailyBackupInterval = null;
   }
+  if (telegramPeriodicSyncInterval) {
+    clearInterval(telegramPeriodicSyncInterval);
+    telegramPeriodicSyncInterval = null;
+  }
+  await performExitTelegramRoutine();
   await closeDatabase();
 });

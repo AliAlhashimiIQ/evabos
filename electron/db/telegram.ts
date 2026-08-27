@@ -324,21 +324,29 @@ export async function sendTelegramDailyReportAndBackup(customDateStr?: string): 
     reportMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
     reportMsg += `💾 <i>جاري رفع النسخة الاحتياطية لقاعدة البيانات أدناه...</i>`;
 
-    // 1. Send the report message
-    const msgResult = await sendTelegramMessage(reportMsg, 'HTML');
+    // 1. Dispatch the text report message immediately (fast < 300ms)
+    const msgPromise = sendTelegramMessage(reportMsg, 'HTML');
+
+    // 2. Prepare fresh database backup concurrently
+    const backupInfoPromise = createBackup();
+
+    // Await text message first so it is guaranteed to reach Telegram even on fast OS shutdown
+    const msgResult = await msgPromise;
     if (!msgResult.success) {
       log.warn('[telegram] Daily report message warning:', msgResult.error);
     }
 
-    // 2. Create fresh backup
-    const backupInfo = await createBackup();
+    // 3. Upload the backup file
+    try {
+      const backupInfo = await backupInfoPromise;
+      const caption = `📦 <b>نسخة احتياطية لقاعدة البيانات</b>\n🏷️ الملف: <code>${backupInfo.filename}</code>\n📅 التاريخ: ${todayStr} (${(backupInfo.size / (1024 * 1024)).toFixed(2)} MB)`;
+      const docResult = await sendTelegramDocument(backupInfo.filepath, caption);
 
-    // 3. Send the backup file
-    const caption = `📦 <b>نسخة احتياطية لقاعدة البيانات</b>\n🏷️ الملف: <code>${backupInfo.filename}</code>\n📅 التاريخ: ${todayStr} (${(backupInfo.size / (1024 * 1024)).toFixed(2)} MB)`;
-    const docResult = await sendTelegramDocument(backupInfo.filepath, caption);
-
-    if (!docResult.success) {
-      return { success: false, error: docResult.error };
+      if (!docResult.success) {
+        log.warn('[telegram] Backup upload warning:', docResult.error);
+      }
+    } catch (backupErr) {
+      log.error('[telegram] Backup creation/upload error on shutdown:', backupErr);
     }
 
     // Mark as sent in DB
