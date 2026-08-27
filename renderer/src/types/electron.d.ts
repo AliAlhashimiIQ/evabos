@@ -812,10 +812,19 @@ export interface EmployeeDetailedSalesEntry {
   totalIQD: number;
 }
 
+export interface TelegramSettings {
+  botToken: string;
+  chatId: string;
+  enabled: boolean;
+  notifyOnSale: boolean;
+  notifyOnClose: boolean;
+}
+
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
     evaApi: any;
   }
 }
+
 

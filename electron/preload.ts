@@ -148,9 +148,24 @@ contextBridge.exposeInMainWorld('evaApi', {
     }) => ipcRenderer.invoke('email:saveSettings', token, settings),
     sendTest: (token: string) => ipcRenderer.invoke('email:sendTest', token),
   },
+  telegram: {
+    getSettings: (token: string) => ipcRenderer.invoke('telegram:getSettings', token),
+    saveSettings: (
+      token: string,
+      settings: {
+        botToken: string;
+        chatId: string;
+        enabled: boolean;
+        notifyOnSale: boolean;
+        notifyOnClose: boolean;
+      },
+    ) => ipcRenderer.invoke('telegram:saveSettings', token, settings),
+    sendTest: (token: string) => ipcRenderer.invoke('telegram:sendTest', token),
+    sendDailyReportNow: (token: string) => ipcRenderer.invoke('telegram:sendDailyReportNow', token),
+  },
   printing: {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),
-    print: (payload: { html: string; printerName?: string | null }) =>
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean }) =>
       ipcRenderer.invoke('printing:print', payload),
   },
   users: {

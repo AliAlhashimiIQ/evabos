@@ -109,7 +109,7 @@
 
 .Layout-content {
   flex: 1;
-  padding: 2.5rem;
+  padding: 1.25rem 1.75rem 2.5rem;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;

@@ -29,6 +29,7 @@ import { registerDashboardIpc } from './ipc/dashboard';
 import { registerLicensingIpc } from './ipc/licensing';
 import { registerSettingsIpc } from './ipc/settings';
 import { registerEmailIpc } from './ipc/email';
+import { registerTelegramIpc } from './ipc/telegram';
 import { registerOnlineOrdersIpc } from './ipc/onlineOrders';
 import { registerEmployeesIpc } from './ipc/employees';
 import { createBackup } from './db/backup';
@@ -143,6 +144,42 @@ async function createWindow(): Promise<void> {
   mainWindow.on('show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.focus();
+    }
+  });
+
+  // Intercept window close to send Telegram report & backup if enabled
+  let isClosingWindow = false;
+  mainWindow.on('close', async (event) => {
+    if (isClosingWindow) {
+      return;
+    }
+
+    try {
+      const { getTelegramSettings, sendTelegramDailyReportAndBackup } = await import('./db/telegram');
+      const settings = await getTelegramSettings();
+      if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
+        event.preventDefault();
+        isClosingWindow = true;
+        log.info('[main] Window close intercepted: Sending Telegram daily report & backup...');
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('app:closing-status', 'sending_telegram_backup');
+        }
+
+        try {
+          await sendTelegramDailyReportAndBackup();
+          log.info('[main] Telegram daily report & backup on close completed.');
+        } catch (tgErr) {
+          log.error('[main] Failed to send Telegram daily report on close:', tgErr);
+        }
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.destroy();
+        }
+        app.quit();
+      }
+    } catch (err) {
+      log.error('[main] Error in window close handler:', err);
     }
   });
 
@@ -434,6 +471,7 @@ app.whenReady().then(async () => {
   registerLicensingIpc();
   registerSettingsIpc();
   registerEmailIpc();
+  registerTelegramIpc();
   registerOnlineOrdersIpc();
   registerEmployeesIpc();
   scheduleDailyBackup();

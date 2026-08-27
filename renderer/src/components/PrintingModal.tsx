@@ -810,11 +810,16 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       if (!window.evaApi) return;
       try {
         const list = await window.evaApi.printing.getPrinters();
-        if (mounted) {
+        if (mounted && list) {
           setPrinters(list);
           if (!propsPrinter) {
-            const def = list.find((printer: any) => printer.isDefault);
-            setPrinterName(def?.name ?? null);
+            const saved = await window.electronAPI.getSetting('receipt_printer_name');
+            if (saved && list.some((p: any) => p.name === saved)) {
+              setPrinterName(saved);
+            } else {
+              const def = list.find((printer: any) => printer.isDefault);
+              setPrinterName(def?.name ?? null);
+            }
           }
         }
       } catch (err) {
@@ -825,7 +830,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     return () => {
       mounted = false;
     };
-  }, [visible]);
+  }, [visible, propsPrinter]);
 
   // Generate barcode when payload changes
   useEffect(() => {
@@ -851,7 +856,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
     }
   }, [payload, visible]);
 
-  const handlePrint = async (silent: boolean = false) => {
+  const handlePrint = async (silent: boolean = true) => {
     if (!window.evaApi) return;
 
     let html = '';
@@ -863,6 +868,10 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         : generateInvoiceHtml(payload, barcodeDataUrl);
     } else {
       return;
+    }
+
+    if (printerName) {
+      window.electronAPI.setSetting('receipt_printer_name', printerName);
     }
 
     await window.evaApi.printing.print({ html, printerName, silent });

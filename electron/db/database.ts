@@ -1649,6 +1649,11 @@ export async function createSale(input: SaleInput): Promise<SaleDetail> {
       throw new Error('Failed to retrieve sale details after creation');
     }
 
+    // Trigger Telegram real-time notification asynchronously (non-blocking)
+    import('./telegram')
+      .then(({ notifyTelegramSale }) => notifyTelegramSale(fullDetail))
+      .catch((err) => log.error('[telegram] notifyTelegramSale error:', err));
+
     return fullDetail;
   } catch (error) {
     await run('ROLLBACK');

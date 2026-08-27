@@ -2,21 +2,20 @@ import React, { useEffect, useState } from 'react';
 import NumberInput from './NumberInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Calculator } from 'lucide-react';
+import { Calculator, Package, Layers, FileText } from 'lucide-react';
 import Combobox from './Combobox';
-type Supplier = import('../types/electron').Supplier;
-type ProductInput = import('../types/electron').ProductInput;
 import './ProductForm.css';
 
+type Supplier = import('../types/electron').Supplier;
+type ProductInput = import('../types/electron').ProductInput;
+
 interface ProductFormProps {
-  onSubmit: (payload: ProductInput) => Promise<void> | void;
+  onSubmit: (payload: ProductInput & { initialStock?: number }) => Promise<void> | void;
   onCancel: () => void;
   loading?: boolean;
   existingSeasons?: string[];
 }
 
-
-// Local state interface to allow empty strings for number inputs
 interface FormState extends Omit<ProductInput, 'salePriceIQD' | 'purchaseCostUSD'> {
   salePriceIQD: number | string;
   purchaseCostUSD: number | string;
@@ -31,19 +30,23 @@ const initialState: FormState = {
   description: '',
   color: '',
   size: '',
-  salePriceIQD: '', // Start empty
-  purchaseCostUSD: '', // Start empty
+  salePriceIQD: '',
+  purchaseCostUSD: '',
   supplierId: undefined,
 };
 
-const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: ProductFormProps): JSX.Element => {
+const ProductForm = ({
+  onSubmit,
+  onCancel,
+  loading,
+  existingSeasons = [],
+}: ProductFormProps): JSX.Element => {
   const { token } = useAuth();
   const { t } = useLanguage();
   const [formState, setFormState] = useState<FormState>(initialState);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
-  const [exchangeRate, setExchangeRate] = useState<number>(1470); // Default exchange rate
-
+  const [exchangeRate, setExchangeRate] = useState<number>(1470);
   const [initialStockStr, setInitialStockStr] = useState('');
   const [supplierSearch, setSupplierSearch] = useState('');
 
@@ -57,11 +60,11 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
   }, [formState.supplierId, suppliers]);
 
   const handleChange =
-    (field: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    (field: keyof FormState) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const value = event.target.value;
       setFormState((prev) => ({
         ...prev,
-        // Keep as string for inputs to allow empty state
         [field]: field === 'supplierId' ? (value ? Number(value) : undefined) : value,
       }));
     };
@@ -95,8 +98,13 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
     }
   }, [token]);
 
-  // Calculate profit margin in real-time
-  const calculateProfitMargin = (): { margin: number; profitIQD: number; profitUSD: number; multiplier: number } | null => {
+  // Real-time Profit Calculation
+  const calculateProfitMargin = (): {
+    margin: number;
+    profitIQD: number;
+    profitUSD: number;
+    multiplier: number;
+  } | null => {
     const purchaseCostUSD = Number(formState.purchaseCostUSD);
     const salePriceIQD = Number(formState.salePriceIQD);
 
@@ -107,11 +115,7 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
     const costIQD = purchaseCostUSD * exchangeRate;
     const profitIQD = salePriceIQD - costIQD;
     const profitUSD = profitIQD / exchangeRate;
-
-    // Markup on cost (e.g., if cost=$5 and sell=$10, profit=$5, markup=100%)
     const margin = (profitIQD / costIQD) * 100;
-
-    // Multiplier (e.g., if cost=$5 and sell=$10, multiplier=2x)
     const multiplier = salePriceIQD / costIQD;
 
     return { margin, profitIQD, profitUSD, multiplier };
@@ -137,7 +141,6 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
 
     try {
       setFormError(null);
-
       const selectedSupplier = suppliers.find((s) => s.name === supplierSearch);
       const payload: ProductInput & { initialStock?: number } = {
         ...formState,
@@ -147,7 +150,7 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
         initialStock: Number(initialStockStr) || 0,
       };
 
-      await onSubmit(payload as ProductInput);
+      await onSubmit(payload);
       setFormState(initialState);
       setSupplierSearch('');
       setInitialStockStr('');
@@ -159,111 +162,192 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
   return (
     <form className="ProductForm" onSubmit={handleSubmit}>
       {formError && <div className="ProductForm-alert">{formError}</div>}
-      <div className="ProductForm-grid">
-        <label>
-          <span>{t('name')}</span>
-          <input type="text" value={formState.name} onChange={handleChange('name')} required />
-        </label>
-        <label>
-          <span>{t('supplier')}</span>
-          <Combobox
-            value={supplierSearch}
-            onChange={(val) => setSupplierSearch(val)}
-            options={suppliers.map((s) => s.name)}
-            placeholder={t('selectSupplier') || 'Select supplier'}
-          />
-        </label>
-        <label>
-          <span>{t('code')}</span>
-          <input type="text" value={formState.code ?? ''} onChange={handleChange('code')} />
-        </label>
-        <label>
-          <span>{t('barcode')}</span>
-          <input type="text" value={formState.barcode ?? ''} onChange={handleChange('barcode')} />
-        </label>
-        <label>
-          <span>{t('category')}</span>
-          <input type="text" value={formState.category ?? ''} onChange={handleChange('category')} />
-        </label>
-        <label>
-          <span>{t('season')}</span>
-          <Combobox
-            value={formState.season ?? ''}
-            onChange={(value) => setFormState(prev => ({ ...prev, season: value }))}
-            options={existingSeasons}
-            placeholder="e.g., Winter 2026"
-          />
-        </label>
-        <label className="ProductForm-span">
-          <span>{t('description')}</span>
-          <textarea value={formState.description ?? ''} onChange={handleChange('description')} rows={3} />
-        </label>
-        <label>
-          <span>{t('color')}</span>
-          <input type="text" value={formState.color ?? ''} onChange={handleChange('color')} />
-        </label>
-        <label>
-          <span>{t('size')}</span>
-          <input type="text" value={formState.size ?? ''} onChange={handleChange('size')} />
-        </label>
-        <label>
-          <span>{t('salePriceIQD')}</span>
-          <NumberInput
-            min="0"
-            step="100"
-            value={formState.salePriceIQD}
-            onChange={handleChange('salePriceIQD')}
-            required
-          />
-        </label>
-        <label>
-          <span>{t('costUSD')}</span>
-          <NumberInput
-            min="0"
-            step="0.01"
-            value={formState.purchaseCostUSD}
-            onChange={handleChange('purchaseCostUSD')}
-          />
-        </label>
-        <label>
-          <span>{t('initialStock') || 'Initial Stock'}</span>
-          <NumberInput
-            value={initialStockStr}
-            onChange={(e) => setInitialStockStr(e.target.value)}
-            placeholder="0"
-          />
-        </label>
+
+      {/* Section 1: Basic Info */}
+      <div className="ProductForm-section">
+        <span className="ProductForm-sectionTitle">
+          <Package size={16} />
+          <span>{t('basicInfo')}</span>
+        </span>
+        <div className="ProductForm-grid">
+          <div className="ProductForm-field">
+            <label>
+              {t('productName')}
+              <span className="required">*</span>
+            </label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.name}
+              onChange={handleChange('name')}
+              placeholder="e.g. طقم رسمي 22"
+              required
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('supplier')}</label>
+            <Combobox
+              value={supplierSearch}
+              onChange={(val) => setSupplierSearch(val)}
+              options={suppliers.map((s) => s.name)}
+              placeholder={t('selectSupplier')}
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('code')}</label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.code ?? ''}
+              onChange={handleChange('code')}
+              placeholder="e.g. EVA-22XX"
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('barcode')}</label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.barcode ?? ''}
+              onChange={handleChange('barcode')}
+              placeholder="e.g. 6416307152412"
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('category')}</label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.category ?? ''}
+              onChange={handleChange('category')}
+              placeholder="e.g. أطقم / فساتين"
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('season')}</label>
+            <Combobox
+              value={formState.season ?? ''}
+              onChange={(value) => setFormState((prev) => ({ ...prev, season: value }))}
+              options={existingSeasons}
+              placeholder="e.g. Summer26 / Winter26"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Profit Margin Display */}
-      {profitInfo && (
-        <div className="ProductForm-profitMargin">
-          <div className="ProductForm-profitMargin-header">
-            <span className="ProductForm-profitMargin-icon"><Calculator size={18} /></span>
-            <span className="ProductForm-profitMargin-title">{t('profitMarginCalculator')}</span>
+      {/* Section 2: Variant & Pricing */}
+      <div className="ProductForm-section">
+        <span className="ProductForm-sectionTitle">
+          <Layers size={16} />
+          <span>{t('variantAndPricing')}</span>
+        </span>
+        <div className="ProductForm-grid">
+          <div className="ProductForm-field">
+            <label>{t('color')}</label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.color ?? ''}
+              onChange={handleChange('color')}
+              placeholder="e.g. أسود / أزرق"
+            />
           </div>
-          <div className="ProductForm-profitMargin-content">
-            <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">{t('markup')}:</span>
-              <span className={`ProductForm-profitMargin-value ${profitInfo.margin >= 100 ? 'positive' : profitInfo.margin >= 50 ? 'neutral' : 'negative'}`}>
+
+          <div className="ProductForm-field">
+            <label>{t('size')}</label>
+            <input
+              type="text"
+              className="ProductForm-input"
+              value={formState.size ?? ''}
+              onChange={handleChange('size')}
+              placeholder="e.g. M / L / XL"
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>
+              {t('sellingPriceIQD')}
+              <span className="required">*</span>
+            </label>
+            <NumberInput
+              className="ProductForm-input"
+              min="0"
+              step="250"
+              value={formState.salePriceIQD}
+              onChange={handleChange('salePriceIQD')}
+              placeholder="75,000"
+              required
+            />
+          </div>
+
+          <div className="ProductForm-field">
+            <label>{t('costUSD')}</label>
+            <NumberInput
+              className="ProductForm-input"
+              min="0"
+              step="0.01"
+              value={formState.purchaseCostUSD}
+              onChange={handleChange('purchaseCostUSD')}
+              placeholder="15.00"
+            />
+          </div>
+
+          <div className="ProductForm-field full-width">
+            <label>{t('initialStock')}</label>
+            <NumberInput
+              className="ProductForm-input"
+              value={initialStockStr}
+              onChange={(e) => setInitialStockStr(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Live Profit Margin Calculator */}
+      {profitInfo && (
+        <div className="ProductForm-profitCard">
+          <div className="ProductForm-profitHeader">
+            <Calculator size={15} style={{ color: 'var(--accent-primary)' }} />
+            <span>{t('profitMarginCalculator')}</span>
+          </div>
+          <div className="ProductForm-profitGrid">
+            <div className="ProductForm-profitItem">
+              <span className="ProductForm-profitLabel">{t('markup')}</span>
+              <span
+                className={`ProductForm-profitValue ${
+                  profitInfo.margin >= 0 ? 'positive' : 'negative'
+                }`}
+              >
                 {profitInfo.margin.toFixed(1)}%
               </span>
             </div>
-            <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">{t('multiplier')}:</span>
-              <span className="ProductForm-profitMargin-value">
-                {profitInfo.multiplier.toFixed(2)}x
+            <div className="ProductForm-profitItem">
+              <span className="ProductForm-profitLabel">{t('multiplier')}</span>
+              <span className="ProductForm-profitValue">{profitInfo.multiplier.toFixed(2)}x</span>
+            </div>
+            <div className="ProductForm-profitItem">
+              <span className="ProductForm-profitLabel">{t('profitAmount')}</span>
+              <span
+                className={`ProductForm-profitValue ${
+                  profitInfo.profitIQD >= 0 ? 'positive' : 'negative'
+                }`}
+              >
+                {profitInfo.profitIQD.toLocaleString('en-IQ')} IQD
               </span>
             </div>
-            <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">{t('profitAmount')}:</span>
-              <span className="ProductForm-profitMargin-value">
-                {profitInfo.profitIQD.toLocaleString('en-IQ', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} IQD
-              </span>
-            </div>
-            <div className="ProductForm-profitMargin-item">
-              <span className="ProductForm-profitMargin-label">{t('profitUSD')}:</span>
-              <span className="ProductForm-profitMargin-value">
+            <div className="ProductForm-profitItem">
+              <span className="ProductForm-profitLabel">{t('profitUSD')}</span>
+              <span
+                className={`ProductForm-profitValue ${
+                  profitInfo.profitUSD >= 0 ? 'positive' : 'negative'
+                }`}
+              >
                 ${profitInfo.profitUSD.toFixed(2)}
               </span>
             </div>
@@ -271,11 +355,38 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
         </div>
       )}
 
+      {/* Section 3: Description */}
+      <div className="ProductForm-section">
+        <span className="ProductForm-sectionTitle">
+          <FileText size={16} />
+          <span>{t('description')}</span>
+        </span>
+        <div className="ProductForm-field full-width">
+          <textarea
+            className="ProductForm-input"
+            value={formState.description ?? ''}
+            onChange={handleChange('description')}
+            rows={2}
+            placeholder={t('optionalDetails')}
+          />
+        </div>
+      </div>
+
+      {/* Actions */}
       <div className="ProductForm-actions">
-        <button type="button" onClick={onCancel} className="ProductForm-button ProductForm-button--ghost" disabled={loading}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="ProductForm-btn"
+          disabled={loading}
+        >
           {t('cancel')}
         </button>
-        <button type="submit" className="ProductForm-button" disabled={loading}>
+        <button
+          type="submit"
+          className="ProductForm-btn primary"
+          disabled={loading}
+        >
           {loading ? t('saving') : t('saveProduct')}
         </button>
       </div>
@@ -284,4 +395,3 @@ const ProductForm = ({ onSubmit, onCancel, loading, existingSeasons = [] }: Prod
 };
 
 export default ProductForm;
-

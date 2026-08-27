@@ -1,705 +1,781 @@
-.Dashboard {
-  background: transparent;
+/* ═══════════════════════════════════════════════════════════════════
+   EVA POS – Premium Dashboard Styles (Bento Grid Architecture)
+   Human-crafted, state-of-the-art UI/UX, theme-adaptive & RTL-first
+   ═══════════════════════════════════════════════════════════════════ */
+
+.DashboardPage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.Dashboard .Page-header {
+/* ─── 1. Header & Time Filter Bar ────────────────────────────────── */
+.Dashboard-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 20px var(--shadow);
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  gap: 1rem;
-}
-
-.Dashboard-headerActions {
-  display: flex;
   align-items: center;
-  gap: 1rem;
   flex-wrap: wrap;
+  gap: 1.25rem;
 }
 
-.Dashboard-dateSelector {
+.Dashboard-headerLeft {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.Dashboard-datePreset {
-  padding: 0.75rem 1rem;
-  background: var(--bg-card);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.Dashboard-datePreset:hover {
-  border-color: rgba(59, 130, 246, 0.5);
-  background: var(--bg-card);
-}
-
-.Dashboard-customDates {
+.Dashboard-brandIcon {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(99, 102, 241, 0.04));
+  color: var(--accent-primary, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  flex-shrink: 0;
 }
 
-.Dashboard-dateInput {
-  padding: 0.65rem 0.85rem;
-  background: var(--bg-card);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 8px;
+.Dashboard-titleSection h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--text-primary);
-  font-size: 0.85rem;
-}
-
-.Dashboard-dateInput:focus {
-  outline: none;
-  border-color: rgba(59, 130, 246, 0.5);
+  letter-spacing: -0.02em;
 }
 
 .Dashboard-subtitle {
-  color: #7f8c8d;
-  font-size: 0.95rem;
-  margin-top: 0.25rem;
-}
-
-.Dashboard-refresh {
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--bg-card);
-  border: 1px solid rgba(224, 224, 224, 0.8);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: #2c3e50;
-  cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(10px);
 }
 
-.Dashboard-refresh:hover:not(:disabled) {
-  background: #f8f9fa;
-  border-color: #3498db;
-}
-
-.Dashboard-refresh:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.refresh-icon {
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.Dashboard-refresh:not(:disabled) .refresh-icon {
-  animation: none;
-}
-
-/* KPI Cards */
-.Dashboard-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.Dashboard-kpiCard {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  display: flex;
-  gap: 1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border-left: 4px solid rgba(148, 163, 184, 0.3);
-  backdrop-filter: blur(20px);
-}
-
-.Dashboard-kpiCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.Dashboard-kpiIcon {
-  font-size: 2.5rem;
-  line-height: 1;
-}
-
-.Dashboard-kpiContent {
-  flex: 1;
-}
-
-.Dashboard-kpiLabel {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.9); */
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.5rem;
-}
-
-.Dashboard-kpiValue {
-  font-size: 1.75rem;
-  font-weight: 700;
+.Dashboard-branchBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--bg-secondary);
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
-  line-height: 1.2;
+  border: 1px solid var(--border-color);
 }
 
-.Dashboard-kpiSubtext {
+.Dashboard-headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.Dashboard-segmentedFilters {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.65rem;
+  padding: 0.25rem;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.Dashboard-filterPill {
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.Dashboard-filterPill:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+.Dashboard-filterPill.active {
+  background: var(--bg-card);
+  color: var(--accent-primary, #6366f1);
+  font-weight: 700;
+  box-shadow: 0 2px 8px var(--shadow);
+  border: 1px solid var(--border-color);
+}
+
+.Dashboard-customDateWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-inline-start: 0.4rem;
+}
+
+.Dashboard-customDateWrap input[type="date"] {
+  height: 32px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input, var(--bg-card));
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.Dashboard-iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.Dashboard-iconBtn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  color: var(--accent-primary, #6366f1);
+  transform: translateY(-1px);
+}
+
+/* ─── 2. Top Bento Grid (Key Metrics) ────────────────────────────── */
+.Dashboard-bentoGridTop {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+}
+
+.Dashboard-bentoCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.4rem 1.5rem;
+  box-shadow: 0 4px 18px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.Dashboard-bentoCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--shadow);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+/* Col spans */
+.Dashboard-bentoCard.col-4 {
+  grid-column: span 4;
+}
+
+.Dashboard-bentoCard.col-3 {
+  grid-column: span 3;
+}
+
+.Dashboard-bentoCard.col-6 {
+  grid-column: span 6;
+}
+
+@media (max-width: 1100px) {
+  .Dashboard-bentoCard.col-4,
+  .Dashboard-bentoCard.col-3,
+  .Dashboard-bentoCard.col-6 {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 768px) {
+  .Dashboard-bentoCard.col-4,
+  .Dashboard-bentoCard.col-3,
+  .Dashboard-bentoCard.col-6 {
+    grid-column: span 12;
+  }
+}
+
+/* Card internals */
+.Dashboard-cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.Dashboard-cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.Dashboard-badgeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.6rem;
+  flex-shrink: 0;
+}
+
+.Dashboard-badgeIcon.blue {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary, #6366f1);
+}
+
+.Dashboard-badgeIcon.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.Dashboard-badgeIcon.purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+}
+
+.Dashboard-badgeIcon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.Dashboard-badgeIcon.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.Dashboard-cardTitle {
   font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.7); */
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.Dashboard-kpiSubtext strong {
+.Dashboard-pillBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.Dashboard-pillBadge.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.Dashboard-pillBadge.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.Dashboard-pillBadge.blue {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.Dashboard-cardBody {
+  margin: 1rem 0 0.5rem;
+}
+
+.Dashboard-mainMetric {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.Dashboard-cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.95); */
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-light, rgba(255, 255, 255, 0.05));
+}
+
+.Dashboard-footerTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-weight: 600;
 }
 
-/* KPI Card Variants */
-.Dashboard-kpiCard--primary {
-  border-left-color: #3498db;
+.Dashboard-footerTag strong {
+  color: var(--text-primary);
 }
 
-.Dashboard-kpiCard--success {
-  border-left-color: #27ae60;
-}
-
-.Dashboard-kpiCard--info {
-  border-left-color: #9b59b6;
-}
-
-.Dashboard-kpiCard--warning {
-  border-left-color: #f39c12;
-}
-
-.Dashboard-kpiCard--danger {
-  border-left-color: #e74c3c;
-}
-
-/* Grid Layout */
-.Dashboard-grid {
+/* ─── 3. Mid Bento Grid (Charts & Peak Times) ────────────────────── */
+.Dashboard-bentoGridMid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
 }
 
-.Dashboard-section {
+.Dashboard-chartCardMid {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.4rem 1.5rem;
+  box-shadow: 0 4px 18px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.Dashboard-sectionHeader {
+.Dashboard-chartCardMid.col-7 {
+  grid-column: span 7;
+}
+
+.Dashboard-chartCardMid.col-5 {
+  grid-column: span 5;
+}
+
+@media (max-width: 1024px) {
+  .Dashboard-chartCardMid.col-7,
+  .Dashboard-chartCardMid.col-5 {
+    grid-column: span 12;
+  }
+}
+
+.Dashboard-chartHead {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.06));
+  padding-bottom: 0.85rem;
   margin-bottom: 1rem;
 }
 
-.Dashboard-section h2 {
-  font-size: 1.25rem;
-  color: var(--text-primary);
+.Dashboard-chartTitleMid {
   margin: 0;
-}
-
-.Dashboard-viewAll {
-  background: none;
-  border: none;
-  color: #3498db;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.Dashboard-viewAll:hover {
-  color: #2980b9;
-}
-
-/* Recent Sales */
-.Dashboard-salesList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.Dashboard-saleItem {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--bg-card);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid rgba(148, 163, 184, 0.1);
-}
-
-.Dashboard-saleItem:hover {
-  background: rgba(59, 130, 246, 0.15);
-  transform: translateX(4px);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.Dashboard-saleIcon {
-  font-size: 1.5rem;
-}
-
-.Dashboard-saleInfo {
-  flex: 1;
-}
-
-.Dashboard-saleId {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.Dashboard-saleDate {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.8); */
-}
-
-.Dashboard-saleAmount {
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #27ae60;
-  font-size: 1.1rem;
-}
-
-.Dashboard-saleArrow {
-  color: #bdc3c7;
-  font-size: 1.25rem;
-}
-
-/* Low Stock */
-.Dashboard-lowStockList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.Dashboard-lowStockItem {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
-  border-left: 3px solid #f39c12;
-  border: 1px solid rgba(243, 156, 18, 0.3);
-}
-
-.Dashboard-lowStockIcon {
-  font-size: 1.5rem;
-}
-
-.Dashboard-lowStockInfo {
-  flex: 1;
-}
-
-.Dashboard-lowStockName {
-  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.Dashboard-lowStockDetails {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.Dashboard-lowStockVariant {
-  color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.8); */
-}
-
-.Dashboard-lowStockSku {
-  color: var(--text-secondary);
-  /* was: rgba(148, 163, 184, 0.7); */
-  font-family: monospace;
-}
-
-.Dashboard-lowStockQty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: rgba(239, 68, 68, 0.15);
-  border-radius: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.Dashboard-lowStockQtyValue {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #e74c3c;
-  line-height: 1;
-}
-
-.Dashboard-lowStockQtyLabel {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  /* was: rgba(248, 113, 113, 0.9); */
-  text-transform: uppercase;
-}
-
-/* Empty States */
-.Dashboard-empty {
-  text-align: center;
-  padding: 3rem 2rem;
-  color: #95a5a6;
-}
-
-.Dashboard-emptyIcon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.Dashboard-empty p {
-  margin-bottom: 1rem;
-}
-
-.Dashboard-emptyButton {
-  padding: 0.75rem 1.5rem;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.Dashboard-emptyButton:hover {
-  background: #2980b9;
-}
-
-/* Quick Actions */
-.Dashboard-actions {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-}
-
-.Dashboard-actions h2 {
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-}
-
-.Dashboard-actionButtons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.Dashboard-actionButton {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 1.5rem 1rem;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #2c3e50;
 }
 
-.Dashboard-actionButton:hover {
-  border-color: #3498db;
-  background: #ebf5fb;
-  transform: translateY(-2px);
-}
-
-.Dashboard-actionButton--primary {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.Dashboard-actionButton--primary:hover {
-  background: #2980b9;
-  border-color: #2980b9;
-}
-
-.Dashboard-actionIcon {
-  font-size: 2rem;
-}
-
-/* Loading & Error */
-.Dashboard-loading {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #7f8c8d;
-}
-
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-.Dashboard-error {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #e74c3c;
-  background: #fadbd8;
-  border-radius: 8px;
-}
-
-/* RTL Support */
-[dir="rtl"] .Dashboard-saleItem:hover {
-  transform: translateX(-4px);
-}
-
-[dir="rtl"] .Dashboard-section h2,
-[dir="rtl"] .Dashboard-actions h2 {
-  text-align: right;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .Dashboard-kpis {
-    grid-template-columns: 1fr;
-  }
-
-  .Dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .Dashboard-actionButtons {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .Dashboard-chartsRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Peak Hours & Peak Days Charts */
-.Dashboard-chartsRow {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.Dashboard-chartCard {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-}
-
-.Dashboard-chartTitle {
-  font-size: 1.1rem;
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
+.Dashboard-peakHighlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 0.78rem;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
-.Dashboard-barChart {
+/* Chart Bars */
+.Dashboard-hourlyChart {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
-  height: 120px;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  gap: 0.5rem;
+  height: 150px;
+  padding-top: 1.5rem;
 }
 
-.Dashboard-barChart--days {
-  gap: 8px;
-}
-
-.Dashboard-barItem {
+.Dashboard-hourCol {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   height: 100%;
   justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.Dashboard-hourBar {
+  width: 100%;
+  max-width: 24px;
+  border-radius: 5px 5px 0 0;
+  min-height: 6px;
+  background: rgba(99, 102, 241, 0.25);
+  transition: all 0.25s ease;
   cursor: pointer;
 }
 
-.Dashboard-barItem--day {
-  min-width: 40px;
-}
-
-.Dashboard-bar {
-  width: 100%;
-  min-height: 2px;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.3s ease;
-}
-
-.Dashboard-barItem:hover .Dashboard-bar {
-  opacity: 0.8;
+.Dashboard-hourBar:hover {
+  filter: brightness(1.25);
   transform: scaleY(1.05);
 }
 
-.Dashboard-barLabel {
-  font-size: 0.65rem;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+.Dashboard-hourBar.peak {
+  background: linear-gradient(180deg, var(--accent-primary, #6366f1), #4f46e5);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
-.Dashboard-barItem--day .Dashboard-barLabel {
-  font-size: 0.7rem;
-}
-
-.Dashboard-chartLegend {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-top: 0.5rem;
-  font-style: italic;
-}
-
-.Dashboard-barValue {
-  font-size: 0.7rem;
+.Dashboard-hourLabel {
+  font-size: 0.72rem;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 2px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
-.Dashboard-chartSummary {
+/* Daily Chart */
+.Dashboard-dailyChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  height: 150px;
+  padding-top: 1.5rem;
+}
+
+.Dashboard-dayCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.Dashboard-dayBar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 5px 5px 0 0;
+  min-height: 6px;
+  background: rgba(168, 85, 247, 0.25);
+  transition: all 0.25s ease;
+}
+
+.Dashboard-dayBar.peak {
+  background: linear-gradient(180deg, #a855f7, #7c3aed);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.Dashboard-dayLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ─── 4. Bottom Bento Grid (Invoices & Top Sellers) ───────────────── */
+.Dashboard-bentoGridBottom {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+}
+
+.Dashboard-feedCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.4rem 1.5rem;
+  box-shadow: 0 4px 18px var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.Dashboard-feedCard.col-7 {
+  grid-column: span 7;
+}
+
+.Dashboard-feedCard.col-5 {
+  grid-column: span 5;
+}
+
+@media (max-width: 1024px) {
+  .Dashboard-feedCard.col-7,
+  .Dashboard-feedCard.col-5 {
+    grid-column: span 12;
+  }
+}
+
+.Dashboard-feedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.06));
+  padding-bottom: 0.85rem;
   margin-bottom: 1rem;
 }
 
-.Dashboard-chartStats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.Dashboard-chartStats strong {
+.Dashboard-feedHeader h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--text-primary);
-}
-
-/* ─── Top Seller Widget ──────────────────────────────────────── */
-
-.Dashboard-topSellerList {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.Dashboard-topSellerItem {
+.Dashboard-feedLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-primary, #6366f1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.Dashboard-feedLink:hover {
+  opacity: 0.75;
+}
+
+/* Recent Invoices Feed */
+.Dashboard-invoicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.Dashboard-invoiceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.Dashboard-invoiceRow:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  transform: translateX(-3px);
+}
+
+.Dashboard-invoiceLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.Dashboard-invoicePill {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent-primary, #6366f1);
+  font-variant-numeric: tabular-nums;
+}
+
+.Dashboard-invoiceMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.Dashboard-invoiceItems {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.Dashboard-invoiceTime {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.Dashboard-invoiceRight {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg-card);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  border-radius: 10px;
-  transition: all 0.2s;
 }
 
-.Dashboard-topSellerItem:hover {
-  border-color: rgba(168, 85, 247, 0.3);
-  background: rgba(168, 85, 247, 0.04);
-}
-
-.Dashboard-topSellerRank {
-  font-size: 1.3rem;
-  min-width: 2rem;
-  text-align: center;
+.Dashboard-invoiceTotal {
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.Dashboard-topSellerInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.Dashboard-topSellerName {
-  font-weight: 600;
-  font-size: 0.9rem;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
-.Dashboard-topSellerMeta {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.Dashboard-topSellerBar {
-  height: 4px;
-  background: rgba(148, 163, 184, 0.15);
-  border-radius: 2px;
-  margin-top: 6px;
-  overflow: hidden;
-}
-
-.Dashboard-topSellerBarFill {
-  height: 100%;
-  background: linear-gradient(90deg, #a855f7, #6366f1);
-  border-radius: 2px;
-  transition: width 0.6s ease;
-}
-
-.Dashboard-topSellerStats {
+/* Top Seller Podium */
+.Dashboard-podiumList {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  gap: 0.75rem;
+}
+
+.Dashboard-podiumRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+}
+
+.Dashboard-podiumRank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
-.Dashboard-topSellerQty {
-  font-weight: 700;
-  font-size: 1.1rem;
+.Dashboard-podiumRank.gold {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.Dashboard-podiumRank.silver {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.Dashboard-podiumRank.bronze {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+.Dashboard-podiumInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.Dashboard-podiumName {
+  font-size: 0.86rem;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.Dashboard-topSellerRevenue {
-  font-size: 0.7rem;
+.Dashboard-podiumTrack {
+  height: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.Dashboard-podiumFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary, #6366f1), #818cf8);
+  border-radius: 99px;
+}
+
+.Dashboard-podiumStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.Dashboard-podiumQty {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.Dashboard-podiumRev {
+  font-size: 0.74rem;
   color: var(--text-secondary);
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 5. Quick Actions Dock ──────────────────────────────────────── */
+.Dashboard-dockCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 18px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.Dashboard-dockCard h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.Dashboard-dockGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.Dashboard-dockItem {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.15rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.Dashboard-dockItem:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  color: var(--accent-primary, #6366f1);
+  transform: translateY(-2px);
+}
+
+.Dashboard-dockItem.primary {
+  background: linear-gradient(135deg, var(--accent-primary, #6366f1), #4f46e5);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.Dashboard-dockItem.primary:hover {
+  filter: brightness(1.1);
+  color: white;
 }

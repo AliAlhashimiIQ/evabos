@@ -1,99 +1,433 @@
+/* ═══════════════════════════════════════════════════════════════════
+   EVA POS – Activity Logs Styles
+   Built with theme variables for light/dark mode and RTL support
+   ═══════════════════════════════════════════════════════════════════ */
+
 .ActivityLogsPage {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.ActivityLogsPage-header h1 {
-  color: var(--text-primary);
-  margin: 0 0 0.5rem 0;
-}
-
-.ActivityLogsPage-header p {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.ActivityLogsPage-alert {
-  border-radius: 0.85rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-}
-
-.ActivityLogsPage-alert--error {
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.6);
-  color: #fecaca;
-}
-
-.ActivityLogsPage-empty {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-secondary);
-  background: var(--bg-input);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1rem;
-}
-
-.ActivityLogsPage-tableWrapper {
-  border-radius: 1.25rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: var(--bg-input);
-  overflow: hidden;
-}
-
-.ActivityLogsPage-table {
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem 2.5rem;
+  max-width: 1350px;
+  margin: 0 auto;
   width: 100%;
-  border-collapse: collapse;
 }
 
-.ActivityLogsPage-table th,
-.ActivityLogsPage-table td {
-  padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  text-align: left;
+/* ─── Header ─────────────────────────────────────────────────────── */
+.ActivityLogs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.ActivityLogsPage-table th {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.ActivityLogsPage-table td {
+.ActivityLogs-headerTitle h1 {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.ActivityLogsPage-table tbody tr:hover {
-  background: rgba(148, 163, 184, 0.05);
+.ActivityLogs-headerTitle p {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
 }
 
-.ActivityLogsPage-action {
-  background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  width: fit-content;
+/* ─── KPI Stats Grid ─────────────────────────────────────────────── */
+.ActivityLogs-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
 }
 
-.ActivityLogsPage-actionWrapper {
+.ActivityLogs-kpiCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ActivityLogs-kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--shadow);
+}
+
+.ActivityLogs-kpiIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+}
+
+.ActivityLogs-kpiIcon.blue {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary, #6366f1);
+}
+
+.ActivityLogs-kpiIcon.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.ActivityLogs-kpiIcon.purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+}
+
+.ActivityLogs-kpiIcon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.ActivityLogs-kpiData {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
 
-.ActivityLogsPage-metadata {
-  font-size: 0.75rem;
+.ActivityLogs-kpiLabel {
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  font-style: italic;
-  max-width: 350px;
+  font-weight: 500;
+}
+
+.ActivityLogs-kpiValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Filter & Toolbar ───────────────────────────────────────────── */
+.ActivityLogs-toolbar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.ActivityLogs-searchBox {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+}
+
+.ActivityLogs-searchIcon {
+  position: absolute;
+  inset-inline-start: 0.85rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.ActivityLogs-searchBox input {
+  width: 100%;
+  height: 40px;
+  padding: 0.55rem 1rem;
+  padding-inline-start: 2.5rem;
+  border-radius: 0.55rem;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-input, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.ActivityLogs-searchBox input:focus {
+  outline: none;
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+  background: var(--bg-card);
+}
+
+.ActivityLogs-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.ActivityLogs-select {
+  height: 40px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.55rem;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-input, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ActivityLogs-select:focus {
+  outline: none;
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+}
+
+.ActivityLogs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 40px;
+  padding: 0 1rem;
+  border-radius: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.ActivityLogs-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  color: var(--accent-primary, #6366f1);
+  transform: translateY(-1px);
+}
+
+.ActivityLogs-btn.primary {
+  background: var(--accent-primary, #6366f1);
+  color: white;
+  border-color: transparent;
+}
+
+.ActivityLogs-btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover, #4f46e5);
+  color: white;
+}
+
+/* ─── Table Container ────────────────────────────────────────────── */
+.ActivityLogs-tableCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.ActivityLogs-tableScroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ActivityLogs-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+
+.ActivityLogs-table th {
+  background: var(--bg-secondary);
+  padding: 0.85rem 1.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1.5px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.ActivityLogs-table td {
+  padding: 0.85rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.05));
+  vertical-align: middle;
+}
+
+.ActivityLogs-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.ActivityLogs-table tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+/* ─── Action Badges & Entities ───────────────────────────────────── */
+.ActivityLogs-actionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.ActivityLogs-actionBadge.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.ActivityLogs-actionBadge.blue {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.ActivityLogs-actionBadge.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ActivityLogs-actionBadge.purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.ActivityLogs-actionBadge.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.ActivityLogs-actionBadge.gray {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.ActivityLogs-userPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ActivityLogs-entityTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  text-transform: capitalize;
+}
+
+.ActivityLogs-metadata {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: block;
+  line-height: 1.3;
+}
+
+.ActivityLogs-date {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Pagination Footer ──────────────────────────────────────────── */
+.ActivityLogs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ActivityLogs-pageInfo {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.ActivityLogs-pageControls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ActivityLogs-pageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ActivityLogs-pageBtn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  color: var(--accent-primary, #6366f1);
+}
+
+.ActivityLogs-pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Empty & Loading States ─────────────────────────────────────── */
+.ActivityLogs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  gap: 0.75rem;
+}
+
+.ActivityLogs-emptyIcon {
+  color: var(--text-secondary);
+  opacity: 0.5;
 }

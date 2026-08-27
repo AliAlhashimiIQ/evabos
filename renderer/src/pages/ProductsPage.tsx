@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { FileDown, Plus, X, Tag, Loader2 } from 'lucide-react';
+import {
+  FileDown,
+  Plus,
+  X,
+  Tag,
+  Loader2,
+  Package,
+  Search,
+  AlertTriangle,
+  Coins,
+  Store,
+  Layers,
+  Sparkles,
+} from 'lucide-react';
 import ProductForm from '../components/ProductForm';
 import ProductVariantTable from '../components/ProductVariantTable';
 import InventoryAdjustModal from '../components/InventoryAdjustModal';
@@ -52,7 +65,6 @@ const ProductsPage = (): JSX.Element => {
   const [showDeactivated, setShowDeactivated] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  // Refs to avoid hook dependency cycle
   const nextCursorRef = useRef<number | null>(null);
   const searchQueryRef = useRef<string>('');
 
@@ -60,59 +72,60 @@ const ProductsPage = (): JSX.Element => {
     searchQueryRef.current = searchQuery;
   }, [searchQuery]);
 
-  const fetchProducts = useCallback(async (isLoadMore = false) => {
-    if (!window.evaApi || !token) {
-      setError('Desktop bridge is unavailable.');
-      return;
-    }
-
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
+  const fetchProducts = useCallback(
+    async (isLoadMore = false) => {
+      if (!window.evaApi || !token) {
+        setError(t('desktopBridgeUnavailable') || 'Desktop bridge is unavailable.');
+        return;
       }
-      setError(null);
 
-      const currentCursor = isLoadMore ? nextCursorRef.current : 0;
-      const limit = 100;
-      const queryToUse = searchQueryRef.current;
+      try {
+        if (isLoadMore) {
+          setLoadingMore(true);
+        } else {
+          setLoading(true);
+        }
+        setError(null);
 
-      const response = await window.evaApi.products.list(token, {
-        limit,
-        cursor: currentCursor,
-        search: queryToUse,
-      });
+        const currentCursor = isLoadMore ? nextCursorRef.current : 0;
+        const limit = 100;
+        const queryToUse = searchQueryRef.current;
 
-      if (isLoadMore) {
-        setProducts((prev) => {
-          const existingIds = new Set(prev.map((p: Product) => p.id));
-          const newItems = response.items.filter((p: Product) => !existingIds.has(p.id));
-          return [...prev, ...newItems];
+        const response = await window.evaApi.products.list(token, {
+          limit,
+          cursor: currentCursor,
+          search: queryToUse,
         });
-      } else {
-        setProducts(response.items);
+
+        if (isLoadMore) {
+          setProducts((prev) => {
+            const existingIds = new Set(prev.map((p: Product) => p.id));
+            const newItems = response.items.filter((p: Product) => !existingIds.has(p.id));
+            return [...prev, ...newItems];
+          });
+        } else {
+          setProducts(response.items);
+        }
+
+        setNextCursor(response.nextCursor ?? null);
+        nextCursorRef.current = response.nextCursor ?? null;
+        setHasMore(response.hasMore ?? false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('failedToLoadProducts'));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
+    },
+    [token, t]
+  );
 
-      setNextCursor(response.nextCursor ?? null);
-      nextCursorRef.current = response.nextCursor ?? null;
-      setHasMore(response.hasMore ?? false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('failedToLoadProducts'));
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [token]);
-
-  // Load suppliers once on mount
   useEffect(() => {
     if (token && window.evaApi) {
       window.evaApi.suppliers.list(token).then(setSuppliers).catch(console.error);
     }
   }, [token]);
 
-  // Debounced search query fetching
   useEffect(() => {
     if (!token) return;
     const timer = setTimeout(() => {
@@ -131,9 +144,9 @@ const ProductsPage = (): JSX.Element => {
     const max = maxPrice === '' ? Infinity : Number(maxPrice);
     const matchesPrice = price >= min && price <= max;
 
-    // Hide deactivated products unless toggle is on
-    // Handle both boolean false and numeric 0 (SQLite)
-    const isActive = showDeactivated ? true : (product.isActive !== false && (product.isActive as any) !== 0);
+    const isActive = showDeactivated
+      ? true
+      : product.isActive !== false && (product.isActive as any) !== 0;
 
     return matchesSupplier && matchesPrice && isActive;
   });
@@ -148,7 +161,7 @@ const ProductsPage = (): JSX.Element => {
 
   const handleCreateProduct = async (payload: ProductInput & { initialStock?: number }) => {
     if (!window.evaApi || !token) {
-      setError('Desktop bridge is unavailable.');
+      setError(t('desktopBridgeUnavailable'));
       return;
     }
 
@@ -156,11 +169,10 @@ const ProductsPage = (): JSX.Element => {
       setIsSubmitting(true);
       const newProduct = await window.evaApi.products.create(token, payload);
 
-      // Handle initial stock if provided and non-zero
       if (payload.initialStock && payload.initialStock !== 0) {
         await window.evaApi.products.adjustStock(token, {
           variantId: newProduct.id,
-          branchId: 1, // Default branch
+          branchId: 1,
           deltaQuantity: payload.initialStock,
           reason: 'initial_stock',
           note: 'Initial stock set during product creation',
@@ -178,7 +190,13 @@ const ProductsPage = (): JSX.Element => {
 
   const handleDeleteVariant = async (variant: Product) => {
     if (!window.evaApi || !token) return;
-    if (!(await confirmDialog({ message: t('areYouSureDelete', { name: variant.productName, sku: variant.sku }), variant: 'danger', confirmText: t('delete') }))) {
+    if (
+      !(await confirmDialog({
+        message: t('areYouSureDelete', { name: variant.productName, sku: variant.sku }),
+        variant: 'danger',
+        confirmText: t('delete'),
+      }))
+    ) {
       return;
     }
     try {
@@ -186,14 +204,22 @@ const ProductsPage = (): JSX.Element => {
       await fetchProducts();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      // Check for constraint violation or generic error
-      if (errorMessage.includes('constraint') || errorMessage.includes('foreign key') || errorMessage.includes('Cannot delete variant')) {
-        if (await confirmDialog({ message: t('deleteConstraintDeactivate', { name: variant.productName }) ||
-          `Cannot delete "${variant.productName}" because it has sales history.\n\nWould you like to deactivate (archive) it instead?` })) {
+      if (
+        errorMessage.includes('constraint') ||
+        errorMessage.includes('foreign key') ||
+        errorMessage.includes('Cannot delete variant')
+      ) {
+        if (
+          await confirmDialog({
+            message:
+              t('deleteConstraintDeactivate', { name: variant.productName }) ||
+              `Cannot delete "${variant.productName}" because it has sales history.\n\nWould you like to deactivate (archive) it instead?`,
+          })
+        ) {
           try {
             await window.evaApi.products.updateVariant(token, {
               id: variant.id,
-              isActive: false
+              isActive: false,
             });
             await fetchProducts();
             return;
@@ -219,15 +245,12 @@ const ProductsPage = (): JSX.Element => {
 
     try {
       setIsEditSubmitting(true);
-
-      // Update product name and season
       await window.evaApi.products.update(token, {
         id: editProduct.productId,
         name: editName,
         season: editSeason,
       });
 
-      // Update variant price
       await window.evaApi.products.updateVariant(token, {
         id: editProduct.id,
         defaultPriceIQD: editPrice,
@@ -262,98 +285,174 @@ const ProductsPage = (): JSX.Element => {
     await fetchProducts();
   };
 
+  // KPIs
+  const totalItemsCount = products.length;
+  const totalStockUnits = products.reduce((sum, p) => sum + (p.stockOnHand || 0), 0);
+  const lowStockCount = products.filter((p) => (p.stockOnHand || 0) <= 3).length;
+  const totalInventoryValueIQD = products.reduce(
+    (sum, p) => sum + (p.salePriceIQD || 0) * Math.max(p.stockOnHand || 0, 0),
+    0
+  );
+
   return (
-    <div className="Page Page--transparent">
-      <div className="ProductsPage-header">
-        <div>
-          <h1>{t('products')}</h1>
-          <p>{t('manageCatalog')}</p>
+    <div className="Page ProductsPage">
+      {/* ── 1. Header Card ────────────────────────────────── */}
+      <div className="ProductsPage-headerCard">
+        <div className="ProductsPage-headerLeft">
+          <div className="ProductsPage-brandIcon">
+            <Package size={24} />
+          </div>
+          <div className="ProductsPage-headerTitles">
+            <h1>{t('products')}</h1>
+            <p>{t('manageCatalog') || 'إدارة المنتجات، الأصناف، والأسعار'}</p>
+          </div>
         </div>
-        <div className="ProductsPage-actions">
+
+        <div className="ProductsPage-headerActions">
           {selectedIds.length > 0 && (
             <button
-              className="ProductsPage-bulkButton"
+              className="ProductsPage-btn primary"
               onClick={() => setIsBulkEditOpen(true)}
             >
-              <Tag size={18} /> {t('bulkUpdate')} ({selectedIds.length})
+              <Tag size={16} />
+              <span>
+                {t('bulkUpdate')} ({selectedIds.length})
+              </span>
             </button>
           )}
-          <button className="ProductsPage-importButton" onClick={() => setIsImportModalOpen(true)}>
-            <FileDown size={18} /> {t('importExcel')}
+          <button
+            className="ProductsPage-btn"
+            onClick={() => setIsImportModalOpen(true)}
+          >
+            <FileDown size={16} />
+            <span>{t('importExcel')}</span>
           </button>
-          <button className="ProductsPage-addButton" onClick={() => setIsModalOpen(true)}>
-            <Plus size={18} /> {t('addProduct')}
+          <button
+            className="ProductsPage-btn primary"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus size={16} />
+            <span>{t('addProduct')}</span>
           </button>
         </div>
       </div>
 
-      <div className="ProductsPage-filters">
-        <div className="ProductsPage-filterGroup">
-          <label>{t('search')}</label>
-          <input
-            type="text"
-            className="ProductsPage-filterInput"
-            placeholder={t('searchPlaceholder') || 'Name, SKU, Barcode...'}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* ── 2. KPI Summary Strip ───────────────────────────── */}
+      <div className="ProductsPage-kpis">
+        <div className="ProductsPage-kpiCard">
+          <div className="ProductsPage-kpiIcon blue">
+            <Package size={20} />
+          </div>
+          <div className="ProductsPage-kpiInfo">
+            <span className="ProductsPage-kpiLabel">{t('activeProducts')}</span>
+            <span className="ProductsPage-kpiVal">{totalItemsCount.toLocaleString('en-IQ')}</span>
+          </div>
         </div>
 
-        <div className="ProductsPage-filterGroup">
-          <label>{t('supplier')}</label>
-          <Combobox
-            value={selectedSupplier}
-            onChange={(val) => setSelectedSupplier(val)}
-            options={suppliers.map((s) => s.name)}
-            placeholder={t('allSuppliers') || 'All Suppliers'}
-          />
+        <div className="ProductsPage-kpiCard">
+          <div className="ProductsPage-kpiIcon green">
+            <Layers size={20} />
+          </div>
+          <div className="ProductsPage-kpiInfo">
+            <span className="ProductsPage-kpiLabel">{t('stockOnHand')}</span>
+            <span className="ProductsPage-kpiVal">{totalStockUnits.toLocaleString('en-IQ')}</span>
+          </div>
         </div>
 
-        <div className="ProductsPage-filterGroup">
-          <label>{t('minPrice')}</label>
-          <NumberInput
-            className="ProductsPage-filterInput"
-            placeholder="0"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            min="0"
-          />
+        <div className="ProductsPage-kpiCard">
+          <div className="ProductsPage-kpiIcon amber">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="ProductsPage-kpiInfo">
+            <span className="ProductsPage-kpiLabel">{t('lowStock')}</span>
+            <span className="ProductsPage-kpiVal">{lowStockCount.toLocaleString('en-IQ')}</span>
+          </div>
         </div>
 
-        <div className="ProductsPage-filterGroup">
-          <label>{t('maxPrice')}</label>
-          <NumberInput
-            className="ProductsPage-filterInput"
-            placeholder="Max"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            min="0"
-          />
+        <div className="ProductsPage-kpiCard">
+          <div className="ProductsPage-kpiIcon purple">
+            <Coins size={20} />
+          </div>
+          <div className="ProductsPage-kpiInfo">
+            <span className="ProductsPage-kpiLabel">{t('inventoryValue')}</span>
+            <span className="ProductsPage-kpiVal">{totalInventoryValueIQD.toLocaleString('en-IQ')} IQD</span>
+          </div>
         </div>
+      </div>
 
-        <div className="ProductsPage-filterGroup ProductsPage-checkboxGroup">
-          <label>
+      {/* ── 3. Filters Toolbar ────────────────────────────── */}
+      <div className="ProductsPage-filterCard">
+        <div className="ProductsPage-filterRow">
+          {/* Instant Search Box */}
+          <div className="ProductsPage-searchBox">
+            <Search size={16} className="ProductsPage-searchIcon" />
+            <input
+              type="text"
+              className="ProductsPage-searchInput"
+              placeholder={t('searchPlaceholder') || 'بحث بالاسم، الباركود، أو رمز SKU...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Supplier Dropdown */}
+          <div>
+            <Combobox
+              value={selectedSupplier}
+              onChange={(val) => setSelectedSupplier(val)}
+              options={suppliers.map((s) => s.name)}
+              placeholder={t('allSuppliers') || 'جميع الموردين'}
+            />
+          </div>
+
+          {/* Min Price */}
+          <div>
+            <NumberInput
+              className="ProductsPage-priceInput"
+              placeholder={t('minPrice') || 'أدنى سعر'}
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              min="0"
+            />
+          </div>
+
+          {/* Max Price */}
+          <div>
+            <NumberInput
+              className="ProductsPage-priceInput"
+              placeholder={t('maxPrice') || 'أعلى سعر'}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              min="0"
+            />
+          </div>
+
+          {/* Show Deactivated Checkbox */}
+          <label className="ProductsPage-toggleLabel">
             <input
               type="checkbox"
               checked={showDeactivated}
               onChange={(e) => setShowDeactivated(e.target.checked)}
             />
-            <span>{t('showDeactivated') || 'Show Deactivated'}</span>
+            <span>{t('showDeactivated') || 'إظهار المعطلة'}</span>
           </label>
-        </div>
 
-        {(searchQuery || selectedSupplier || minPrice || maxPrice || showDeactivated) && (
-          <button className="ProductsPage-clearFilters" onClick={clearFilters}>
-            <X size={16} /> {t('clearFilters') || 'Clear'}
-          </button>
-        )}
+          {/* Clear Filters */}
+          {(searchQuery || selectedSupplier || minPrice || maxPrice || showDeactivated) && (
+            <button className="ProductsPage-clearBtn" onClick={clearFilters}>
+              <X size={14} />
+              <span>{t('clearFilters') || 'إعادة تعيين'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="ProductsPage-alert">{error}</div>}
 
+      {/* ── 4. Table ──────────────────────────────────────── */}
       <div className="ProductsPage-tableWrapper">
         {loading ? (
-          <SkeletonTable rows={6} cols={5} />
+          <SkeletonTable rows={6} cols={6} />
         ) : (
           <ProductVariantTable
             products={filteredProducts}
@@ -389,146 +488,170 @@ const ProductsPage = (): JSX.Element => {
             {loadingMore ? (
               <>
                 <Loader2 size={16} className="spin" />
-                <span>{t('loading') || 'Loading...'}</span>
+                <span>{t('loading') || 'جاري التحميل...'}</span>
               </>
             ) : (
-              <span>{t('loadMore') || 'Load More'}</span>
+              <span>{t('loadMore') || 'تحميل المزيد من المنتجات'}</span>
             )}
           </button>
         </div>
       )}
 
-      {
-        isModalOpen && (
-          <PortalModal onClose={() => setIsModalOpen(false)}>
-            <div className="ProductsPage-modal" style={{ width: 'min(640px, 90vw)' }}>
-              <div className="ProductsPage-modalHeader">
-                <h2>{t('addProduct')}</h2>
-                <button className="ProductsPage-closeButton" onClick={() => setIsModalOpen(false)}>
-                  <X size={20} />
-                </button>
-              </div>
-              <ProductForm 
-                onSubmit={handleCreateProduct} 
-                onCancel={() => setIsModalOpen(false)} 
-                loading={isSubmitting} 
-                existingSeasons={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
-              />
-            </div>
-          </PortalModal>
-        )
-      }
-
-      {
-        adjustVariant && (
-          <InventoryAdjustModal
-            variant={adjustVariant}
-            onClose={() => setAdjustVariant(null)}
-            onSubmit={async ({ variantId, deltaQuantity, reason, note }) => {
-              if (!window.evaApi || !token) {
-                setError(t('desktopBridgeUnavailable'));
-                return;
-              }
-              try {
-                await window.evaApi.products.adjustStock(token, {
-                  variantId,
-                  branchId: 1,
-                  deltaQuantity,
-                  reason,
-                  note,
-                });
-                await fetchProducts();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : t('failedToAdjustStock'));
-              }
-            }}
-          />
-        )
-      }
-
-      {
-        isImportModalOpen && (
-          <ExcelImportModal
-            isOpen={isImportModalOpen}
-            onClose={() => setIsImportModalOpen(false)}
-            onSuccess={fetchProducts}
-          />
-        )
-      }
-
-      {
-        viewDetailsProduct && (
-          <ProductDetailsModal product={viewDetailsProduct} onClose={() => setViewDetailsProduct(null)} />
-        )
-      }
-
-      {
-        printLabelProduct && (
-          <BarcodeLabelModal
-            product={printLabelProduct}
-            isOpen={!!printLabelProduct}
-            onClose={() => setPrintLabelProduct(null)}
-          />
-        )
-      }
-
-      {editProduct && (
-        <PortalModal onClose={() => setEditProduct(null)}>
-          <div className="ProductsPage-modal ProductsPage-editModal" style={{ width: 'min(400px, 90vw)' }}>
+      {/* ── Modals ────────────────────────────────────────── */}
+      {isModalOpen && (
+        <PortalModal onClose={() => setIsModalOpen(false)}>
+          <div className="ProductsPage-modal" style={{ width: 'min(640px, 90vw)' }}>
             <div className="ProductsPage-modalHeader">
-              <h2>{t('editProduct')}</h2>
-              <button className="ProductsPage-closeButton" onClick={() => setEditProduct(null)}>
+              <h2>{t('addProduct')}</h2>
+              <button
+                className="ProductsPage-closeButton"
+                onClick={() => setIsModalOpen(false)}
+              >
                 <X size={20} />
               </button>
             </div>
-            <div className="ProductsPage-editForm">
-              <label>
-                {t('productName')}
+            <ProductForm
+              onSubmit={handleCreateProduct}
+              onCancel={() => setIsModalOpen(false)}
+              loading={isSubmitting}
+              existingSeasons={
+                Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]
+              }
+            />
+          </div>
+        </PortalModal>
+      )}
+
+      {adjustVariant && (
+        <InventoryAdjustModal
+          variant={adjustVariant}
+          onClose={() => setAdjustVariant(null)}
+          onSubmit={async ({ variantId, deltaQuantity, reason, note }) => {
+            if (!window.evaApi || !token) {
+              setError(t('desktopBridgeUnavailable'));
+              return;
+            }
+            try {
+              await window.evaApi.products.adjustStock(token, {
+                variantId,
+                branchId: 1,
+                deltaQuantity,
+                reason,
+                note,
+              });
+              await fetchProducts();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : t('failedToAdjustStock'));
+            }
+          }}
+        />
+      )}
+
+      {isImportModalOpen && (
+        <ExcelImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={() => {
+            setIsImportModalOpen(false);
+            fetchProducts();
+          }}
+        />
+      )}
+
+      {viewDetailsProduct && (
+        <ProductDetailsModal
+          product={viewDetailsProduct}
+          onClose={() => setViewDetailsProduct(null)}
+        />
+      )}
+
+      {printLabelProduct && (
+        <BarcodeLabelModal
+          product={printLabelProduct}
+          onClose={() => setPrintLabelProduct(null)}
+        />
+      )}
+
+      {editProduct && (
+        <PortalModal onClose={() => setEditProduct(null)}>
+          <div className="ProductsPage-modal" style={{ width: 'min(450px, 90vw)' }}>
+            <div className="ProductsPage-modalHeader">
+              <h2>{t('editProduct')}</h2>
+              <button
+                className="ProductsPage-closeButton"
+                onClick={() => setEditProduct(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleEditProduct();
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', padding: '1.5rem' }}
+            >
+              <div className="ProductsPage-formField">
+                <label>{t('productName')}</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
+                  className="ProductsPage-searchInput"
+                  style={{ padding: '0 0.85rem' }}
+                  required
                 />
-              </label>
-              <label>
-                {t('season')}
-                <Combobox
+              </div>
+
+              <div className="ProductsPage-formField">
+                <label>{t('season')}</label>
+                <input
+                  type="text"
                   value={editSeason}
-                  onChange={setEditSeason}
-                  options={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
-                  placeholder="e.g. Winter 2026"
+                  onChange={(e) => setEditSeason(e.target.value)}
+                  className="ProductsPage-searchInput"
+                  style={{ padding: '0 0.85rem' }}
+                  placeholder="e.g. Summer26"
                 />
-              </label>
-              <label>
-                {t('sellingPriceIQD')}
+              </div>
+
+              <div className="ProductsPage-formField">
+                <label>{t('sellingPriceIQD')}</label>
                 <NumberInput
                   value={editPrice}
-                  onChange={(e) => setEditPrice(Number(e.target.value) || 0)}
-                  min={0}
+                  onChange={(e) => setEditPrice(Number(e.target.value))}
+                  className="ProductsPage-searchInput"
+                  style={{ padding: '0 0.85rem' }}
+                  min="0"
+                  required
                 />
-              </label>
-              <div className="ProductsPage-editActions">
-                <button className="ProductsPage-cancelButton" onClick={() => setEditProduct(null)}>
+              </div>
+
+              <div className="ProductsPage-modalActions">
+                <button
+                  type="button"
+                  className="ProductsPage-btn"
+                  onClick={() => setEditProduct(null)}
+                >
                   {t('cancel')}
                 </button>
                 <button
-                  className="ProductsPage-saveButton"
-                  onClick={handleEditProduct}
+                  type="submit"
+                  className="ProductsPage-btn primary"
                   disabled={isEditSubmitting}
                 >
-                  {isEditSubmitting ? t('saving') : t('save')}
+                  {isEditSubmitting ? t('saving') : t('saveChanges')}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </PortalModal>
       )}
+
       {isBulkEditOpen && (
         <BulkEditSeasonModal
-          productIds={Array.from(new Set(products.filter(p => selectedIds.includes(p.id)).map(p => p.productId)))}
+          selectedIds={selectedIds}
           onClose={() => setIsBulkEditOpen(false)}
-          onComplete={handleBulkComplete}
-          existingSeasons={Array.from(new Set(products.map((p) => p.season).filter(Boolean))) as string[]}
+          onSuccess={handleBulkComplete}
         />
       )}
     </div>
@@ -536,4 +659,3 @@ const ProductsPage = (): JSX.Element => {
 };
 
 export default ProductsPage;
-

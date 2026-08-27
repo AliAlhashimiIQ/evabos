@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
 import { Product } from '../types/electron';
-import './InventoryAdjustModal.css';
+import { useLanguage } from '../contexts/LanguageContext';
+import { SlidersHorizontal, X } from 'lucide-react';
 import NumberInput from './NumberInput';
 import PortalModal from './PortalModal';
+import './InventoryAdjustModal.css';
 
 interface InventoryAdjustModalProps {
   variant: Product;
   onClose: () => void;
-  onSubmit: (payload: { variantId: number; deltaQuantity: number; reason: string; note?: string }) => Promise<void>;
+  onSubmit: (payload: {
+    variantId: number;
+    deltaQuantity: number;
+    reason: string;
+    note?: string;
+  }) => Promise<void>;
 }
 
-const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustModalProps): JSX.Element => {
+const InventoryAdjustModal = ({
+  variant,
+  onClose,
+  onSubmit,
+}: InventoryAdjustModalProps): JSX.Element => {
+  const { t } = useLanguage();
   const [quantityStr, setQuantityStr] = useState('');
   const [reason, setReason] = useState('manual_adjustment');
   const [note, setNote] = useState('');
@@ -22,11 +34,7 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
     const quantity = Number(quantityStr);
 
     if (!quantityStr || isNaN(quantity) || quantity === 0) {
-      setError('Enter a quantity adjustment (positive to add, negative to remove).');
-      return;
-    }
-    if (!reason.trim()) {
-      setError('Select a reason for the adjustment.');
+      setError(t('pricePositive') || 'Enter a valid non-zero quantity.');
       return;
     }
 
@@ -36,7 +44,7 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
       await onSubmit({ variantId: variant.id, deltaQuantity: quantity, reason, note });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to adjust inventory.');
+      setError(err instanceof Error ? err.message : t('failedToAdjustStock'));
     } finally {
       setLoading(false);
     }
@@ -45,51 +53,76 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
   return (
     <PortalModal onClose={onClose}>
       <div className="InventoryAdjustModal-card">
-        <header>
-          <div>
-            <h3>Adjust Stock</h3>
+        <header className="InventoryAdjustModal-header">
+          <div className="InventoryAdjustModal-headerTitles">
+            <h3>
+              <SlidersHorizontal size={18} style={{ color: 'var(--accent-primary)' }} />
+              <span>{t('adjustStock')}</span>
+            </h3>
             <p>
-              {variant.productName} – {variant.color ?? 'Any'} / {variant.size ?? 'Any'}
+              {variant.productName} • {[variant.color, variant.size].filter(Boolean).join(' / ') || '—'}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close">
-            ✕
+          <button className="InventoryAdjustModal-closeBtn" onClick={onClose} aria-label="Close">
+            <X size={18} />
           </button>
         </header>
 
         {error && <div className="InventoryAdjustModal-alert">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <label>
-            <span>Quantity Change</span>
+        <form className="InventoryAdjustModal-form" onSubmit={handleSubmit}>
+          <div className="InventoryAdjustModal-field">
+            <label>{t('quantityChange')}</label>
             <NumberInput
+              className="InventoryAdjustModal-input"
               value={quantityStr}
               onChange={(event) => setQuantityStr(event.target.value)}
-              placeholder="e.g. 5 or -2"
+              placeholder="مثال: 5+ أو 2-"
+              required
             />
-          </label>
+          </div>
 
-          <label>
-            <span>Reason</span>
-            <select value={reason} onChange={(event) => setReason(event.target.value)}>
-              <option value="manual_adjustment">Manual adjustment</option>
-              <option value="damage_loss">Damage or loss</option>
-              <option value="found_stock">Found stock</option>
-              <option value="correction">Correction</option>
+          <div className="InventoryAdjustModal-field">
+            <label>{t('reason')}</label>
+            <select
+              className="InventoryAdjustModal-select"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            >
+              <option value="manual_adjustment">{t('manualAdjustment')}</option>
+              <option value="damage_loss">{t('damageLoss')}</option>
+              <option value="found_stock">{t('foundStock')}</option>
+              <option value="correction">{t('correction')}</option>
+              <option value="supplier_return">{t('supplierReturn')}</option>
             </select>
-          </label>
+          </div>
 
-          <label className="InventoryAdjustModal-span">
-            <span>Note</span>
-            <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Optional details" />
-          </label>
+          <div className="InventoryAdjustModal-field">
+            <label>{t('description')}</label>
+            <textarea
+              className="InventoryAdjustModal-textarea"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              rows={2}
+              placeholder={t('optionalDetails')}
+            />
+          </div>
 
           <div className="InventoryAdjustModal-actions">
-            <button type="button" onClick={onClose} className="ghost">
-              Cancel
+            <button
+              type="button"
+              onClick={onClose}
+              className="InventoryAdjustModal-btn"
+              disabled={loading}
+            >
+              {t('cancel')}
             </button>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Saving…' : 'Apply Adjustment'}
+            <button
+              type="submit"
+              className="InventoryAdjustModal-btn primary"
+              disabled={loading}
+            >
+              {loading ? t('saving') : t('applyAdjustment')}
             </button>
           </div>
         </form>
@@ -99,4 +132,3 @@ const InventoryAdjustModal = ({ variant, onClose, onSubmit }: InventoryAdjustMod
 };
 
 export default InventoryAdjustModal;
-

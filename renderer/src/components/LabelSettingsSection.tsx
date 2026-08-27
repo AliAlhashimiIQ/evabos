@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Tag, Save, Loader2 } from 'lucide-react';
+import { Tag, Save, Loader2, Sliders, Eye, Sparkles, Barcode, Type, CheckCircle2 } from 'lucide-react';
 import './LabelSettingsSection.css';
 import NumberInput from './NumberInput';
 
 interface LabelSettings {
-  // labelSize removed, fixed to 50x25mm
   showProductName: boolean;
   showVariant: boolean;
   showSku: boolean;
@@ -19,13 +18,11 @@ interface LabelSettings {
   customText2: string;
   customText3: string;
   fieldOrder: string[];
-  // Fake discount feature
   showFakeDiscount: boolean;
   fakeDiscountPercent: number;
 }
 
 const defaultSettings: LabelSettings = {
-  // labelSize fixed to 50x25mm
   showProductName: true,
   showVariant: true,
   showSku: true,
@@ -39,18 +36,16 @@ const defaultSettings: LabelSettings = {
   customText2: '',
   customText3: '',
   fieldOrder: ['productName', 'variant', 'barcode', 'sku', 'price'],
-  // Fake discount defaults
   showFakeDiscount: false,
   fakeDiscountPercent: 30,
 };
-
 
 const LabelSettingsSection = (): JSX.Element => {
   const { t } = useLanguage();
   const [settings, setSettings] = useState<LabelSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [, setSuccess] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -76,7 +71,7 @@ const LabelSettingsSection = (): JSX.Element => {
       setSaving(true);
       setSuccess(null);
       await window.electronAPI.setSetting('label_settings', JSON.stringify(settings));
-      setSuccess(t('labelSettingsSaved'));
+      setSuccess(t('labelSettingsSaved') || 'Label settings saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Failed to save label settings:', err);
@@ -91,182 +86,281 @@ const LabelSettingsSection = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="SettingsPage-section">
-        <h2><Tag size={24} /> {t('labelSettings')}</h2>
-        <p>{t('loading')}</p>
+      <div className="LabelSettings-container">
+        <div className="LabelSettings-header">
+          <div className="LabelSettings-headerIcon">
+            <Tag size={20} />
+          </div>
+          <div className="LabelSettings-headerTitle">
+            <h2>{t('labelSettings')}</h2>
+            <p>{t('loading')}</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="SettingsPage-section">
-      <h2><Tag size={24} /> {t('labelSettings')}</h2>
-      <p>{t('customizeBarcodeLabels')}</p>
+    <div className="LabelSettings-container">
+      {/* Header */}
+      <div className="LabelSettings-header">
+        <div className="LabelSettings-headerIcon">
+          <Tag size={20} />
+        </div>
+        <div className="LabelSettings-headerTitle">
+          <h2>{t('labelSettings')}</h2>
+          <p>{t('customizeBarcodeLabels')}</p>
+        </div>
+      </div>
 
-      <div className="LabelSettings-content">
-        <div className="LabelSettings-grid">
-          {/* Basic Settings */}
-          <div className="LabelSettings-group">
-            <h3>{t('basicSettings')}</h3>
+      {/* Grid Settings */}
+      <div className="LabelSettings-grid">
+        {/* 1. Basic Dimensions & Font */}
+        <div className="LabelSettings-card">
+          <h3 className="LabelSettings-cardTitle">
+            <Sliders size={16} />
+            {t('basicSettings')}
+          </h3>
 
-            <label>
-              {t('fontSize')}
-              <NumberInput
-                min="6"
-                max="24"
-                value={settings.fontSize}
-                onChange={(e) => updateSetting('fontSize', parseInt(e.target.value) || 7)}
-              />
-            </label>
-            <label>
-              {t('textAlignment')}
-              <select value={settings.textAlign} onChange={(e) => updateSetting('textAlign', e.target.value as 'left' | 'center' | 'right')}>
-                <option value="left">{t('left')}</option>
-                <option value="center">{t('center')}</option>
-                <option value="right">{t('right')}</option>
-              </select>
-            </label>
-            <label>
-              {t('labelPadding')}
-              <NumberInput
-                min="0"
-                max="20"
-                value={settings.labelPadding}
-                onChange={(e) => updateSetting('labelPadding', parseInt(e.target.value) || 3)}
-              />
-            </label>
+          <div className="LabelSettings-field">
+            <label>{t('fontSize')}</label>
+            <NumberInput
+              min="6"
+              max="24"
+              value={settings.fontSize}
+              onChange={(e) => updateSetting('fontSize', parseInt(e.target.value) || 7)}
+            />
           </div>
 
-          {/* Show/Hide Elements */}
-          <div className="LabelSettings-group">
-            <h3>{t('showHideElements')}</h3>
-            <label className="LabelSettings-checkbox">
-              <input
-                type="checkbox"
-                checked={settings.showProductName}
-                onChange={(e) => updateSetting('showProductName', e.target.checked)}
-              />
-              <span>{t('productName')}</span>
-            </label>
-            <label className="LabelSettings-checkbox">
-              <input
-                type="checkbox"
-                checked={settings.showVariant}
-                onChange={(e) => updateSetting('showVariant', e.target.checked)}
-              />
-              <span>{t('variantColorSize')}</span>
-            </label>
-            <label className="LabelSettings-checkbox">
-              <input
-                type="checkbox"
-                checked={settings.showSku}
-                onChange={(e) => updateSetting('showSku', e.target.checked)}
-              />
-              <span>{t('sku')}</span>
-            </label>
-            <label className="LabelSettings-checkbox">
-              <input
-                type="checkbox"
-                checked={settings.showPrice}
-                onChange={(e) => updateSetting('showPrice', e.target.checked)}
-              />
-              <span>{t('price')}</span>
-            </label>
+          <div className="LabelSettings-field">
+            <label>{t('textAlignment')}</label>
+            <select
+              value={settings.textAlign}
+              onChange={(e) => updateSetting('textAlign', e.target.value as 'left' | 'center' | 'right')}
+            >
+              <option value="left">{t('left') || 'Left'}</option>
+              <option value="center">{t('center') || 'Center'}</option>
+              <option value="right">{t('right') || 'Right'}</option>
+            </select>
           </div>
 
-          {/* Fake Discount Feature */}
-          <div className="LabelSettings-group">
-            <h3><Tag size={20} /> {t('fakeDiscount') || 'عرض السعر القديم'}</h3>
-            <p className="LabelSettings-hint">{t('fakeDiscountHint') || 'أظهر سعر "أصلي" مشطوب لإعطاء انطباع التخفيض'}</p>
-            <label className="LabelSettings-checkbox">
+          <div className="LabelSettings-field">
+            <label>{t('labelPadding')}</label>
+            <NumberInput
+              min="0"
+              max="20"
+              value={settings.labelPadding}
+              onChange={(e) => updateSetting('labelPadding', parseInt(e.target.value) || 3)}
+            />
+          </div>
+        </div>
+
+        {/* 2. Visible Elements */}
+        <div className="LabelSettings-card">
+          <h3 className="LabelSettings-cardTitle">
+            <Eye size={16} />
+            {t('showHideElements')}
+          </h3>
+
+          <div className="LabelSettings-checkboxList">
+            <div
+              className="SettingsPage-switchRow"
+              style={{ padding: '0.65rem 0.85rem' }}
+              onClick={() => updateSetting('showProductName', !settings.showProductName)}
+            >
+              <div className="SettingsPage-switchInfo">
+                <strong style={{ fontSize: '0.88rem' }}>{t('productName')}</strong>
+              </div>
+              <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={settings.showProductName}
+                  onChange={(e) => updateSetting('showProductName', e.target.checked)}
+                />
+                <span className="SettingsPage-slider" />
+              </label>
+            </div>
+
+            <div
+              className="SettingsPage-switchRow"
+              style={{ padding: '0.65rem 0.85rem' }}
+              onClick={() => updateSetting('showVariant', !settings.showVariant)}
+            >
+              <div className="SettingsPage-switchInfo">
+                <strong style={{ fontSize: '0.88rem' }}>{t('variantColorSize')}</strong>
+              </div>
+              <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={settings.showVariant}
+                  onChange={(e) => updateSetting('showVariant', e.target.checked)}
+                />
+                <span className="SettingsPage-slider" />
+              </label>
+            </div>
+
+            <div
+              className="SettingsPage-switchRow"
+              style={{ padding: '0.65rem 0.85rem' }}
+              onClick={() => updateSetting('showSku', !settings.showSku)}
+            >
+              <div className="SettingsPage-switchInfo">
+                <strong style={{ fontSize: '0.88rem' }}>{t('sku')}</strong>
+              </div>
+              <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={settings.showSku}
+                  onChange={(e) => updateSetting('showSku', e.target.checked)}
+                />
+                <span className="SettingsPage-slider" />
+              </label>
+            </div>
+
+            <div
+              className="SettingsPage-switchRow"
+              style={{ padding: '0.65rem 0.85rem' }}
+              onClick={() => updateSetting('showPrice', !settings.showPrice)}
+            >
+              <div className="SettingsPage-switchInfo">
+                <strong style={{ fontSize: '0.88rem' }}>{t('price')}</strong>
+              </div>
+              <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={settings.showPrice}
+                  onChange={(e) => updateSetting('showPrice', e.target.checked)}
+                />
+                <span className="SettingsPage-slider" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Strikethrough Fake Discount */}
+        <div className="LabelSettings-card">
+          <h3 className="LabelSettings-cardTitle">
+            <Sparkles size={16} style={{ color: '#f59e0b' }} />
+            {t('fakeDiscount')}
+          </h3>
+          <p className="LabelSettings-hint">{t('fakeDiscountHint')}</p>
+
+          <div
+            className="SettingsPage-switchRow"
+            style={{ padding: '0.65rem 0.85rem' }}
+            onClick={() => updateSetting('showFakeDiscount', !settings.showFakeDiscount)}
+          >
+            <div className="SettingsPage-switchInfo">
+              <strong style={{ fontSize: '0.88rem' }}>{t('enableFakeDiscount')}</strong>
+            </div>
+            <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={settings.showFakeDiscount}
                 onChange={(e) => updateSetting('showFakeDiscount', e.target.checked)}
               />
-              <span>{t('enableFakeDiscount') || 'تفعيل السعر القديم'}</span>
-            </label>
-            {settings.showFakeDiscount && (
-              <label>
-                {t('discountPercent') || 'نسبة الزيادة (أعلى من السعر الحالي)'}
-                <NumberInput
-                  min="5"
-                  max="80"
-                  value={settings.fakeDiscountPercent}
-                  onChange={(e) => updateSetting('fakeDiscountPercent', parseInt(e.target.value) || 30)}
-                />
-                <span className="LabelSettings-hint" style={{ marginTop: '4px', display: 'block' }}>
-                  {t('discountExample') || 'مثال: إذا السعر 65,000 ونسبة الزيادة 30%، سيظهر ~85,000 مشطوب'}
-                </span>
-              </label>
-            )}
-          </div>
-
-          {/* Barcode Settings */}
-          <div className="LabelSettings-group">
-            <h3>{t('barcodeSettings')}</h3>
-            <label>
-              {t('barcodeHeight')}
-              <NumberInput
-                min="10"
-                max="200"
-                value={settings.barcodeHeight}
-                onChange={(e) => updateSetting('barcodeHeight', parseInt(e.target.value) || 35)}
-              />
-            </label>
-            <label>
-              {t('barcodeWidth')}
-              <NumberInput
-                min="1"
-                max="10"
-                step="0.5"
-                value={settings.barcodeWidth}
-                onChange={(e) => updateSetting('barcodeWidth', parseFloat(e.target.value) || 2)}
-              />
+              <span className="SettingsPage-slider" />
             </label>
           </div>
 
-          {/* Custom Text Fields */}
-          <div className="LabelSettings-group">
-            <h3>{t('customTextFields')}</h3>
-            <p className="LabelSettings-hint">{t('addCustomText')}</p>
-            <label>
-              {t('customText1')}
-              <input
-                type="text"
-                value={settings.customText1}
-                onChange={(e) => updateSetting('customText1', e.target.value)}
-                placeholder={t('exampleVIP')}
-                maxLength={50}
+          {settings.showFakeDiscount && (
+            <div className="LabelSettings-field" style={{ marginTop: '0.5rem' }}>
+              <label>{t('labelDiscountPercent')}</label>
+              <NumberInput
+                min="5"
+                max="80"
+                value={settings.fakeDiscountPercent}
+                onChange={(e) => updateSetting('fakeDiscountPercent', parseInt(e.target.value) || 30)}
               />
-            </label>
-            <div className="LabelSettings-info">
-              <strong>{t('customText2')}</strong>
-              <p className="LabelSettings-hint">{t('customText2Auto') || 'Automatically set to product name'}</p>
+              <p className="LabelSettings-hint" style={{ marginTop: '0.25rem' }}>
+                {t('discountExample')}
+              </p>
             </div>
-            <label>
-              {t('storeName') || 'Store Name'}
-              <input
-                type="text"
-                value={settings.customText3}
-                onChange={(e) => updateSetting('customText3', e.target.value)}
-                placeholder={t('exampleStoreName')}
-                maxLength={50}
-              />
-            </label>
+          )}
+        </div>
+
+        {/* 4. Barcode Dimensions */}
+        <div className="LabelSettings-card">
+          <h3 className="LabelSettings-cardTitle">
+            <Barcode size={16} />
+            {t('barcodeSettings')}
+          </h3>
+
+          <div className="LabelSettings-field">
+            <label>{t('barcodeHeight')}</label>
+            <NumberInput
+              min="10"
+              max="200"
+              value={settings.barcodeHeight}
+              onChange={(e) => updateSetting('barcodeHeight', parseInt(e.target.value) || 35)}
+            />
           </div>
 
-          <div className="LabelSettings-actions">
-            <button onClick={saveSettings} disabled={saving} className="LabelSettings-saveButton">
-              {saving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
-              {saving ? t('saving') : t('saveLabelSettings')}
-            </button>
+          <div className="LabelSettings-field">
+            <label>{t('barcodeWidth')}</label>
+            <NumberInput
+              min="1"
+              max="10"
+              step="0.5"
+              value={settings.barcodeWidth}
+              onChange={(e) => updateSetting('barcodeWidth', parseFloat(e.target.value) || 2)}
+            />
           </div>
         </div>
+
+        {/* 5. Custom Text Fields */}
+        <div className="LabelSettings-card">
+          <h3 className="LabelSettings-cardTitle">
+            <Type size={16} />
+            {t('customTextFields')}
+          </h3>
+          <p className="LabelSettings-hint">{t('addCustomText')}</p>
+
+          <div className="LabelSettings-field">
+            <label>{t('customText1')}</label>
+            <input
+              type="text"
+              value={settings.customText1}
+              onChange={(e) => updateSetting('customText1', e.target.value)}
+              placeholder={t('exampleVIP') || 'e.g. VIP'}
+              maxLength={50}
+            />
+          </div>
+
+          <div className="LabelSettings-field">
+            <label>{t('storeName') || 'Store Name'}</label>
+            <input
+              type="text"
+              value={settings.customText3}
+              onChange={(e) => updateSetting('customText3', e.target.value)}
+              placeholder={t('exampleStoreName') || 'EVA CLOTHING'}
+              maxLength={50}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Success Notification */}
+      {success && (
+        <div className="SettingsPage-message success" style={{ marginTop: '1rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {/* Action Save Button */}
+      <div className="LabelSettings-actions">
+        <button
+          onClick={saveSettings}
+          disabled={saving}
+          className="SettingsPage-btn primary"
+        >
+          {saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
+          {saving ? (t('saving') || 'Saving...') : (t('saveLabelSettings') || 'Save Label Settings')}
+        </button>
       </div>
     </div>
   );
 };
 
 export default LabelSettingsSection;
-

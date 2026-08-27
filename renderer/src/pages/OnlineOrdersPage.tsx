@@ -16,11 +16,11 @@ type OnlineOrderSource = import('../types/electron').OnlineOrderSource;
 type Product = import('../types/electron').Product;
 
 const SOURCE_ICONS: Record<OnlineOrderSource, JSX.Element> = {
-  instagram: <Instagram size={14} />,
+  instagram: <Instagram size={14} style={{ color: '#E1306C' }} />,
   tiktok: <Globe size={14} />,
-  whatsapp: <MessageCircle size={14} />,
-  phone: <Phone size={14} />,
-  other: <Globe size={14} />,
+  whatsapp: <MessageCircle size={14} style={{ color: '#25D366' }} />,
+  phone: <Phone size={14} style={{ color: '#3b82f6' }} />,
+  other: <Globe size={14} style={{ color: '#6366f1' }} />,
 };
 const SOURCE_LABELS: Record<OnlineOrderSource, string> = {
   instagram: 'Instagram', tiktok: 'TikTok', whatsapp: 'WhatsApp', phone: 'Phone', other: 'Other',
@@ -29,6 +29,21 @@ const STATUS_CFG: Record<OnlineOrderStatus, { label: string; cls: string; icon: 
   pending:   { label: 'قيد الانتظار',   cls: 'OO-badge--pending',   icon: <Clock size={12} /> },
   confirmed: { label: 'مؤكد', cls: 'OO-badge--confirmed', icon: <CheckCircle2 size={12} /> },
   rejected:  { label: 'مرفوض',  cls: 'OO-badge--rejected',  icon: <XCircle size={12} /> },
+};
+
+const formatEnglishDateTime = (dateVal: string | Date | number): string => {
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '—';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hh = String(hours).padStart(2, '0');
+  return `${yyyy}/${mm}/${dd} • ${hh}:${minutes} ${ampm}`;
 };
 
 interface CartItem { product: Product; quantity: number; unitPrice: number; }
@@ -365,7 +380,7 @@ const OnlineOrdersPage = (): JSX.Element => {
                 </div>
                 <div className="OO-card-right">
                   <span className="OO-total">{order.totalIQD.toLocaleString('en-IQ')} IQD</span>
-                  <span className="OO-date">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span className="OO-date" dir="ltr">{formatEnglishDateTime(order.createdAt)}</span>
                   {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </div>

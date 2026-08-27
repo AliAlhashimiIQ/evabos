@@ -53,16 +53,15 @@ const createPrintWindow = async (html: string, options?: { printerName?: string 
     const hasPrinter = !!(options?.printerName && options.printerName.trim() !== '');
 
     const printOptions: Electron.WebContentsPrintOptions = {
-      silent: options?.silent ?? false, // Use provided silent option or default to false
+      silent: options?.silent ?? (hasPrinter ? true : false),
       printBackground: true,
       landscape: false,
       margins: { marginType: 'none' },
-      pageSize: { width: 72000, height: 2000000 }, // 72mm width (receipt printable area), tall enough for any receipt
     };
 
     if (hasPrinter) {
       printOptions.deviceName = options.printerName!;
-      log('[Print] Pre-selecting printer:', printOptions.deviceName);
+      log('[Print] Targeting printer deviceName:', printOptions.deviceName, 'silent:', printOptions.silent);
     }
 
     // Handle window close

@@ -1,873 +1,765 @@
-.SettingsPage-dangerZone {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #dc3545;
-  border-radius: 8px;
-  background-color: rgba(220, 53, 69, 0.1);
-}
-
-.SettingsPage-resetButton {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-}
-
-.SettingsPage-resetButton:hover {
-  background-color: #c82333;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   EVA POS – Premium Settings Page Styles
+   State-of-the-art UI/UX, responsive, dark/light theme aware, RTL-safe
+   ═══════════════════════════════════════════════════════════════════ */
 
 .SettingsPage {
-  padding: 2rem;
-  background: transparent;
-}
-
-.SettingsPage .Page-header p {
-  color: var(--text-secondary);
-  margin-top: 0.5rem;
-}
-
-.SettingsPage-content {
-  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem 2.5rem;
+  max-width: 1250px;
   margin: 0 auto;
+  width: 100%;
 }
 
-.SettingsPage-section {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 12px var(--shadow);
-  backdrop-filter: blur(20px);
+/* ─── Header & Role Badge ─────────────────────────────────────────── */
+.SettingsPage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.SettingsPage-headerTitle h1 {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.SettingsPage-headerTitle p {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.SettingsPage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+/* ─── Navigation Tabs Bar ─────────────────────────────────────────── */
+.SettingsPage-tabs {
+  display: flex;
+  gap: 0.35rem;
+  background: var(--bg-secondary);
+  border-radius: 0.75rem;
+  padding: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 1px solid var(--border-color);
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.SettingsPage-section h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.35rem;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
+.SettingsPage-tabs::-webkit-scrollbar {
+  display: none;
 }
 
-.SettingsPage-section>p {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  transition: color 0.3s ease;
-}
-
-/* Language Options */
-.SettingsPage-languageOptions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.SettingsPage-langButton {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-card);
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-
-.SettingsPage-langButton:hover {
-  border-color: #3498db;
-  background: var(--hover-bg);
-  transform: translateY(-2px);
-}
-
-.SettingsPage-langButton.active {
-  border-color: #3498db;
-  background: var(--hover-bg);
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
-}
-
-.SettingsPage-langButton .flag {
-  font-size: 2.5rem;
-}
-
-.SettingsPage-langButton .label {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-  transition: color 0.3s ease;
-}
-
-.SettingsPage-langButton .sublabel {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.SettingsPage-langButton .check {
-  margin-left: auto;
-}
-
-/* Theme Options */
-.SettingsPage-themeOptions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.SettingsPage-themeButton {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-card);
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-
-.SettingsPage-themeButton:hover {
-  border-color: #3498db;
-  background: var(--hover-bg);
-  transform: translateY(-2px);
-}
-
-.SettingsPage-themeButton.active {
-  border-color: #3498db;
-  background: var(--hover-bg);
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
-}
-
-.SettingsPage-themeButton .theme-icon {
-  font-size: 2.5rem;
-}
-
-.SettingsPage-themeButton .label {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-  transition: color 0.3s ease;
-}
-
-.SettingsPage-themeButton .sublabel {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.SettingsPage-themeButton .check {
-  margin-left: auto;
-  color: #3498db;
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.SettingsPage-langButton .check {
-  color: #27ae60;
-  font-size: 1.75rem;
-  font-weight: bold;
-}
-
-/* Exchange Rate */
-.SettingsPage-exchangeRate {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 2rem;
-  align-items: start;
-}
-
-.SettingsPage-currentRate {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem;
-  border-radius: 10px;
-  text-align: center;
-}
-
-.SettingsPage-currentRate .label {
-  font-size: 0.85rem;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.5rem;
-}
-
-.SettingsPage-currentRate .value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-}
-
-.SettingsPage-currentRate .sublabel {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.SettingsPage-updateRate label {
-  display: block;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.SettingsPage-updateRate .input-group {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.SettingsPage-updateRate input {
-  flex: 1;
-  padding: 0.875rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  transition: border-color 0.2s;
-}
-
-.SettingsPage-updateRate input:focus {
-  outline: none;
-  border-color: #3498db;
-}
-
-.SettingsPage-updateButton {
-  padding: 0.875rem 1.5rem;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.SettingsPage-updateButton:hover:not(:disabled) {
-  background: #2980b9;
-}
-
-.SettingsPage-updateButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.SettingsPage-success {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: #d4edda;
-  color: #155724;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.SettingsPage-error {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: #f8d7da;
-  color: #721c24;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-/* Margin Calculator */
-.SettingsPage-calculator {
-  background: var(--bg-tertiary);
-  padding: 1.5rem;
-  border-radius: 10px;
-  transition: background-color 0.3s ease;
-}
-
-.SettingsPage-calcInputs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.SettingsPage-calcField label {
-  display: block;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.SettingsPage-calcField input {
-  width: 100%;
-  padding: 0.875rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  transition: border-color 0.2s;
-}
-
-.SettingsPage-calcField input:focus {
-  outline: none;
-  border-color: #3498db;
-}
-
-.SettingsPage-calcResults {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.SettingsPage-calcResult {
-  background: var(--bg-card);
-  padding: 1.25rem;
-  border-radius: 8px;
-  text-align: center;
-  border-left: 4px solid #3498db;
-  transition: background-color 0.3s ease;
-}
-
-.SettingsPage-calcResult .label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.5rem;
-}
-
-.SettingsPage-calcResult .value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.SettingsPage-calcFormula {
-  padding: 1rem;
-  background: #fff3cd;
-  border-left: 4px solid #f39c12;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #856404;
-}
-
-.SettingsPage-calcFormula strong {
-  color: #533f03;
-}
-
-/* Placeholder */
-.SettingsPage-placeholder {
-  text-align: center;
-  padding: 2rem;
-  color: var(--text-secondary);
-}
-
-/* RTL Support */
-[dir="rtl"] .SettingsPage-section h2,
-[dir="rtl"] .SettingsPage-section p,
-[dir="rtl"] .SettingsPage-updateRate label,
-[dir="rtl"] .SettingsPage-calcField label {
-  text-align: right;
-}
-
-[dir="rtl"] .SettingsPage-langButton {
-  text-align: right;
-}
-
-[dir="rtl"] .SettingsPage-langButton .check {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .SettingsPage {
-    padding: 1rem;
-  }
-
-  .SettingsPage-exchangeRate {
-    grid-template-columns: 1fr;
-  }
-
-  .SettingsPage-languageOptions {
-    grid-template-columns: 1fr;
-  }
-
-  .SettingsPage-calcInputs,
-  .SettingsPage-calcResults {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Email Reports Section */
-.SettingsPage-emailTest {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-testEmailButton {
-  background: linear-gradient(120deg, #2563eb, #7c3aed);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 1rem;
-  margin: 1rem 0;
-}
-
-.SettingsPage-testEmailButton:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.SettingsPage-emailHelp {
-  margin-top: 1rem;
-  font-size: 0.9rem;
-}
-
-.SettingsPage-emailHelp details {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-}
-
-.SettingsPage-emailHelp summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: #60a5fa;
-}
-
-.SettingsPage-emailHelp pre {
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  white-space: pre-wrap;
-}
-
-/* Email Configuration Form */
-.SettingsPage-emailForm {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-emailRow {
-  margin-bottom: 1rem;
-}
-
-.SettingsPage-emailRow>label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #94a3b8;
-}
-
-.SettingsPage-emailRow>label:has(input[type="checkbox"]) {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.SettingsPage-emailRow input[type="text"],
-.SettingsPage-emailRow input[type="email"],
-.SettingsPage-emailRow input[type="password"] {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 0.5rem;
-  background: var(--bg-input, rgba(255, 255, 255, 0.05));
-  color: inherit;
-  font-size: 1rem;
-}
-
-.SettingsPage-emailRow input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.SettingsPage-emailMessage {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: rgba(0, 0, 0, 0.2);
-  margin-bottom: 1rem;
-}
-
-.SettingsPage-emailActions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-saveEmailButton {
-  background: linear-gradient(120deg, #10b981, #059669);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.SettingsPage-saveEmailButton:disabled,
-.SettingsPage-testEmailButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Receipt Settings */
-.SettingsPage-receiptForm {
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-receiptOptions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s;
-}
-
-.checkbox-label:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 1.2rem;
-  height: 1.2rem;
-  cursor: pointer;
-}
-
-.SettingsPage-logoUpload {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.SettingsPage-logoUpload label {
-  display: block;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.logo-preview-container {
-  background: white;
-  padding: 1rem;
-  border-radius: 0.5rem;
+.SettingsPage-tabButton {
   display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 1.15rem;
+  border: none;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.SettingsPage-tabButton:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+.SettingsPage-tabButton.active {
+  background: var(--bg-card);
+  color: var(--accent-primary, #6366f1);
+  font-weight: 600;
+  box-shadow: 0 1px 4px var(--shadow);
+}
+
+/* ─── Main Content Container ──────────────────────────────────────── */
+.SettingsPage-content {
+  display: flex;
   flex-direction: column;
-  align-items: center;
-  border: 1px solid #e2e8f0;
+  gap: 1.5rem;
 }
 
-.logo-preview-container p {
-  grid-template-columns: 1fr;
+.SettingsPage-card {
+  background: var(--bg-card);
+  border-radius: 0.85rem;
+  padding: 1.75rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 10px var(--shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
-.SettingsPage-calcInputs,
-.SettingsPage-calcResults {
-  grid-template-columns: 1fr;
-}
-}
-
-/* Email Reports Section */
-.SettingsPage-emailTest {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-testEmailButton {
-  background: linear-gradient(120deg, #2563eb, #7c3aed);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 1rem;
-  margin: 1rem 0;
-}
-
-.SettingsPage-testEmailButton:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.SettingsPage-emailHelp {
-  margin-top: 1rem;
-  font-size: 0.9rem;
-}
-
-.SettingsPage-emailHelp details {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-}
-
-.SettingsPage-emailHelp summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: #60a5fa;
-}
-
-.SettingsPage-emailHelp pre {
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  white-space: pre-wrap;
-}
-
-/* Email Configuration Form */
-.SettingsPage-emailForm {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-emailRow {
-  margin-bottom: 1rem;
-}
-
-.SettingsPage-emailRow>label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #94a3b8;
-}
-
-.SettingsPage-emailRow>label:has(input[type="checkbox"]) {
+.SettingsPage-cardHeader {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: #e2e8f0;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.06));
+  padding-bottom: 1rem;
 }
 
-.SettingsPage-emailRow input[type="text"],
-.SettingsPage-emailRow input[type="email"],
-.SettingsPage-emailRow input[type="password"] {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 0.5rem;
-  background: var(--bg-input, rgba(255, 255, 255, 0.05));
-  color: inherit;
-  font-size: 1rem;
-}
-
-.SettingsPage-emailRow input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.SettingsPage-emailMessage {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: rgba(0, 0, 0, 0.2);
-  margin-bottom: 1rem;
-}
-
-.SettingsPage-emailActions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-saveEmailButton {
-  background: linear-gradient(120deg, #10b981, #059669);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.SettingsPage-saveEmailButton:disabled,
-.SettingsPage-testEmailButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Receipt Settings */
-.SettingsPage-receiptForm {
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-top: 1rem;
-}
-
-.SettingsPage-receiptOptions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-
-.checkbox-label {
+.SettingsPage-cardHeaderLeft {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s;
 }
 
-.checkbox-label:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 1.2rem;
-  height: 1.2rem;
-  cursor: pointer;
-}
-
-.SettingsPage-logoUpload {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.SettingsPage-logoUpload label {
-  display: block;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.logo-preview-container {
-  background: white;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  border: 1px solid #e2e8f0;
-}
-
-.logo-preview-container p {
-  color: #64748b;
-  font-size: 0.8rem;
-  margin-bottom: 0.5rem;
-}
-
-.receipt-logo-preview {
-  max-width: 200px;
-  max-height: 100px;
-  object-fit: contain;
-}
-
-/* Button Styles */
-.SettingsPage-button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
+.SettingsPage-cardHeaderIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-width: 160px;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.6rem;
+  background: var(--bg-secondary);
+  color: var(--accent-primary, #6366f1);
+  flex-shrink: 0;
 }
 
-.SettingsPage-button.primary {
-  background: var(--primary-color, #3498db);
-  color: white;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+.SettingsPage-cardHeaderTitle h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.SettingsPage-button.primary:hover {
-  background: var(--primary-hover, #2980b9);
+.SettingsPage-cardHeaderTitle p {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* ─── Status Indicator Pills ──────────────────────────────────────── */
+.SettingsPage-statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.SettingsPage-statusPill.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.SettingsPage-statusPill.inactive {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.SettingsPage-statusDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ─── Theme & Language Visual Selection Cards ─────────────────────── */
+.SettingsPage-optionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.SettingsPage-optionCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+[dir="rtl"] .SettingsPage-optionCard {
+  text-align: right;
+}
+
+.SettingsPage-optionCard:hover {
+  border-color: var(--accent-primary, #6366f1);
+  background: var(--hover-bg);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.3);
 }
 
-.SettingsPage-button.primary:disabled {
-  background: #bdc3c7;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.SettingsPage-optionCard.active {
+  border-color: var(--accent-primary, #6366f1);
+  background: var(--bg-card);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.16);
 }
 
-.SettingsPage-button.danger {
-  background: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-  border: 1px solid rgba(220, 53, 69, 0.2);
+.SettingsPage-optionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.65rem;
+  background: var(--bg-card);
+  color: var(--accent-primary, #6366f1);
+  flex-shrink: 0;
+  font-size: 1.4rem;
 }
 
-.SettingsPage-button.danger:hover {
-  background: #dc3545;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+.SettingsPage-optionLabel {
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
 }
 
-/* Update Status Container */
-.UpdateStatus-container {
-  margin-top: 15px;
-  padding: 15px;
-  background: var(--bg-secondary, #f8f9fa);
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #e9ecef);
+.SettingsPage-optionDesc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
-.UpdateStatus-available,
-.UpdateStatus-ready {
+.SettingsPage-optionCheck {
+  margin-inline-start: auto;
+  color: var(--accent-primary, #6366f1);
+}
+
+/* ─── Custom Animated iOS-Style Toggle Switch ─────────────────────── */
+.SettingsPage-switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border-radius: 0.65rem;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  gap: 1rem;
+}
+
+.SettingsPage-switchRow:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+}
+
+.SettingsPage-switchInfo {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.2rem;
+  text-align: start;
 }
 
-.UpdateStatus-progress {
-  margin-top: 10px;
+.SettingsPage-switchInfo strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
-/* RTL Support for Buttons */
-[dir="rtl"] .SettingsPage-button {
-  flex-direction: row-reverse;
+.SettingsPage-switchInfo span {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.SettingsPage-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.SettingsPage-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.SettingsPage-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color);
+  transition: 0.25s;
+  border-radius: 24px;
+}
+
+.SettingsPage-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[dir="rtl"] .SettingsPage-slider:before {
+  left: auto;
+  right: 3px;
+}
+
+.SettingsPage-switch input:checked + .SettingsPage-slider {
+  background-color: var(--accent-primary, #6366f1);
+}
+
+.SettingsPage-switch input:checked + .SettingsPage-slider:before {
+  transform: translateX(20px);
+}
+
+[dir="rtl"] .SettingsPage-switch input:checked + .SettingsPage-slider:before {
+  transform: translateX(-20px);
+}
+
+/* ─── Universal Form Controls & Inputs ────────────────────────────── */
+.SettingsPage-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.SettingsPage-formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.SettingsPage-formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  text-align: start;
+}
+
+.SettingsPage-formRow label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Universal Input Styling for text, number, email, password, etc. */
+.SettingsPage input[type="text"],
+.SettingsPage input[type="number"],
+.SettingsPage input[type="email"],
+.SettingsPage input[type="password"],
+.SettingsPage input[type="time"],
+.SettingsPage-formRow input,
+.SettingsPage-form input,
+.SettingsPage-form textarea {
+  width: 100%;
+  height: 42px;
+  padding: 0.6rem 0.95rem;
+  border-radius: 0.55rem;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-input, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 500;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.SettingsPage-form textarea {
+  height: auto;
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.SettingsPage input:focus,
+.SettingsPage textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+  background: var(--bg-card);
+}
+
+.SettingsPage-inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.SettingsPage-inputWrapper input {
+  padding-inline-end: 2.75rem !important;
+}
+
+.SettingsPage-inputAction {
+  position: absolute;
+  inset-inline-end: 0.4rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.SettingsPage-inputAction:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+/* ─── Currency Exchange & Margin Calculator ───────────────────────── */
+.SettingsPage-rateLayout {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (max-width: 800px) {
+  .SettingsPage-rateLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.SettingsPage-rateDisplay {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25);
+}
+
+.SettingsPage-rateDisplay .rate-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+}
+
+.SettingsPage-rateDisplay .rate-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0.35rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.SettingsPage-rateDisplay .rate-sublabel {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.SettingsPage-quickPresets {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.SettingsPage-presetPill {
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.SettingsPage-presetPill:hover {
+  border-color: var(--accent-primary, #6366f1);
+  background: var(--hover-bg);
+  color: var(--accent-primary, #6366f1);
+}
+
+.SettingsPage-calcResults {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  background: var(--bg-secondary);
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--border-color);
+}
+
+.SettingsPage-calcResultItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: start;
+}
+
+.SettingsPage-calcResultItem .res-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.SettingsPage-calcResultItem .res-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Side-by-Side Live Receipt Preview ───────────────────────────── */
+.SettingsPage-receiptLayout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+@media (max-width: 950px) {
+  .SettingsPage-receiptLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ReceiptPreview-container {
+  background: var(--bg-secondary);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ReceiptPreview-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ReceiptPreview-paper {
+  background: #ffffff;
+  color: #111111;
+  width: 100%;
+  max-width: 270px;
+  padding: 1.25rem 1rem;
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.3;
+  direction: rtl;
+  text-align: center;
+  position: relative;
+}
+
+.ReceiptPreview-logo {
+  max-width: 100px;
+  max-height: 50px;
+  object-fit: contain;
+  margin: 0 auto 0.5rem;
+  display: block;
+}
+
+.ReceiptPreview-storeName {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.ReceiptPreview-divider {
+  border-top: 1px dashed #777777;
+  margin: 0.6rem 0;
+}
+
+.ReceiptPreview-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+  font-size: 11px;
+}
+
+.ReceiptPreview-row.bold {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.ReceiptPreview-barcode {
+  font-size: 24px;
+  letter-spacing: 3px;
+  margin: 0.5rem 0 0.2rem;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.ReceiptPreview-footer {
+  font-size: 10px;
+  color: #444444;
+  margin-top: 0.6rem;
+  line-height: 1.3;
+}
+
+/* ─── Buttons & Action Bars ───────────────────────────────────────── */
+.SettingsPage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.SettingsPage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.55rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.SettingsPage-btn.primary {
+  background: var(--accent-primary, #6366f1);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.SettingsPage-btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover, #4f46e5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.SettingsPage-btn.secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.SettingsPage-btn.secondary:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary, #6366f1);
+  transform: translateY(-1px);
+}
+
+.SettingsPage-btn.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.SettingsPage-btn.danger:hover:not(:disabled) {
+  background: #ef4444;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.SettingsPage-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Feedback & Status Banners ───────────────────────────────────── */
+.SettingsPage-message {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.55rem;
+  font-size: 0.88rem;
+  margin-top: 0.75rem;
+}
+
+.SettingsPage-message.success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.SettingsPage-message.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.SettingsPage-infoBox {
+  background: var(--bg-secondary);
+  border-radius: 0.65rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: start;
+}
+
+.SettingsPage-infoBox strong {
+  color: var(--text-primary);
+}
+
+/* ─── Danger Zone ─────────────────────────────────────────────────── */
+.SettingsPage-dangerCard {
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 0.85rem;
+  padding: 1.75rem;
+  text-align: start;
+}
+
+.SettingsPage-dangerCard .SettingsPage-cardHeaderIcon {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* ─── Spin Animation ──────────────────────────────────────────────── */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

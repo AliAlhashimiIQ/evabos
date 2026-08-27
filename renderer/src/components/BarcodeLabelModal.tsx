@@ -9,7 +9,7 @@ type Product = import('../types/electron').Product;
 
 interface BarcodeLabelModalProps {
   product: Product;
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
 }
 
@@ -53,7 +53,7 @@ const defaultSettings: LabelSettings = {
   fakeDiscountPercent: 30,
 };
 
-const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps): JSX.Element | null => {
+const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModalProps): JSX.Element | null => {
   const { t } = useLanguage();
   const barcodeCanvasRef = useRef<HTMLCanvasElement>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -123,8 +123,13 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         const list = await window.evaApi.printing.getPrinters();
         if (mounted && list) {
           setPrinters(list);
-          const def = list.find((printer: any) => printer.isDefault);
-          setPrinterName(def?.name ?? null);
+          const savedPrinter = await window.electronAPI.getSetting('label_printer_name');
+          if (savedPrinter && list.some((p: any) => p.name === savedPrinter)) {
+            setPrinterName(savedPrinter);
+          } else {
+            const def = list.find((printer: any) => printer.isDefault);
+            setPrinterName(def?.name ?? null);
+          }
         }
       } catch (err) {
         console.error('Failed to load printers', err);
@@ -308,7 +313,7 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
         try {
 
 
-          await window.evaApi.printing.print({ html: labelHtml, printerName });
+          await window.evaApi.printing.print({ html: labelHtml, printerName, silent: true });
 
 
           // For PDF, show message after first print
@@ -373,7 +378,16 @@ const BarcodeLabelModal = ({ product, isOpen, onClose }: BarcodeLabelModalProps)
                 <div className="BarcodeLabelModal-controlGroup">
                   <label>
                     {t('printer')}
-                    <select value={printerName ?? ''} onChange={(e) => setPrinterName(e.target.value || null)}>
+                    <select
+                      value={printerName ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value || null;
+                        setPrinterName(val);
+                        if (val) {
+                          window.electronAPI.setSetting('label_printer_name', val);
+                        }
+                      }}
+                    >
                       <option value="">{t('systemDefault')}</option>
                       {(printers || []).map((printer) => (
                         <option key={printer.name} value={printer.name}>
