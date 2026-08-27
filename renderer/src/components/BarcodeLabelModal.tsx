@@ -143,14 +143,23 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       if (!window.evaApi) return;
       try {
         const list = await window.evaApi.printing.getPrinters();
-        if (mounted && list) {
+        if (mounted && list && list.length > 0) {
           setPrinters(list);
           const savedPrinter = await window.electronAPI.getSetting('label_printer_name');
           if (savedPrinter && list.some((p: any) => p.name === savedPrinter)) {
             setPrinterName(savedPrinter);
           } else {
-            const def = list.find((printer: any) => printer.isDefault);
-            setPrinterName(def?.name ?? null);
+            // Auto-detect a dedicated label/barcode printer if available in system
+            const labelPrinter = list.find((p: any) =>
+              /label|barcode|xp-3|xp-2|tsc|zebra|xprinter|hprt|gprinter|postek|godex/i.test(p.name)
+            );
+            if (labelPrinter) {
+              setPrinterName(labelPrinter.name);
+              window.electronAPI.setSetting('label_printer_name', labelPrinter.name);
+            } else {
+              const def = list.find((printer: any) => printer.isDefault);
+              setPrinterName(def?.name ?? null);
+            }
           }
         }
       } catch (err) {
@@ -327,7 +336,13 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       // Print multiple labels
       for (let i = 0; i < quantity; i++) {
         try {
-          await window.evaApi.printing.print({ html: labelHtml, printerName, silent: true, isLabel: true });
+          await window.evaApi.printing.print({
+            html: labelHtml,
+            printerName,
+            silent: true,
+            isLabel: true,
+            pageSize: { width: 50000, height: 25000 },
+          });
 
           // Small delay between prints
           if (i < quantity - 1) {

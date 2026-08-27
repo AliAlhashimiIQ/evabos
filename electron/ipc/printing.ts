@@ -26,6 +26,7 @@ const createPrintWindow = async (
     skipTaskbar: true,
     webPreferences: {
       offscreen: false, // Must be false for print dialogs
+      backgroundThrottling: false, // Prevent Chromium from throttling rendering in hidden print window
     },
   });
 
@@ -49,7 +50,7 @@ const createPrintWindow = async (
   await pageLoaded;
 
   // Give DOM time to render
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 600));
 
   // Now safe to print
   return new Promise<void>((resolve, reject) => {
@@ -65,7 +66,8 @@ const createPrintWindow = async (
     if (options?.pageSize) {
       printOptions.pageSize = options.pageSize;
     } else if (options?.isLabel) {
-      // Barcode stickers use native label driver sizing
+      // 50mm x 25mm barcode label standard in microns
+      printOptions.pageSize = { width: 50000, height: 25000 };
     } else {
       // Standard thermal receipt roll paper (72mm width continuous roll)
       printOptions.pageSize = { width: 72000, height: 2000000 };
