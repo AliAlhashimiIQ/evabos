@@ -405,9 +405,181 @@ export async function sendTelegramTest(): Promise<{ success: boolean; error?: st
     hour12: true,
   });
 
-  const testMessage = `🤖 <b>تم الاتصال بنجاح مع بوت EVA POS!</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ البوت يعمل وجاهز لاستقبال إشعارات المبيعات الفورية وتقارير الإغلاق اليومية والنسخ الاحتياطية.\n🕒 <b>الوقت:</b> ${now}`;
+  const testMessage = `🤖 <b>تم الاتصال بنجاح مع بوت EVA POS!</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ البوت يعمل وجاهز لاستقبال إشعارات المبيعات والتقارير.\n\n💡 <b>الأوامر المتاحة:</b>\n📊 /report — تقرير مبيعات وأرباح اليوم المباشر\n📅 /yesterday — تقرير يوم أمس\n💾 /backup — طلب نسخة احتياطية لقاعدة البيانات\n🟢 /status — فحص حالة النظام المباشرة\n🕒 <b>الوقت:</b> ${now}`;
 
   return sendTelegramMessage(testMessage, 'HTML');
+}
+
+// ─── Interactive Telegram Bot Commands (Long-Polling) ─────────────────────────
+
+let pollingActive = false;
+let pollingAbortController: AbortController | null = null;
+let lastUpdateId = 0;
+
+export async function startTelegramBotPolling(): Promise<void> {
+  const settings = await getTelegramSettings();
+  if (!settings.enabled || !settings.botToken) {
+    log.info('[telegram-bot] Bot not enabled or token missing, skipping polling.');
+    return;
+  }
+
+  if (pollingActive) {
+    return;
+  }
+  pollingActive = true;
+  pollingAbortController = new AbortController();
+
+  log.info('[telegram-bot] Starting Telegram Bot command listener (long-polling)...');
+
+  (async () => {
+    while (pollingActive) {
+      try {
+        const currentSettings = await getTelegramSettings();
+        if (!currentSettings.enabled || !currentSettings.botToken) {
+          await new Promise((resolve) => setTimeout(resolve, 8000));
+          continue;
+        }
+
+        const url = `https://api.telegram.org/bot${currentSettings.botToken}/getUpdates?offset=${lastUpdateId + 1}&timeout=20&allowed_updates=["message"]`;
+        const resp = await fetch(url, {
+          signal: pollingAbortController?.signal,
+        });
+
+        if (!resp.ok) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          continue;
+        }
+
+        const data = (await resp.json()) as {
+          ok: boolean;
+          result: Array<{
+            update_id: number;
+            message?: {
+              message_id: number;
+              from?: { id: number; first_name?: string; username?: string };
+              chat: { id: number | string; title?: string };
+              text?: string;
+              date: number;
+            };
+          }>;
+        };
+
+        if (data.ok && Array.isArray(data.result)) {
+          for (const update of data.result) {
+            lastUpdateId = Math.max(lastUpdateId, update.update_id);
+
+            const msg = update.message;
+            if (!msg || !msg.text) continue;
+
+            const text = msg.text.trim();
+            const chatIdStr = String(msg.chat.id);
+
+            // Security: match authorized chat ID if configured
+            if (currentSettings.chatId && chatIdStr !== currentSettings.chatId) {
+              log.warn(`[telegram-bot] Ignored message from unauthorized chat ID: ${chatIdStr}`);
+              continue;
+            }
+
+            await handleTelegramBotCommand(text, chatIdStr, currentSettings.botToken);
+          }
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError' || !pollingActive) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+      }
+    }
+  })();
+}
+
+export function stopTelegramBotPolling(): void {
+  if (pollingActive) {
+    pollingActive = false;
+    if (pollingAbortController) {
+      pollingAbortController.abort();
+      pollingAbortController = null;
+    }
+    log.info('[telegram-bot] Stopped Telegram Bot command listener.');
+  }
+}
+
+/**
+ * Handle incoming Telegram command from owner
+ */
+async function handleTelegramBotCommand(commandText: string, chatId: string, botToken: string): Promise<void> {
+  const cleanCmd = commandText.toLowerCase().split('@')[0].trim();
+  const override = { botToken, chatId };
+
+  log.info(`[telegram-bot] Received command: "${commandText}" from chat ${chatId}`);
+
+  try {
+    if (cleanCmd === '/report' || cleanCmd === '/today' || cleanCmd === '/sales' || cleanCmd === 'تقرير' || cleanCmd === 'تقرير اليوم' || cleanCmd === 'المبيعات') {
+      await sendTelegramMessage('⏳ <i>جاري إعداد تقرير مبيعات اليوم المباشر...</i>', 'HTML', override);
+      await sendTelegramDailyReportAndBackup();
+      return;
+    }
+
+    if (cleanCmd === '/yesterday' || cleanCmd === 'تقرير الامس' || cleanCmd === 'امس') {
+      const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+      await sendTelegramMessage(`⏳ <i>جاري جلب تقرير يوم أمس (${yesterdayStr})...</i>`, 'HTML', override);
+      await sendTelegramDailyReportAndBackup(yesterdayStr);
+      return;
+    }
+
+    if (cleanCmd === '/backup' || cleanCmd === 'باك اب' || cleanCmd === 'نسخة احتياطية') {
+      await sendTelegramMessage('⏳ <i>جاري إنشاء نسخة احتياطية لقاعدة البيانات ورفعها...</i>', 'HTML', override);
+      const backupInfo = await createBackup();
+      const now = new Date().toLocaleString('ar-IQ');
+      const caption = `📦 <b>نسخة احتياطية لقاعدة البيانات (مباشرة)</b>\n🏷️ الملف: <code>${backupInfo.filename}</code>\n📅 التاريخ: ${now}\n📊 الحجم: ${(backupInfo.size / (1024 * 1024)).toFixed(2)} MB`;
+      await sendTelegramDocument(backupInfo.filepath, caption, override);
+      return;
+    }
+
+    if (cleanCmd === '/status' || cleanCmd === 'الحالة' || cleanCmd === 'فحص') {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const reports = await getAdvancedReports({ startDate: todayStr, endDate: todayStr });
+      const totalRevenue = reports?.profitAnalysis?.revenueIQD || 0;
+      const netProfit = reports?.profitAnalysis?.netProfitIQD || 0;
+      const totalOrders = reports?.dailySales?.reduce((acc, d) => acc + (d.orders || 0), 0) || 0;
+
+      let statusMsg = `🟢 <b>نظام EVA POS متصل ويعمل الآن</b>\n`;
+      statusMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      statusMsg += `🧾 <b>فواتير اليوم:</b> ${totalOrders} فاتورة\n`;
+      statusMsg += `💰 <b>مبيعات اليوم:</b> <b>${totalRevenue.toLocaleString('en-IQ')} د.ع</b>\n`;
+      statusMsg += `💵 <b>صافي الأرباح:</b> ${netProfit.toLocaleString('en-IQ')} د.ع\n`;
+      statusMsg += `🕒 <b>الوقت الحالي للنظام:</b> ${now.toLocaleTimeString('ar-IQ', { hour12: true })}\n`;
+      statusMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      statusMsg += `💡 أرسل /report للتقرير المفصل أو /backup لتحميل قاعدة البيانات.`;
+
+      await sendTelegramMessage(statusMsg, 'HTML', override);
+      return;
+    }
+
+    if (cleanCmd === '/start' || cleanCmd === '/help' || cleanCmd === 'مساعدة' || cleanCmd === 'الاوامر') {
+      let helpMsg = `🤖 <b>أوامر بوت كاشير EVA POS:</b>\n`;
+      helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      helpMsg += `📊 <b>/report</b> — طلب تقرير المبيعات والأرباح لليوم الحالي\n`;
+      helpMsg += `📅 <b>/yesterday</b> — طلب تقرير مبيعات يوم أمس\n`;
+      helpMsg += `💾 <b>/backup</b> — تحميل فوري لأحدث نسخة احتياطية من قاعدة البيانات\n`;
+      helpMsg += `🟢 <b>/status</b> — فحص حالة النظام وإجمالي فواتير اليوم\n`;
+      helpMsg += `❓ <b>/help</b> — عرض هذه القائمة من الأوامر\n`;
+      helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      helpMsg += `<i>يمكنك إرسال أي أمر في أي وقت أثناء عمل النظام.</i>`;
+
+      await sendTelegramMessage(helpMsg, 'HTML', override);
+      return;
+    }
+
+    // Default response for unhandled text
+    await sendTelegramMessage(`❓ أمر غير معروف. أرسل <b>/help</b> أو <b>/report</b> لعرض التقرير.`, 'HTML', override);
+  } catch (cmdErr) {
+    log.error('[telegram-bot] Command execution error:', cmdErr);
+    await sendTelegramMessage(`❌ حدث خطأ أثناء معالجة الأمر: ${cmdErr instanceof Error ? cmdErr.message : String(cmdErr)}`, 'HTML', override);
+  }
 }
 
 /**

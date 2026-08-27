@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
-import ProductVariantTable from '../components/ProductVariantTable';
 import PrintingModal, { ReturnPrintData } from '../components/PrintingModal';
 import NumberInput from '../components/NumberInput';
-import { Search, Receipt, Plus, Trash2, History, Check, Loader2 } from 'lucide-react';
+import { Search, Receipt, Plus, Trash2, History, Check, Loader2, Package } from 'lucide-react';
 import './Pages.css';
 import './ReturnsPage.css';
 
@@ -49,6 +48,42 @@ const ReturnsPage = (): JSX.Element => {
   const [submitting, setSubmitting] = useState(false);
   const [printData, setPrintData] = useState<ReturnPrintData | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
+  const [selectedReturnDetail, setSelectedReturnDetail] = useState<ReturnResponse | null>(null);
+  const [variantSearchQuery, setVariantSearchQuery] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+
+  const filteredPickerProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesCategory = selectedCategoryFilter === 'all' || p.category === selectedCategoryFilter;
+      if (!matchesCategory) return false;
+
+      if (!variantSearchQuery.trim()) return true;
+      const q = variantSearchQuery.toLowerCase().trim();
+      return (
+        (p.productName && p.productName.toLowerCase().includes(q)) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+        (p.color && p.color.toLowerCase().includes(q)) ||
+        (p.size && p.size.toLowerCase().includes(q))
+      );
+    });
+  }, [products, variantSearchQuery, selectedCategoryFilter]);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set);
+  }, [products]);
+
+  useEffect(() => {
+    if (window.electronAPI?.getSetting) {
+      window.electronAPI.getSetting('receipt_printer_name').then((p: string | null) => {
+        if (p) setPreferredPrinter(p);
+      });
+    }
+  }, []);
 
   const getReturnTypeLabel = (type: string) => {
     switch (type) {
@@ -68,9 +103,9 @@ const ReturnsPage = (): JSX.Element => {
         window.evaApi.products.list(token),
         window.evaApi.customers.list(token),
       ]);
-      setReturns(returnsResponse);
-      setProducts(productsResponse.products);
-      setCustomers(customersResponse);
+      setReturns(returnsResponse || []);
+      setProducts(productsResponse.products || []);
+      setCustomers(customersResponse || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadReturns'));
     } finally {
@@ -109,12 +144,16 @@ const ReturnsPage = (): JSX.Element => {
   };
 
   const parseBarcodeValue = (value: string): number | null => {
+    if (!value) return null;
     const cleanValue = value.trim();
-    const saleMatch = cleanValue.match(/^SALE(\d+)$/i);
+    const saleMatch = cleanValue.match(/^SALE[-_#]?(\d+)$/i);
     if (saleMatch) return Number(saleMatch[1]);
-    const returnMatch = cleanValue.match(/^RETURN(\d+)$/i);
+    const returnMatch = cleanValue.match(/^RETURN[-_#]?(\d+)$/i);
     if (returnMatch) return Number(returnMatch[1]);
-    const num = Number(cleanValue);
+    const invMatch = cleanValue.match(/^INV[-_#]?(\d+)$/i);
+    if (invMatch) return Number(invMatch[1]);
+    const digitsOnly = cleanValue.replace(/[^\d]/g, '');
+    const num = Number(digitsOnly);
     if (!isNaN(num) && num > 0) return num;
     return null;
   };
@@ -125,8 +164,8 @@ const ReturnsPage = (): JSX.Element => {
       : parseBarcodeValue(saleLookupId);
 
     if (!idToUse || !window.evaApi) {
-      if (saleIdValue !== undefined) {
-        setError(t('invalidBarcodeFormat'));
+      if (saleIdValue !== undefined || saleLookupId.trim()) {
+        setError(t('invalidBarcodeFormat') || 'Invalid invoice number. Please enter digits or scan barcode.');
       }
       setSaleInfo(null);
       return;
@@ -135,17 +174,50 @@ const ReturnsPage = (): JSX.Element => {
     try {
       setError(null);
       const response = await window.evaApi.returns.saleInfo(token!, idToUse);
+      if (!response || !response.id) {
+        setError(t('failedToFindSale') || 'Invoice not found.');
+        setSaleInfo(null);
+        return;
+      }
       setSaleInfo(response);
       if (response?.customerId) {
         setForm((prev) => ({ ...prev, customerId: response.customerId ?? undefined }));
       }
       setForm((prev) => ({ ...prev, saleId: response ? response.id : undefined }));
-      if (saleIdValue !== undefined) {
-        setSaleLookupId('');
-      }
+      setSaleLookupId('');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToFindSale'));
       setSaleInfo(null);
+    }
+  };
+
+  const handleAddAllSaleItems = () => {
+    if (!saleInfo?.items?.length) return;
+    const direction = form.type === 'exchange' ? 'exchange_out' : 'return';
+    const newItems: DraftReturnItem[] = saleInfo.items.map((entry) => ({
+      variantId: entry.variantId,
+      saleItemId: entry.id,
+      quantity: entry.quantity,
+      amountIQD: entry.lineTotalIQD,
+      direction,
+      productName: entry.productName,
+      color: entry.color ?? null,
+      size: entry.size ?? null,
+      maxQuantity: entry.quantity,
+      unitPriceIQD: entry.lineTotalIQD / entry.quantity,
+    }));
+    setItems(newItems);
+  };
+
+  const handleViewReturnDetail = async (returnId: number) => {
+    if (!window.evaApi || !token) return;
+    try {
+      const detail = await window.evaApi.returns.get(token, returnId);
+      if (detail) {
+        setSelectedReturnDetail(detail);
+      }
+    } catch (err) {
+      console.error('Failed to load return details:', err);
     }
   };
 
@@ -377,23 +449,48 @@ const ReturnsPage = (): JSX.Element => {
 
           {/* Loaded Sale Details Card */}
           {saleInfo && (
-            <div className="ReturnsPage-card" style={{ borderLeft: '3px solid #10b981' }}>
+            <div className="ReturnsPage-card" style={{ borderInlineStart: '4px solid #10b981' }}>
               <div className="ReturnsPage-saleInfo-header">
                 <div>
                   <h4>{t('sale') || 'Sale'} #{saleInfo.id}</h4>
-                  <p>{new Date(saleInfo.saleDate).toLocaleString()}</p>
+                  <p dir="ltr" style={{ textAlign: 'start' }}>
+                    {new Date(saleInfo.saleDate).toLocaleString('ar-IQ', {
+                      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true
+                    })}
+                  </p>
                 </div>
-                <span>{t('total') || 'Total'}: {saleInfo.totalIQD.toLocaleString('en-IQ')} IQD</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontWeight: 700, color: '#10b981' }}>
+                    {t('total') || 'Total'}: <b dir="ltr">{saleInfo.totalIQD.toLocaleString('en-IQ')} IQD</b>
+                  </span>
+                  <button
+                    type="button"
+                    className="ReturnsPage-btnAddAll"
+                    onClick={handleAddAllSaleItems}
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    + {t('addAllItems') || 'إرجاع كل الفاتورة'}
+                  </button>
+                </div>
               </div>
               
               <div className="ReturnsPage-tableContainer">
                 <table className="ReturnsPage-cartTable">
                   <thead>
                     <tr>
-                      <th style={{ width: '55%' }}>{t('product') || 'Product'}</th>
+                      <th style={{ width: '50%' }}>{t('product') || 'Product'}</th>
                       <th style={{ width: '15%', textAlign: 'center' }}>{t('qty') || 'Quantity'}</th>
                       <th style={{ width: '20%' }}>{t('lineTotal') || 'Total'}</th>
-                      <th style={{ width: '10%' }} />
+                      <th style={{ width: '15%', textAlign: 'center' }}>{t('action') || 'Action'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -408,10 +505,10 @@ const ReturnsPage = (): JSX.Element => {
                           )}
                         </td>
                         <td style={{ textAlign: 'center' }}>{entry.quantity}</td>
-                        <td>{entry.lineTotalIQD.toLocaleString('en-IQ')} IQD</td>
-                        <td style={{ textAlign: 'end' }}>
+                        <td dir="ltr" style={{ textAlign: 'start' }}>{entry.lineTotalIQD.toLocaleString('en-IQ')} IQD</td>
+                        <td style={{ textAlign: 'center' }}>
                           <button className="ReturnsPage-btnAddItem" onClick={() => handleAddSaleItem(entry)}>
-                            {t('add') || 'Add'}
+                            + {t('add') || 'إرجاع'}
                           </button>
                         </td>
                       </tr>
@@ -517,7 +614,7 @@ const ReturnsPage = (): JSX.Element => {
             )}
           </div>
 
-          {/* Recent Returns Table Card inside Scrollable Main */}
+          {/* Recent Returns Table Card */}
           <section className="ReturnsPage-recentCard">
             <div className="ReturnsPage-cardHeader">
               <h3>
@@ -537,22 +634,49 @@ const ReturnsPage = (): JSX.Element => {
                   <thead>
                     <tr>
                       <th style={{ width: '10%' }}>{t('id') || 'ID'}</th>
-                      <th style={{ width: '25%' }}>{t('type') || 'Type'}</th>
-                      <th style={{ width: '25%' }}>{t('customer') || 'Customer'}</th>
-                      <th style={{ width: '20%' }}>{t('refund') || 'Refund'} (IQD)</th>
-                      <th style={{ width: '20%' }}>{t('date') || 'Date'}</th>
+                      <th style={{ width: '20%' }}>{t('type') || 'Type'}</th>
+                      <th style={{ width: '22%' }}>{t('customer') || 'Customer'}</th>
+                      <th style={{ width: '20%' }}>{t('refund') || 'Refund'}</th>
+                      <th style={{ width: '18%' }}>{t('date') || 'Date'}</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>{t('action') || 'Action'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {returns.map((record) => {
-                      const customerName = customers.find((c) => c.id === record.customerId)?.name ?? t('walkIn') ?? 'Walk-In';
+                      const customerName = customers.find((c) => c.id === record.customerId)?.name ?? t('walkIn') ?? 'مشاة';
                       return (
-                        <tr key={record.id}>
+                        <tr
+                          key={record.id}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleViewReturnDetail(record.id)}
+                        >
                           <td><code className="Reports-skuCode">#{record.id}</code></td>
-                          <td>{getReturnTypeLabel(record.type)}</td>
+                          <td>
+                            <span className={`ReturnsPage-typeBadge ReturnsPage-typeBadge--${record.type}`}>
+                              {getReturnTypeLabel(record.type)}
+                            </span>
+                          </td>
                           <td>{customerName}</td>
-                          <td><strong>{record.refundAmountIQD.toLocaleString('en-IQ')} IQD</strong></td>
-                          <td>{new Date(record.createdAt).toLocaleString()}</td>
+                          <td><strong dir="ltr">{record.refundAmountIQD.toLocaleString('en-IQ')} IQD</strong></td>
+                          <td dir="ltr" style={{ fontSize: '0.82rem', textAlign: 'start' }}>
+                            {new Date(record.createdAt).toLocaleString('ar-IQ', {
+                              year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true
+                            })}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              className="ReturnsPage-btnAddItem"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewReturnDetail(record.id);
+                              }}
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                            >
+                              <Receipt size={13} />
+                              <span>{t('viewReceipt') || 'عرض الإيصال'}</span>
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -564,24 +688,223 @@ const ReturnsPage = (): JSX.Element => {
         </main>
       </div>
 
+      {/* Return Detail Modal */}
+      {selectedReturnDetail && (
+        <div className="ReturnsPage-variantsOverlay" onClick={() => setSelectedReturnDetail(null)}>
+          <div className="ReturnsPage-variantsCard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <header>
+              <h3>
+                <Receipt size={18} /> {t('returnDetails') || 'تفاصيل المرتجع'} #{selectedReturnDetail.id}
+              </h3>
+              <button onClick={() => setSelectedReturnDetail(null)}>✕</button>
+            </header>
+            <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.88rem' }}>
+                <div><strong>{t('type') || 'النوع'}:</strong> {getReturnTypeLabel(selectedReturnDetail.type)}</div>
+                <div><strong>{t('customer') || 'العميل'}:</strong> {customers.find((c) => c.id === selectedReturnDetail.customerId)?.name || t('walkIn') || 'مشاة'}</div>
+                <div><strong>{t('date') || 'التاريخ'}:</strong> <span dir="ltr">{new Date(selectedReturnDetail.createdAt).toLocaleString('ar-IQ', { hour12: true })}</span></div>
+                <div><strong>{t('refund') || 'المبلغ المسترد'}:</strong> <strong style={{ color: '#f97316' }} dir="ltr">{selectedReturnDetail.refundAmountIQD.toLocaleString('en-IQ')} IQD</strong></div>
+              </div>
+              {selectedReturnDetail.reason && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <strong>{t('reason') || 'السبب'}:</strong> {selectedReturnDetail.reason}
+                </div>
+              )}
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>{t('items') || 'الأصناف'}:</h4>
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  <table className="ReturnsPage-cartTable" style={{ fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr>
+                        <th>{t('product') || 'المنتج'}</th>
+                        <th style={{ textAlign: 'center' }}>{t('qty') || 'الكمية'}</th>
+                        <th>{t('amount') || 'المبلغ'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedReturnDetail.items || []).map((it, idx) => {
+                        const prodName = products.find((p) => p.id === it.variantId)?.productName ?? `Variant #${it.variantId}`;
+                        return (
+                          <tr key={idx}>
+                            <td>{prodName}</td>
+                            <td style={{ textAlign: 'center' }}>{it.quantity}</td>
+                            <td dir="ltr" style={{ textAlign: 'start' }}>{it.amountIQD.toLocaleString('en-IQ')} IQD</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintData({
+                      id: selectedReturnDetail.id,
+                      totalIQD: selectedReturnDetail.refundAmountIQD,
+                      customerName: customers.find((c) => c.id === selectedReturnDetail.customerId)?.name,
+                      items: (selectedReturnDetail.items || []).map((it) => ({
+                        name: products.find((p) => p.id === it.variantId)?.productName ?? `Variant #${it.variantId}`,
+                        quantity: it.quantity,
+                        amountIQD: it.amountIQD,
+                      })),
+                    });
+                    setSelectedReturnDetail(null);
+                  }}
+                  className="ReturnsPage-btnLookup"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Receipt size={15} /> {t('printReceipt') || 'طباعة الإيصال'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Manual Product Variant Selector Overlay */}
       {showVariantPicker && (
-        <div className="ReturnsPage-variantsOverlay">
-          <div className="ReturnsPage-variantsCard">
+        <div className="ReturnsPage-variantsOverlay" onClick={() => setShowVariantPicker(false)}>
+          <div className="ReturnsPage-variantsCard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '850px' }}>
             <header>
-              <h3>{t('selectVariant') || 'Select Product Variant'}</h3>
+              <h3>
+                <Package size={18} /> {t('selectVariant') || 'اختر متغير المنتج للإرجاع'}
+              </h3>
               <button onClick={() => setShowVariantPicker(false)}>✕</button>
             </header>
-            <ProductVariantTable
-              products={products}
-              actionLabel={t('addToReturn') || 'Add to Return'}
-              onAction={(variantId) => {
-                const variant = products.find((p) => p.id === variantId);
-                if (variant) {
-                  handleAddVariant(variant);
-                }
-              }}
-            />
+
+            {/* Filter & Search Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', insetInlineStart: '0.85rem', color: 'var(--text-secondary)' }} />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder={t('searchProductVariant') || 'ابحث باسم المنتج، الكود أو الباركود...'}
+                  value={variantSearchQuery}
+                  onChange={(e) => setVariantSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 1rem',
+                    paddingInlineStart: '2.5rem',
+                    borderRadius: '0.75rem',
+                    border: '1.5px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.92rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {categories.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategoryFilter('all')}
+                    style={{
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: '9999px',
+                      border: '1px solid',
+                      borderColor: selectedCategoryFilter === 'all' ? '#3b82f6' : 'var(--border-color)',
+                      background: selectedCategoryFilter === 'all' ? '#3b82f6' : 'var(--bg-secondary)',
+                      color: selectedCategoryFilter === 'all' ? '#fff' : 'var(--text-secondary)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {t('all') || 'الكل'}
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat)}
+                      style={{
+                        padding: '0.3rem 0.75rem',
+                        borderRadius: '9999px',
+                        border: '1px solid',
+                        borderColor: selectedCategoryFilter === cat ? '#3b82f6' : 'var(--border-color)',
+                        background: selectedCategoryFilter === cat ? '#3b82f6' : 'var(--bg-secondary)',
+                        color: selectedCategoryFilter === cat ? '#fff' : 'var(--text-secondary)',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Results Table */}
+            <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '0.75rem' }}>
+              {filteredPickerProducts.length === 0 ? (
+                <div className="ReturnsPage-empty">
+                  <p>{t('noProductsFound') || 'لا توجد منتجات مطابقة للبحث.'}</p>
+                </div>
+              ) : (
+                <table className="ReturnsPage-cartTable" style={{ fontSize: '0.88rem' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '35%' }}>{t('product') || 'المنتج'}</th>
+                      <th style={{ width: '18%' }}>{t('sku') || 'الكود'}</th>
+                      <th style={{ width: '17%' }}>{t('barcode') || 'الباركود'}</th>
+                      <th style={{ width: '15%' }}>{t('price') || 'السعر'}</th>
+                      <th style={{ width: '15%', textAlign: 'center' }}>{t('action') || 'الإجراء'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPickerProducts.map((p) => {
+                      const variantTag = [p.color, p.size].filter(Boolean).join(' • ');
+                      return (
+                        <tr
+                          key={p.id}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleAddVariant(p)}
+                        >
+                          <td>
+                            <strong>{p.productName}</strong>
+                            {variantTag && (
+                              <span className="Reports-variantBadge" style={{ marginInlineStart: '0.5rem' }}>
+                                {variantTag}
+                              </span>
+                            )}
+                            {p.category && (
+                              <span style={{ fontSize: '0.72rem', opacity: 0.65, display: 'block' }}>
+                                {p.category}
+                              </span>
+                            )}
+                          </td>
+                          <td><code className="Reports-skuCode">{p.sku || '—'}</code></td>
+                          <td><span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{p.barcode || '—'}</span></td>
+                          <td><strong dir="ltr">{p.salePriceIQD.toLocaleString('en-IQ')} IQD</strong></td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              className="ReturnsPage-btnAddItem"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddVariant(p);
+                              }}
+                              style={{ padding: '0.35rem 0.8rem', fontSize: '0.82rem' }}
+                            >
+                              + {t('add') || 'إضافة'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -7,9 +7,8 @@
   flex-direction: column;
   gap: 1rem;
   width: 100%;
-  padding: 0 0 1.25rem;
-  height: calc(100vh - 100px);
-  overflow: hidden;
+  padding: 0 0 1.5rem;
+  min-height: 100%;
 }
 
 .ReturnsPage-header {
@@ -38,16 +37,12 @@
   display: grid;
   grid-template-columns: 340px 1fr;
   gap: 1.25rem;
-  align-items: stretch;
-  height: calc(100% - 50px);
-  overflow: hidden;
+  align-items: start;
 }
 
 @media (max-width: 1024px) {
   .ReturnsPage-layout {
     grid-template-columns: 1fr;
-    height: auto;
-    overflow: auto;
   }
 }
 
@@ -56,7 +51,8 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  height: 100%;
+  position: sticky;
+  top: 0.5rem;
 }
 
 .ReturnsPage-formCard {
@@ -184,9 +180,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  height: 100%;
-  overflow-y: auto;
-  padding-inline-end: 0.25rem;
+  min-width: 0;
 }
 
 .ReturnsPage-card {
@@ -413,7 +407,7 @@
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 0.3rem;
@@ -421,6 +415,11 @@
 
 .ReturnsPage-btnManualAdd:hover {
   background: var(--hover-bg);
+  transform: translateY(-1px);
+}
+
+.ReturnsPage-btnManualAdd:active {
+  transform: scale(0.98);
 }
 
 /* ── Recent Returns History Section ──────────────────────────────── */
@@ -429,22 +428,23 @@
   border: 1px solid var(--border-color);
   border-radius: 1rem;
   padding: 1.25rem;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .ReturnsPage-recentTable {
   width: 100%;
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
 
 .ReturnsPage-recentTable th {
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.65rem 0.85rem;
+  letter-spacing: 0.04em;
+  padding: 0.75rem 0.85rem;
   border-bottom: 1.5px solid var(--border-color);
   text-align: start;
 }
@@ -452,7 +452,8 @@
 .ReturnsPage-recentTable td {
   padding: 0.75rem 0.85rem;
   border-bottom: 1px solid var(--border-light);
-  font-size: 0.85rem;
+  font-size: 0.86rem;
+  vertical-align: middle;
 }
 
 .ReturnsPage-recentTable tr:hover {
@@ -467,20 +468,55 @@
   text-align: center;
   padding: 2.5rem 1.5rem;
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
+}
+
+/* ── Type Badges ────────────────────────────────────────────────── */
+.ReturnsPage-typeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ReturnsPage-typeBadge--with_receipt {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.ReturnsPage-typeBadge--without_receipt {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ReturnsPage-typeBadge--exchange {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
 /* ── Variants Modal Overlay ─────────────────────────────────────── */
 .ReturnsPage-variantsOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1100;
   padding: 1.5rem;
+  animation: fadeInOverlay 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .ReturnsPage-variantsCard {
@@ -488,14 +524,20 @@
   max-width: 900px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
   max-height: 85vh;
   overflow: hidden;
+  animation: scaleInCard 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleInCard {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .ReturnsPage-variantsCard header {
@@ -508,9 +550,12 @@
 
 .ReturnsPage-variantsCard header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ReturnsPage-variantsCard header button {

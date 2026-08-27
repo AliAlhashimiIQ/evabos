@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { listReturns, createReturn, getSaleForReturn } from '../db/database';
+import { listReturns, createReturn, getSaleForReturn, fetchReturnById } from '../db/database';
 import type { ReturnInput } from '../db/types';
 import { requireRole } from './auth';
 
@@ -14,6 +14,14 @@ export function registerReturnsIpc(): void {
     'returns:list',
     requireRole(['admin', 'manager', 'cashier'])(async () => {
       return listReturns();
+    }),
+  );
+
+  ipcMain.handle(
+    'returns:get',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const returnId = args[0] as number;
+      return fetchReturnById(returnId);
     }),
   );
 

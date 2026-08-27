@@ -37,6 +37,8 @@ import {
   getTelegramSettings,
   sendTelegramDailyReportAndBackup,
   checkTelegramRecoveryOnStartup,
+  startTelegramBotPolling,
+  stopTelegramBotPolling,
 } from './db/telegram';
 
 // Set explicit application name to lock userData directory across updates
@@ -499,6 +501,9 @@ app.whenReady().then(async () => {
   checkTelegramRecoveryOnStartup().catch((err) => {
     log.error('[main] checkTelegramRecoveryOnStartup error:', err);
   });
+  startTelegramBotPolling().catch((err) => {
+    log.error('[main] startTelegramBotPolling error:', err);
+  });
 
   if (!isDev) {
     setupAutoUpdater();
@@ -546,6 +551,8 @@ app.on('before-quit', (event) => {
 
   // Prevent quit SYNCHRONOUSLY to hold Windows shutdown until reporting & backup finishes
   event.preventDefault();
+
+  stopTelegramBotPolling();
 
   if (dailyBackupTimeout) {
     clearTimeout(dailyBackupTimeout);

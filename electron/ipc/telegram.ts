@@ -4,6 +4,8 @@ import {
   saveTelegramSettings,
   sendTelegramTest,
   sendTelegramDailyReportAndBackup,
+  startTelegramBotPolling,
+  stopTelegramBotPolling,
 } from '../db/telegram';
 import { requireRole } from './auth';
 
@@ -38,7 +40,12 @@ export function registerTelegramIpc(): void {
         notifyOnClose: boolean;
       };
 
-      return saveTelegramSettings(settings);
+      const result = await saveTelegramSettings(settings);
+      stopTelegramBotPolling();
+      if (settings.enabled) {
+        startTelegramBotPolling();
+      }
+      return result;
     }),
   );
 

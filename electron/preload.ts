@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld('evaApi', {
   },
   returns: {
     list: (token: string) => ipcRenderer.invoke('returns:list', token),
+    get: (token: string, returnId: number) => ipcRenderer.invoke('returns:get', token, returnId),
     create: (token: string, data: ReturnInput) => ipcRenderer.invoke('returns:create', token, data),
     saleInfo: (token: string, saleId: number) => ipcRenderer.invoke('returns:sale-info', token, saleId),
   },
