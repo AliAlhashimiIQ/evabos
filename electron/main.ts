@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, powerMonitor } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import path from 'path';
@@ -33,6 +33,11 @@ import { registerTelegramIpc } from './ipc/telegram';
 import { registerOnlineOrdersIpc } from './ipc/onlineOrders';
 import { registerEmployeesIpc } from './ipc/employees';
 import { createBackup } from './db/backup';
+import {
+  getTelegramSettings,
+  sendTelegramDailyReportAndBackup,
+  checkTelegramRecoveryOnStartup,
+} from './db/telegram';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5174';
@@ -151,40 +156,55 @@ async function createWindow(): Promise<void> {
     }
   });
 
-  // Intercept window close to send Telegram report & backup if enabled
+  // Perform graceful Telegram daily report on exit
   let isClosingWindow = false;
-  mainWindow.on('close', async (event) => {
+
+  async function performExitTelegramRoutine(): Promise<void> {
+    try {
+      const settings = await getTelegramSettings();
+      if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
+        log.info('[main] Sending Telegram daily report & backup on application exit/shutdown...');
+        await sendTelegramDailyReportAndBackup();
+        log.info('[main] Telegram daily report & backup completed.');
+      }
+    } catch (tgErr) {
+      log.error('[main] Failed to send Telegram daily report on exit:', tgErr);
+    }
+  }
+
+  // Intercept window close (X button or Alt+F4)
+  mainWindow.on('close', (event) => {
     if (isClosingWindow) {
       return;
     }
 
-    try {
-      const { getTelegramSettings, sendTelegramDailyReportAndBackup } = await import('./db/telegram');
-      const settings = await getTelegramSettings();
-      if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
-        event.preventDefault();
-        isClosingWindow = true;
-        log.info('[main] Window close intercepted: Sending Telegram daily report & backup...');
+    // CRITICAL: Must synchronously prevent default so window doesn't close immediately
+    event.preventDefault();
+    isClosingWindow = true;
 
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('app:closing-status', 'sending_telegram_backup');
-        }
+    // Immediately hide the window so user sees instant close response
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.hide();
+    }
 
-        try {
-          await sendTelegramDailyReportAndBackup();
-          log.info('[main] Telegram daily report & backup on close completed.');
-        } catch (tgErr) {
-          log.error('[main] Failed to send Telegram daily report on close:', tgErr);
-        }
-
+    (async () => {
+      try {
+        await performExitTelegramRoutine();
+      } catch (err) {
+        log.error('[main] Error in close routine:', err);
+      } finally {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.destroy();
         }
         app.quit();
       }
-    } catch (err) {
-      log.error('[main] Error in window close handler:', err);
-    }
+    })();
+  });
+
+  // Windows system shutdown / restart listener
+  powerMonitor.on('shutdown', async () => {
+    log.info('[main] Windows system shutdown detected by powerMonitor');
+    await performExitTelegramRoutine();
   });
 
   mainWindow.on('closed', () => {
@@ -481,6 +501,9 @@ app.whenReady().then(async () => {
   scheduleDailyBackup();
   scheduleDailyEmailReport();
   await createWindow();
+  checkTelegramRecoveryOnStartup().catch((err) => {
+    log.error('[main] checkTelegramRecoveryOnStartup error:', err);
+  });
 
   if (!isDev) {
     setupAutoUpdater();

@@ -249,7 +249,7 @@ export async function notifyTelegramSale(sale: SaleDetail): Promise<void> {
 /**
  * Send full End-of-Day report and upload latest database backup file
  */
-export async function sendTelegramDailyReportAndBackup(): Promise<{ success: boolean; error?: string }> {
+export async function sendTelegramDailyReportAndBackup(customDateStr?: string): Promise<{ success: boolean; error?: string }> {
   try {
     const settings = await getTelegramSettings();
     if (!settings.enabled) {
@@ -262,16 +262,18 @@ export async function sendTelegramDailyReportAndBackup(): Promise<{ success: boo
 
     log.info('[telegram] Generating daily report & backup for Telegram...');
 
-    // Today's date
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    // Today's local date (YYYY-MM-DD)
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayStr = customDateStr || todayLocalStr;
     const range: DateRange = { startDate: todayStr, endDate: todayStr };
 
     // Get report data
     const reports = await getAdvancedReports(range);
     const itemsSold = await listSaleItems(todayStr);
 
-    const formattedDateStr = today.toLocaleDateString('ar-IQ', {
+    const reportDateObj = new Date(todayStr + 'T12:00:00');
+    const formattedDateStr = reportDateObj.toLocaleDateString('ar-IQ', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -339,12 +341,45 @@ export async function sendTelegramDailyReportAndBackup(): Promise<{ success: boo
       return { success: false, error: docResult.error };
     }
 
+    // Mark as sent in DB
+    await setSetting('telegram_last_eod_sent_date', todayStr);
+
     log.info('[telegram] Daily report & database backup sent to Telegram successfully.');
     return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     log.error('[telegram] Failed in sendTelegramDailyReportAndBackup:', errorMsg);
     return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Automatically checks on app startup if yesterday's report was missed (e.g. PC was shut down directly or power cut)
+ * and sends yesterday's report to Telegram.
+ */
+export async function checkTelegramRecoveryOnStartup(): Promise<void> {
+  try {
+    const settings = await getTelegramSettings();
+    if (!settings.enabled || !settings.notifyOnClose || !settings.botToken || !settings.chatId) {
+      return;
+    }
+
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    const lastSentDate = await getSetting('telegram_last_eod_sent_date');
+    if (lastSentDate && lastSentDate !== todayLocalStr && lastSentDate !== yesterdayStr) {
+      const yesterdaySales = await getAdvancedReports({ startDate: yesterdayStr, endDate: yesterdayStr });
+      if (yesterdaySales && (yesterdaySales.dailySales?.length || 0) > 0) {
+        log.info('[telegram] Recovering missed daily report for yesterday:', yesterdayStr);
+        await sendTelegramDailyReportAndBackup(yesterdayStr);
+      }
+    }
+  } catch (err) {
+    log.error('[telegram] Startup recovery check error:', err);
   }
 }
 
