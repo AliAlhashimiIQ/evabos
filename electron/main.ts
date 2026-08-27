@@ -39,6 +39,9 @@ import {
   checkTelegramRecoveryOnStartup,
 } from './db/telegram';
 
+// Set explicit application name to lock userData directory across updates
+app.setName('EVA POS');
+
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5174';
 
@@ -83,7 +86,7 @@ function setupAutoUpdater() {
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
-let isClosingWindow = false;
+let isReadyToQuit = false;
 let hasExitTelegramRun = false;
 
 async function performExitTelegramRoutine(): Promise<void> {
@@ -178,31 +181,14 @@ async function createWindow(): Promise<void> {
 
   // Intercept window close (X button or Alt+F4)
   mainWindow.on('close', (event) => {
-    if (isClosingWindow) {
-      return;
-    }
-
-    // CRITICAL: Must synchronously prevent default so window doesn't close immediately
-    event.preventDefault();
-    isClosingWindow = true;
-
-    // Immediately hide the window so user sees instant close response
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-    }
-
-    (async () => {
-      try {
-        await performExitTelegramRoutine();
-      } catch (err) {
-        log.error('[main] Error in close routine:', err);
-      } finally {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.destroy();
-        }
-        app.quit();
+    if (!isReadyToQuit) {
+      // Synchronously halt window destroy, hide immediately, and initiate graceful exit
+      event.preventDefault();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.hide();
       }
-    })();
+      app.quit();
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -553,7 +539,14 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', async () => {
+app.on('before-quit', (event) => {
+  if (isReadyToQuit) {
+    return;
+  }
+
+  // Prevent quit SYNCHRONOUSLY to hold Windows shutdown until reporting & backup finishes
+  event.preventDefault();
+
   if (dailyBackupTimeout) {
     clearTimeout(dailyBackupTimeout);
     dailyBackupTimeout = null;
@@ -566,6 +559,23 @@ app.on('before-quit', async () => {
     clearInterval(telegramPeriodicSyncInterval);
     telegramPeriodicSyncInterval = null;
   }
-  await performExitTelegramRoutine();
-  await closeDatabase();
+
+  (async () => {
+    try {
+      await performExitTelegramRoutine();
+    } catch (err) {
+      log.error('[main] Error in before-quit routine:', err);
+    } finally {
+      try {
+        await closeDatabase();
+      } catch (dbErr) {
+        log.error('[main] Error closing database on exit:', dbErr);
+      }
+      isReadyToQuit = true;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+      }
+      app.quit();
+    }
+  })();
 });

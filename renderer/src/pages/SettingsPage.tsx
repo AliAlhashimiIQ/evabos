@@ -140,11 +140,23 @@ const SettingsPage = (): JSX.Element => {
 
   useEffect(() => {
     loadExchangeRate();
-    loadEmailSettings();
-    loadTelegramSettings();
     loadReceiptSettings();
     loadPrinterSettings();
-  }, []);
+    if (token) {
+      loadEmailSettings();
+      loadTelegramSettings();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'receipts') {
+      loadPrinterSettings();
+      loadReceiptSettings();
+    } else if (activeTab === 'notifications' && token) {
+      loadTelegramSettings();
+      loadEmailSettings();
+    }
+  }, [activeTab, token]);
 
   const loadExchangeRate = async () => {
     if (!window.evaApi) return;

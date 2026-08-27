@@ -26,23 +26,40 @@ const resolveDbPath = (): string => {
     log.info('[db] Using PORTABLE database path:', portablePath);
     return portablePath;
   }
-  const userDataPath = path.join(app.getPath('userData'), 'eva-pos.db');
-  if (app.isPackaged) {
-    const fs = require('fs');
-    const oldDbPath = path.join(path.dirname(app.getPath('exe')), 'eva-pos.db');
-    if (fs.existsSync(oldDbPath) && !fs.existsSync(userDataPath)) {
-      try {
-        log.info('[db] MIGRATION: Found old database at:', oldDbPath);
-        const userDataDir = path.dirname(userDataPath);
-        if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
-        fs.copyFileSync(oldDbPath, userDataPath);
-        log.info('[db] MIGRATION: Successfully migrated database to userData!');
-        try { fs.renameSync(oldDbPath, oldDbPath + '.migrated'); } catch { /* ignore */ }
-      } catch (migrationErr) {
-        log.error('[db] MIGRATION: Failed to migrate database:', migrationErr);
+
+  const fs = require('fs');
+  const userDataDir = app.getPath('userData');
+  const userDataPath = path.join(userDataDir, 'eva-pos.db');
+
+  // Check if primary database already exists
+  if (!fs.existsSync(userDataPath)) {
+    // Check all potential alternative / legacy userData directories across installer updates
+    const appData = app.getPath('appData');
+    const potentialPaths = [
+      path.join(appData, 'EVA POS', 'eva-pos.db'),
+      path.join(appData, 'EVA-POS', 'eva-pos.db'),
+      path.join(appData, 'eva-pos-desktop', 'eva-pos.db'),
+      path.join(appData, 'Electron', 'eva-pos.db'),
+      path.join(path.dirname(app.getPath('exe')), 'eva-pos.db'),
+    ];
+
+    for (const altPath of potentialPaths) {
+      if (altPath !== userDataPath && fs.existsSync(altPath)) {
+        try {
+          log.info('[db] MIGRATION: Found existing database at:', altPath);
+          if (!fs.existsSync(userDataDir)) {
+            fs.mkdirSync(userDataDir, { recursive: true });
+          }
+          fs.copyFileSync(altPath, userDataPath);
+          log.info('[db] MIGRATION: Successfully migrated database to:', userDataPath);
+          break;
+        } catch (migrationErr) {
+          log.error('[db] MIGRATION: Failed to copy database from', altPath, migrationErr);
+        }
       }
     }
   }
+
   log.info('[db] Using userData database path:', userDataPath);
   return userDataPath;
 };
