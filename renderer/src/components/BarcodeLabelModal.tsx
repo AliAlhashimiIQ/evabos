@@ -60,6 +60,7 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
   const [printers, setPrinters] = useState<Array<{ name: string; description: string; isDefault: boolean }>>([]);
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [barcodeReady, setBarcodeReady] = useState<boolean>(false);
+  const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [settings, setSettings] = useState<LabelSettings>(defaultSettings);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
@@ -89,17 +90,22 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       return;
     }
 
-    // Generate barcode image
+    // Generate barcode image safely with CODE128 (supports all barcode formats & lengths)
     try {
       const canvas = barcodeCanvasRef.current;
-      // Set canvas size explicitly
       canvas.width = 300;
       canvas.height = 100;
 
-      JsBarcode(canvas, product.barcode, {
-        format: 'EAN13',
-        width: settings.barcodeWidth,
-        height: settings.barcodeHeight,
+      const barcodeText = String(product.barcode).trim();
+      if (!barcodeText) {
+        setBarcodeReady(false);
+        return;
+      }
+
+      JsBarcode(canvas, barcodeText, {
+        format: 'CODE128',
+        width: Math.max(1, settings.barcodeWidth || 2),
+        height: Math.max(20, settings.barcodeHeight || 40),
         displayValue: true,
         fontSize: 14,
         margin: 5,
@@ -109,8 +115,24 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
 
       setBarcodeReady(true);
     } catch (error) {
-      console.error('Failed to generate barcode:', error);
-      setBarcodeReady(false);
+      console.error('Failed to generate barcode with CODE128, trying auto:', error);
+      try {
+        const canvas = barcodeCanvasRef.current;
+        JsBarcode(canvas, String(product.barcode).trim(), {
+          format: 'auto',
+          width: 2,
+          height: 40,
+          displayValue: true,
+          fontSize: 14,
+          margin: 5,
+          background: '#ffffff',
+          lineColor: '#000000',
+        });
+        setBarcodeReady(true);
+      } catch (fallbackErr) {
+        console.error('Failed barcode generation fallback:', fallbackErr);
+        setBarcodeReady(false);
+      }
     }
   }, [isOpen, product.barcode, settings.barcodeHeight, settings.barcodeWidth, loadingSettings]);
 
@@ -298,33 +320,18 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
     }
 
     try {
+      setIsPrinting(true);
       // Generate HTML for each label
       const labelHtml = generateLabelHtml();
-
-      // For PDF printing, show a message
-      const isPdfPrinter = printerName?.toLowerCase().includes('pdf') ?? false;
-      if (isPdfPrinter) {
-        // Show info message for PDF
-
-      }
 
       // Print multiple labels
       for (let i = 0; i < quantity; i++) {
         try {
-
-
           await window.evaApi.printing.print({ html: labelHtml, printerName, silent: true, isLabel: true });
-
-
-          // For PDF, show message after first print
-          if (isPdfPrinter && i === 0) {
-            // Message is handled by the save dialog in the main process
-
-          }
 
           // Small delay between prints
           if (i < quantity - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 300));
           }
         } catch (error) {
           console.error(`Failed to print label ${i + 1}:`, error);
@@ -340,6 +347,8 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       console.error('Failed to generate label HTML:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(t('failedToGenerateLabel', { error: errorMessage }));
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -513,9 +522,9 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
           <button
             className="BarcodeLabelModal-printButton"
             onClick={handlePrint}
-            disabled={!barcodeReady || loadingSettings}
+            disabled={!barcodeReady || loadingSettings || isPrinting}
           >
-            {t('print')}
+            {isPrinting ? (t('printing') || 'جاري الطباعة...') : t('print')}
           </button>
         </div>
       </div>

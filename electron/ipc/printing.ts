@@ -139,11 +139,16 @@ export function registerPrintingIpc(): void {
 
   ipcMain.handle(
     'printing:print',
-    async (_event, payload: { html: string; printerName?: string | null; silent?: boolean }) => {
-      log('[Print] IPC received, printer:', payload.printerName || 'System Default', 'silent:', payload.silent);
+    async (_event, payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) => {
+      log('[Print] IPC received, printer:', payload.printerName || 'System Default', 'silent:', payload.silent, 'isLabel:', payload.isLabel);
 
       try {
-        await createPrintWindow(payload.html, { printerName: payload.printerName, silent: payload.silent });
+        await createPrintWindow(payload.html, {
+          printerName: payload.printerName,
+          silent: payload.silent,
+          isLabel: payload.isLabel,
+          pageSize: payload.pageSize,
+        });
         return true;
       } catch (error) {
         logError('[Print] Error:', error);
