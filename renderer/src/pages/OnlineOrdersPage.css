@@ -1,4 +1,4 @@
-.OO { padding: 1.5rem; }
+.OO { width: 100%; padding: 0 0 2rem; box-sizing: border-box; }
 
 .OO-header {
   display: flex;

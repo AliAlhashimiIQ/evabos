@@ -95,8 +95,10 @@ async function loadWindowContent(targetWindow: BrowserWindow): Promise<void> {
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1280,
+    height: 850,
+    minWidth: 1024,
+    minHeight: 700,
     autoHideMenuBar: true, // Hide menu bar (File, Edit, View, etc.)
     icon: path.join(__dirname, '../build/icon.png'), // App icon
     webPreferences: {
@@ -106,6 +108,8 @@ async function createWindow(): Promise<void> {
       // webSecurity is true by default - do NOT disable it
     },
   });
+
+  mainWindow.maximize();
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
