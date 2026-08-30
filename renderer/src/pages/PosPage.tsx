@@ -16,7 +16,6 @@ import {
   Plus,
   Minus,
   Bell,
-  Send,
   ShieldAlert,
 } from 'lucide-react';
 import './Pages.css';
@@ -72,8 +71,7 @@ const PosPage = (): JSX.Element => {
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [, setHasMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [profiles, setProfiles] = useState<PosProfile[]>(() => {
     try {

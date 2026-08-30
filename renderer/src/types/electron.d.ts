@@ -706,6 +706,7 @@ export interface LoginResponse {
 export interface CurrentUser {
   userId: number;
   username: string;
+  name?: string | null;
   role: 'admin' | 'manager' | 'cashier';
   branchId?: number | null;
 }
