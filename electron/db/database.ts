@@ -2585,6 +2585,15 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
     // Update the return with the calculated cost
     await run('UPDATE returns SET totalCostIQD = ? WHERE id = ?', [totalReturnCost, returnId]);
 
+    // Log activity for return/exchange
+    if (input.processedBy) {
+      await logActivity(input.processedBy, 'return', 'sale', input.saleId ?? returnId, {
+        'نوع العملية': input.type === 'exchange' ? 'استبدال بضاعة' : 'إرجاع واسترداد مالي',
+        'مبلغ الاسترداد': `${refundAmount.toLocaleString()} د.ع`,
+        'السبب': input.reason || '—',
+      });
+    }
+
     await run('COMMIT');
 
     const created = await fetchReturnById(returnId);
@@ -3036,11 +3045,14 @@ export async function deleteSale(saleId: number, userId: number): Promise<void> 
     await run('DELETE FROM sale_items WHERE saleId = ?', [saleId]);
     await run('DELETE FROM sales WHERE id = ?', [saleId]);
 
-    // 6. Log activity with metadata
-    const restockedSummary = sale.items.map(item => `${item.productName} (${item.quantity})`).join(', ');
+    // 6. Log activity with rich metadata
+    const itemsList = sale.items.map(i => `${i.productName} (العدد: ${i.quantity})`).join('، ');
     await logActivity(userId, 'delete', 'sale', saleId, { 
-      details: `Restored stock: ${restockedSummary}`,
-      items: sale.items.map(i => ({ name: i.productName, qty: i.quantity }))
+      'رقم الفاتورة': `#${saleId}`,
+      'إجمالي الفاتورة': `${sale.totalIQD.toLocaleString()} د.ع`,
+      'طريقة الدفع': sale.paymentMethod || 'كاش',
+      'الأصناف المحذوفة': itemsList,
+      'حالة المخزون': 'تمت إعادة الأصناف إلى المخزن تلقائياً',
     });
 
     await run('COMMIT');

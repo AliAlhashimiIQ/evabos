@@ -58,12 +58,19 @@ export function registerInventoryIpc(): void {
 
   ipcMain.handle(
     'inventory:products:create',
-    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+    requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
       const payload = args[0] as ProductInput;
       if (!payload || !payload.name) {
         throw new Error('Invalid product data: name is required');
       }
-      return createProduct(payload);
+      const product = await createProduct(payload);
+      if (session) {
+        await (await import('../db/database')).logActivity(session.userId, 'create', 'product', product.id, {
+          'الاسم': product.name,
+          'الموسم': product.season || '—',
+        });
+      }
+      return product;
     }),
   );
 
@@ -73,7 +80,10 @@ export function registerInventoryIpc(): void {
       if (!session) throw new Error('Unauthorized');
       const payload = args[0] as ProductUpdateInput;
       const product = await updateProduct(payload);
-      await (await import('../db/database')).logActivity(session.userId, 'update', 'product', product.id);
+      const metadata: Record<string, unknown> = {};
+      if (payload.name) metadata['الاسم الجديد'] = payload.name;
+      if (payload.season) metadata['الموسم'] = payload.season;
+      await (await import('../db/database')).logActivity(session.userId, 'update', 'product', product.id, metadata);
       return product;
     }),
   );
@@ -84,7 +94,12 @@ export function registerInventoryIpc(): void {
       if (!session) throw new Error('Unauthorized');
       const payload = args[0] as VariantUpdateInput;
       await updateVariant(payload);
-      await (await import('../db/database')).logActivity(session.userId, 'update', 'variant', payload.id);
+      const metadata: Record<string, unknown> = {};
+      if (payload.defaultPriceIQD !== undefined) metadata['السعر الجديد'] = `${payload.defaultPriceIQD.toLocaleString()} د.ع`;
+      if (payload.purchaseCostUSD !== undefined) metadata['سعر التكلفة'] = `$${payload.purchaseCostUSD}`;
+      if (payload.size) metadata['المقاس'] = payload.size;
+      if (payload.color) metadata['اللون'] = payload.color;
+      await (await import('../db/database')).logActivity(session.userId, 'update', 'variant', payload.id, metadata);
       return true;
     }),
   );
@@ -100,7 +115,7 @@ export function registerInventoryIpc(): void {
         reason: string;
         note?: string;
       };
-      return adjustVariantStock({
+      const result = await adjustVariantStock({
         variantId: payload.variantId,
         branchId: payload.branchId,
         deltaQuantity: payload.deltaQuantity,
@@ -108,6 +123,12 @@ export function registerInventoryIpc(): void {
         note: payload.note,
         adjustedBy: session.userId,
       });
+      await (await import('../db/database')).logActivity(session.userId, 'inventory_adjust', 'variant', payload.variantId, {
+        'الكمية المعدلة': `${payload.deltaQuantity > 0 ? '+' : ''}${payload.deltaQuantity}`,
+        'السبب': payload.reason,
+        'الملاحظات': payload.note || '—',
+      });
+      return result;
     }),
   );
 
@@ -174,8 +195,16 @@ export function registerInventoryIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
       if (!session) throw new Error('Unauthorized');
       const variantId = args[0] as number;
+      const db = await import('../db/database');
+      const core = await import('../db/core');
+      const info = await core.get<{ productName: string; size?: string; color?: string }>(
+        `SELECT p.name as productName, v.size, v.color FROM product_variants v JOIN products p ON p.id = v.productId WHERE v.id = ?`,
+        [variantId],
+      );
       await deleteVariant(variantId);
-      await (await import('../db/database')).logActivity(session.userId, 'delete', 'variant', variantId);
+      await db.logActivity(session.userId, 'delete', 'variant', variantId, {
+        'المنتج': info ? `${info.productName} (${[info.size, info.color].filter(Boolean).join(' - ')})` : `#${variantId}`,
+      });
       return true;
     }),
   );

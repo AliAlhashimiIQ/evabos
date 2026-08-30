@@ -920,7 +920,17 @@ export async function notifyTelegramActivity(
     }
 
     // Filter for sensitive actions that owner needs immediate alerts for
-    const sensitiveActions = ['delete', 'update', 'bulk_update', 'reset', 'password_change', 'return', 'deactivate'];
+    const sensitiveActions = [
+      'delete',
+      'update',
+      'bulk_update',
+      'reset',
+      'password_change',
+      'return',
+      'deactivate',
+      'inventory_adjust',
+      'reject',
+    ];
     if (!sensitiveActions.includes(action.toLowerCase())) {
       return;
     }
@@ -930,7 +940,7 @@ export async function notifyTelegramActivity(
       `SELECT username, name, role FROM users WHERE id = ?`,
       [userId],
     );
-    const userName = userRow?.name || userRow?.username || `User #${userId}`;
+    const userName = userRow?.name || userRow?.username || `مستخدم #${userId}`;
     const userRole = userRow?.role ? `(${userRow.role})` : '';
 
     const actionIcons: Record<string, string> = {
@@ -941,23 +951,58 @@ export async function notifyTelegramActivity(
       password_change: '🔑 <b>تغيير كلمة المرور</b>',
       return: '🔄 <b>إرجاع / استرداد (Return)</b>',
       deactivate: '⛔ <b>تعطيل حساب</b>',
-    };
-
-    const entityNames: Record<string, string> = {
-      product: 'منتج',
-      variant: 'صنف / مقاس',
-      sale: 'فاتورة بيع',
-      customer: 'زبون',
-      employee: 'موظف',
-      user: 'مستخدم نظام',
-      branch: 'فرع',
-      online_order: 'طلب أونلاين',
-      system: 'إعدادات النظام',
+      inventory_adjust: '📊 <b>تعديل كمية المخزون (Stock Adjust)</b>',
+      reject: '❌ <b>إلغاء / رفض طلب</b>',
     };
 
     const actionLabel = actionIcons[action.toLowerCase()] || `⚡ <b>${escapeHtml(action)}</b>`;
-    const entityLabel = entity ? (entityNames[entity.toLowerCase()] || entity) : 'عنصر';
-    const entityStr = entityId ? `${entityLabel} #${entityId}` : entityLabel;
+
+    let entityDisplay = entity ? `${entity} #${entityId ?? ''}` : 'عنصر';
+    let lookupDetails = '';
+
+    // Smart lookup based on entity
+    if (entity?.toLowerCase() === 'variant' && entityId) {
+      const v = await get<{ productName: string; size?: string; color?: string; defaultPriceIQD?: number }>(
+        `SELECT p.name as productName, v.size, v.color, v.defaultPriceIQD
+         FROM product_variants v
+         JOIN products p ON p.id = v.productId
+         WHERE v.id = ?`,
+        [entityId],
+      );
+      if (v) {
+        const variantDesc = [v.size, v.color].filter(Boolean).join(' - ');
+        entityDisplay = `👗 <b>${escapeHtml(v.productName)}</b> ${variantDesc ? `(${escapeHtml(variantDesc)})` : ''}`;
+        if (v.defaultPriceIQD) {
+          lookupDetails += `• السعر الحالي: <code>${v.defaultPriceIQD.toLocaleString()} د.ع</code>\n`;
+        }
+      } else {
+        entityDisplay = `صنف / مقاس #${entityId}`;
+      }
+    } else if (entity?.toLowerCase() === 'product' && entityId) {
+      const p = await get<{ name: string }>(`SELECT name FROM products WHERE id = ?`, [entityId]);
+      if (p) {
+        entityDisplay = `👗 <b>${escapeHtml(p.name)}</b> (#${entityId})`;
+      } else {
+        entityDisplay = `منتج #${entityId}`;
+      }
+    } else if (entity?.toLowerCase() === 'sale' && entityId) {
+      const s = await get<{ totalIQD: number; paymentMethod?: string }>(
+        `SELECT totalIQD, paymentMethod FROM sales WHERE id = ?`,
+        [entityId],
+      );
+      if (s) {
+        entityDisplay = `🧾 <b>فاتورة بيع #${entityId}</b>`;
+        lookupDetails += `• إجمالي الفاتورة: <code>${s.totalIQD.toLocaleString()} د.ع</code>\n`;
+      } else {
+        entityDisplay = `فاتورة بيع #${entityId}`;
+      }
+    } else if (entity?.toLowerCase() === 'employee' && entityId) {
+      const e = await get<{ name: string }>(`SELECT name FROM employees WHERE id = ?`, [entityId]);
+      entityDisplay = e ? `👤 موظف: <b>${escapeHtml(e.name)}</b>` : `موظف #${entityId}`;
+    } else if (entity?.toLowerCase() === 'user' && entityId) {
+      const u = await get<{ name?: string; username: string }>(`SELECT name, username FROM users WHERE id = ?`, [entityId]);
+      entityDisplay = u ? `👤 مستخدم: <b>${escapeHtml(u.name || u.username)}</b>` : `مستخدم #${entityId}`;
+    }
 
     const now = new Date().toLocaleString('ar-IQ', {
       hour: '2-digit',
@@ -970,7 +1015,11 @@ export async function notifyTelegramActivity(
     text += `━━━━━━━━━━━━━━━━━━━━\n`;
     text += `⚡ <b>العملية:</b> ${actionLabel}\n`;
     text += `👤 <b>المستخدم:</b> <b>${escapeHtml(userName)}</b> ${userRole}\n`;
-    text += `🏷️ <b>العنصر:</b> ${escapeHtml(entityStr)}\n`;
+    text += `🏷️ <b>العنصر:</b> ${entityDisplay}\n`;
+
+    if (lookupDetails) {
+      text += lookupDetails;
+    }
 
     if (metadata && Object.keys(metadata).length > 0) {
       const metaDetails = Object.entries(metadata)
