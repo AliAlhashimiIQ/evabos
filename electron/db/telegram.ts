@@ -830,35 +830,81 @@ export function stopTelegramBotPolling(): void {
 }
 
 /**
+ * Strip emojis, diacritics, and normalize Arabic characters for robust command matching
+ */
+function normalizeTelegramCommand(raw: string): string {
+  if (!raw) return '';
+  return raw
+    .toLowerCase()
+    .split('@')[0]
+    // Strip emojis & unicode symbols
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '')
+    // Normalize Arabic letters
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    // Replace punctuation with spaces
+    .replace(/[\-_/\\.,:;!?()[\]{}"'`~*^]/g, ' ')
+    // Normalize multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Handle incoming Telegram command from owner
  */
 async function handleTelegramBotCommand(commandText: string, chatId: string, botToken: string): Promise<void> {
-  const cleanCmd = commandText.toLowerCase().split('@')[0].trim();
+  const slashCmd = commandText.trim().toLowerCase().split('@')[0].split(' ')[0];
+  const norm = normalizeTelegramCommand(commandText);
   const override = { botToken, chatId };
 
-  log.info(`[telegram-bot] Received command: "${commandText}" from chat ${chatId}`);
+  log.info(`[telegram-bot] Received command: "${commandText}" (norm: "${norm}", slash: "${slashCmd}") from chat ${chatId}`);
 
   try {
     // ─── 1. /report or /today ────────────────────────────────────────────────
-    if (cleanCmd === '/report' || cleanCmd === '/today' || cleanCmd === '/sales' || cleanCmd === 'تقرير' || cleanCmd === 'تقرير اليوم' || cleanCmd === 'المبيعات' || cleanCmd === 'اليوم') {
-      await sendTelegramMessage('⏳ <i>جاري إعداد تقرير مبيعات اليوم المباشر...</i>', 'HTML', override);
+    if (
+      slashCmd === '/report' ||
+      slashCmd === '/today' ||
+      slashCmd === '/sales' ||
+      norm === 'مبيعات اليوم' ||
+      norm === 'تقرير اليوم' ||
+      norm === 'تقرير' ||
+      norm === 'المبيعات' ||
+      norm === 'اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري إعداد تقرير مبيعات اليوم المباشر...</i>', 'HTML', override, REPORT_INLINE_KEYBOARD);
       await sendTelegramDailyReportAndBackup();
       return;
     }
 
     // ─── 2. /yesterday ──────────────────────────────────────────────────────
-    if (cleanCmd === '/yesterday' || cleanCmd === 'تقرير الامس' || cleanCmd === 'امس' || cleanCmd === 'البارحة') {
+    if (
+      slashCmd === '/yesterday' ||
+      norm === 'مبيعات الامس' ||
+      norm === 'تقرير الامس' ||
+      norm === 'تقرير امس' ||
+      norm === 'امس' ||
+      norm === 'الامس' ||
+      norm === 'البارحه' ||
+      norm === 'بارحه'
+    ) {
       const now = new Date();
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-      await sendTelegramMessage(`⏳ <i>جاري جلب تقرير يوم أمس (${yesterdayStr})...</i>`, 'HTML', override);
+      await sendTelegramMessage(`⏳ <i>جاري جلب تقرير يوم أمس (${yesterdayStr})...</i>`, 'HTML', override, REPORT_INLINE_KEYBOARD);
       await sendTelegramDailyReportAndBackup(yesterdayStr);
       return;
     }
 
     // ─── 3. /month ──────────────────────────────────────────────────────────
-    if (cleanCmd === '/month' || cleanCmd === '/monthly' || cleanCmd === 'الشهر' || cleanCmd === 'مبيعات الشهر' || cleanCmd === 'تقرير الشهر') {
-      await sendTelegramMessage('⏳ <i>جاري حساب إحصائيات الشهر الحالي...</i>', 'HTML', override);
+    if (
+      slashCmd === '/month' ||
+      slashCmd === '/monthly' ||
+      norm === 'مبيعات الشهر' ||
+      norm === 'تقرير الشهر' ||
+      norm === 'الشهر'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري حساب إحصائيات الشهر الحالي...</i>', 'HTML', override, REPORT_INLINE_KEYBOARD);
       const now = new Date();
       const firstDayOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -890,12 +936,18 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
       msg += `✨ <i>التقرير محدث حتى اللحظة.</i>`;
 
-      await sendTelegramMessage(msg, 'HTML', override);
+      await sendTelegramMessage(msg, 'HTML', override, REPORT_INLINE_KEYBOARD);
       return;
     }
 
     // ─── 4. /week ───────────────────────────────────────────────────────────
-    if (cleanCmd === '/week' || cleanCmd === '/weekly' || cleanCmd === 'الاسبوع' || cleanCmd === 'مبيعات الاسبوع') {
+    if (
+      slashCmd === '/week' ||
+      slashCmd === '/weekly' ||
+      norm === 'مبيعات الاسبوع' ||
+      norm === 'تقرير الاسبوع' ||
+      norm === 'الاسبوع'
+    ) {
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
       const startDate = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
@@ -915,12 +967,18 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       msg += `🧾 <b>عدد الفواتير:</b> ${orders} فاتورة\n`;
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
 
-      await sendTelegramMessage(msg, 'HTML', override);
+      await sendTelegramMessage(msg, 'HTML', override, REPORT_INLINE_KEYBOARD);
       return;
     }
 
     // ─── 5. /stock or /lowstock ─────────────────────────────────────────────
-    if (cleanCmd === '/stock' || cleanCmd === '/lowstock' || cleanCmd === 'المخزون' || cleanCmd === 'النواقص' || cleanCmd === 'نواقص') {
+    if (
+      slashCmd === '/stock' ||
+      slashCmd === '/lowstock' ||
+      norm.includes('نواقص') ||
+      norm.includes('المخزون') ||
+      norm === 'مخزون'
+    ) {
       const lowStockItems = await all<{
         productName: string;
         sku: string | null;
@@ -968,7 +1026,13 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
     }
 
     // ─── 6. /top or /bestsellers ───────────────────────────────────────────
-    if (cleanCmd === '/top' || cleanCmd === '/bestsellers' || cleanCmd === 'الاعلى مبيعا' || cleanCmd === 'الاكثر مبيعا' || cleanCmd === 'توب') {
+    if (
+      slashCmd === '/top' ||
+      slashCmd === '/bestsellers' ||
+      norm.includes('الاكثر مبيعا') ||
+      norm.includes('الاعلى مبيعا') ||
+      norm.includes('توب')
+    ) {
       const topItems = await all<{
         productName: string;
         color: string | null;
@@ -1013,29 +1077,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 7. /expenses (Today's Expenses) ───────────────────────────────────
+    // ─── 7a. Expenses Yesterday ─────────────────────────────────────────────
     if (
-      cleanCmd === '/expenses' ||
-      cleanCmd === '/exp' ||
-      cleanCmd === 'المصروفات' ||
-      cleanCmd === 'المصاريف' ||
-      cleanCmd === 'مصاريف اليوم' ||
-      cleanCmd === 'مصروفات اليوم'
-    ) {
-      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات اليوم...</i>', 'HTML', override);
-      const msg = await formatExpensesTelegramMessage('today');
-      await sendTelegramMessage(msg, 'HTML', override);
-      return;
-    }
-
-    // ─── 7b. /expenses_yesterday (Yesterday's Expenses) ─────────────────────
-    if (
-      cleanCmd === '/expenses_yesterday' ||
-      cleanCmd === '/exp_yesterday' ||
-      cleanCmd === 'مصاريف امس' ||
-      cleanCmd === 'مصروفات امس' ||
-      cleanCmd === 'مصاريف البارحة' ||
-      cleanCmd === 'مصروفات الامس'
+      slashCmd === '/expenses_yesterday' ||
+      slashCmd === '/exp_yesterday' ||
+      (norm.includes('مصروف') && (norm.includes('امس') || norm.includes('بارح'))) ||
+      (norm.includes('مصاريف') && (norm.includes('امس') || norm.includes('بارح')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مصروفات يوم أمس...</i>', 'HTML', override);
       const msg = await formatExpensesTelegramMessage('yesterday');
@@ -1043,13 +1090,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 7c. /expenses_week (Past 7 Days Expenses) ──────────────────────────
+    // ─── 7b. Expenses Week ──────────────────────────────────────────────────
     if (
-      cleanCmd === '/expenses_week' ||
-      cleanCmd === '/exp_week' ||
-      cleanCmd === 'مصاريف الاسبوع' ||
-      cleanCmd === 'مصروفات الاسبوع' ||
-      cleanCmd === 'مصاريف اخر 7 ايام'
+      slashCmd === '/expenses_week' ||
+      slashCmd === '/exp_week' ||
+      (norm.includes('مصروف') && (norm.includes('اسبوع') || norm.includes('7'))) ||
+      (norm.includes('مصاريف') && (norm.includes('اسبوع') || norm.includes('7')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مصروفات آخر 7 أيام...</i>', 'HTML', override);
       const msg = await formatExpensesTelegramMessage('week');
@@ -1057,12 +1103,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 7d. /expenses_month (Month's Expenses) ─────────────────────────────
+    // ─── 7c. Expenses Month ─────────────────────────────────────────────────
     if (
-      cleanCmd === '/expenses_month' ||
-      cleanCmd === '/exp_month' ||
-      cleanCmd === 'مصاريف الشهر' ||
-      cleanCmd === 'مصروفات الشهر'
+      slashCmd === '/expenses_month' ||
+      slashCmd === '/exp_month' ||
+      (norm.includes('مصروف') && norm.includes('شهر')) ||
+      (norm.includes('مصاريف') && norm.includes('شهر'))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مصروفات هذا الشهر...</i>', 'HTML', override);
       const msg = await formatExpensesTelegramMessage('month');
@@ -1070,12 +1116,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 7e. /expenses_all (All Expenses) ───────────────────────────────────
+    // ─── 7d. Expenses All ───────────────────────────────────────────────────
     if (
-      cleanCmd === '/expenses_all' ||
-      cleanCmd === '/exp_all' ||
-      cleanCmd === 'جميع المصاريف' ||
-      cleanCmd === 'كل المصروفات'
+      slashCmd === '/expenses_all' ||
+      slashCmd === '/exp_all' ||
+      (norm.includes('مصروف') && (norm.includes('كل') || norm.includes('جميع'))) ||
+      (norm.includes('مصاريف') && (norm.includes('كل') || norm.includes('جميع')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب أحدث المصروفات...</i>', 'HTML', override);
       const msg = await formatExpensesTelegramMessage('all');
@@ -1083,8 +1129,36 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
+    // ─── 7e. /expenses (Today's Expenses / Default) ─────────────────────────
+    if (
+      slashCmd === '/expenses' ||
+      slashCmd === '/exp' ||
+      norm === 'المصروفات' ||
+      norm === 'المصاريف' ||
+      norm === 'مصاريف' ||
+      norm === 'مصروفات' ||
+      norm === 'مصاريف اليوم' ||
+      norm === 'مصروفات اليوم' ||
+      norm === 'صرفيات'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات اليوم...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
     // ─── 8. /cash or /drawer ────────────────────────────────────────────────
-    if (cleanCmd === '/cash' || cleanCmd === '/drawer' || cleanCmd === 'الكاش' || cleanCmd === 'الصندوق' || cleanCmd === 'الدرج') {
+    if (
+      slashCmd === '/cash' ||
+      slashCmd === '/drawer' ||
+      norm.includes('الكاش') ||
+      norm.includes('كاش') ||
+      norm.includes('الصندوق') ||
+      norm.includes('صندوق') ||
+      norm.includes('الدرج') ||
+      norm.includes('درج') ||
+      norm.includes('قاصه')
+    ) {
       const paymentSummary = await get<{
         cashSales: number;
         cardSales: number;
@@ -1138,30 +1212,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 9. /employees (Today's Staff Sales) ───────────────────────────────
+    // ─── 9a. Employees Yesterday ────────────────────────────────────────────
     if (
-      cleanCmd === '/employees' ||
-      cleanCmd === '/staff' ||
-      cleanCmd === 'الموظفين' ||
-      cleanCmd === 'الكادر' ||
-      cleanCmd === 'مبيعات الكادر' ||
-      cleanCmd === 'مبيعات الموظفين' ||
-      cleanCmd === 'موظفين اليوم'
-    ) {
-      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر اليوم...</i>', 'HTML', override);
-      const msg = await formatEmployeeSalesTelegramMessage('today');
-      await sendTelegramMessage(msg, 'HTML', override);
-      return;
-    }
-
-    // ─── 9b. /employees_yesterday (Yesterday's Staff Sales) ─────────────────
-    if (
-      cleanCmd === '/employees_yesterday' ||
-      cleanCmd === '/staff_yesterday' ||
-      cleanCmd === 'موظفين امس' ||
-      cleanCmd === 'مبيعات امس موظفين' ||
-      cleanCmd === 'كادر امس' ||
-      cleanCmd === 'مبيعات الموظفين امس'
+      slashCmd === '/employees_yesterday' ||
+      slashCmd === '/staff_yesterday' ||
+      (norm.includes('كادر') && (norm.includes('امس') || norm.includes('بارح'))) ||
+      (norm.includes('موظف') && (norm.includes('امس') || norm.includes('بارح')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر يوم أمس...</i>', 'HTML', override);
       const msg = await formatEmployeeSalesTelegramMessage('yesterday');
@@ -1169,14 +1225,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 9c. /employees_week (Past 7 Days Staff Sales) ──────────────────────
+    // ─── 9b. Employees Week ─────────────────────────────────────────────────
     if (
-      cleanCmd === '/employees_week' ||
-      cleanCmd === '/staff_week' ||
-      cleanCmd === 'موظفين الاسبوع' ||
-      cleanCmd === 'مبيعات الاسبوع موظفين' ||
-      cleanCmd === 'كادر الاسبوع' ||
-      cleanCmd === 'مبيعات الموظفين الاسبوع'
+      slashCmd === '/employees_week' ||
+      slashCmd === '/staff_week' ||
+      (norm.includes('كادر') && (norm.includes('اسبوع') || norm.includes('7'))) ||
+      (norm.includes('موظف') && (norm.includes('اسبوع') || norm.includes('7')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر آخر 7 أيام...</i>', 'HTML', override);
       const msg = await formatEmployeeSalesTelegramMessage('week');
@@ -1184,14 +1238,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 9d. /employees_month (Month's Staff Sales) ─────────────────────────
+    // ─── 9c. Employees Month ────────────────────────────────────────────────
     if (
-      cleanCmd === '/employees_month' ||
-      cleanCmd === '/staff_month' ||
-      cleanCmd === 'موظفين الشهر' ||
-      cleanCmd === 'مبيعات الشهر موظفين' ||
-      cleanCmd === 'كادر الشهر' ||
-      cleanCmd === 'مبيعات الموظفين الشهر'
+      slashCmd === '/employees_month' ||
+      slashCmd === '/staff_month' ||
+      (norm.includes('كادر') && norm.includes('شهر')) ||
+      (norm.includes('موظف') && norm.includes('شهر'))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر هذا الشهر...</i>', 'HTML', override);
       const msg = await formatEmployeeSalesTelegramMessage('month');
@@ -1199,12 +1251,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 9e. /employees_all (All-time Staff Sales) ──────────────────────────
+    // ─── 9d. Employees All ──────────────────────────────────────────────────
     if (
-      cleanCmd === '/employees_all' ||
-      cleanCmd === '/staff_all' ||
-      cleanCmd === 'جميع الموظفين' ||
-      cleanCmd === 'كل الكادر'
+      slashCmd === '/employees_all' ||
+      slashCmd === '/staff_all' ||
+      (norm.includes('كادر') && (norm.includes('كل') || norm.includes('جميع'))) ||
+      (norm.includes('موظف') && (norm.includes('كل') || norm.includes('جميع')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب إجمالي مبيعات الكادر...</i>', 'HTML', override);
       const msg = await formatEmployeeSalesTelegramMessage('all');
@@ -1212,8 +1264,33 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
+    // ─── 9e. /employees (Today's Staff Sales / Default) ─────────────────────
+    if (
+      slashCmd === '/employees' ||
+      slashCmd === '/staff' ||
+      norm === 'مبيعات الكادر' ||
+      norm === 'الكادر' ||
+      norm === 'كادر' ||
+      norm === 'الموظفين' ||
+      norm === 'الموظف' ||
+      norm === 'موظفين' ||
+      norm === 'موظفين اليوم' ||
+      norm === 'كادر اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر اليوم...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
     // ─── 10. /backup ────────────────────────────────────────────────────────
-    if (cleanCmd === '/backup' || cleanCmd === 'باك اب' || cleanCmd === 'نسخة احتياطية') {
+    if (
+      slashCmd === '/backup' ||
+      norm.includes('نسخه احتياطيه') ||
+      norm.includes('احتياطيه') ||
+      norm.includes('باك اب') ||
+      norm.includes('باكاب')
+    ) {
       await sendTelegramMessage('⏳ <i>جاري إنشاء نسخة احتياطية لقاعدة البيانات ورفعها...</i>', 'HTML', override);
       const backupInfo = await createBackup();
       const now = new Date().toLocaleString('ar-IQ');
@@ -1223,7 +1300,15 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
     }
 
     // ─── 11. /status ────────────────────────────────────────────────────────
-    if (cleanCmd === '/status' || cleanCmd === 'الحالة' || cleanCmd === 'فحص') {
+    if (
+      slashCmd === '/status' ||
+      norm.includes('فحص الحاله') ||
+      norm.includes('الحاله') ||
+      norm.includes('حاله') ||
+      norm.includes('فحص') ||
+      norm.includes('اتصال') ||
+      norm.includes('شغال')
+    ) {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const reports = await getReportsHelper({ startDate: todayStr, endDate: todayStr });
@@ -1244,34 +1329,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 12. /activity (Today's Activity) ──────────────────────────────────
+    // ─── 12a. Activity Yesterday ────────────────────────────────────────────
     if (
-      cleanCmd === '/activity' ||
-      cleanCmd === '/logs' ||
-      cleanCmd === '/audit' ||
-      cleanCmd === 'النشاط' ||
-      cleanCmd === 'نشاط اليوم' ||
-      cleanCmd === 'سجلات اليوم' ||
-      cleanCmd === 'سجل النشاط' ||
-      cleanCmd === 'النشاطات' ||
-      cleanCmd === 'سجلات النشاط' ||
-      cleanCmd === 'حركات اليوم'
-    ) {
-      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط اليوم...</i>', 'HTML', override);
-      const msg = await formatActivityLogsTelegramMessage('today');
-      await sendTelegramMessage(msg, 'HTML', override);
-      return;
-    }
-
-    // ─── 13. /activity_yesterday (Yesterday's Activity) ─────────────────────
-    if (
-      cleanCmd === '/activity_yesterday' ||
-      cleanCmd === '/logs_yesterday' ||
-      cleanCmd === 'نشاط امس' ||
-      cleanCmd === 'سجلات امس' ||
-      cleanCmd === 'نشاط البارحة' ||
-      cleanCmd === 'سجلات الامس' ||
-      cleanCmd === 'حركات امس'
+      slashCmd === '/activity_yesterday' ||
+      slashCmd === '/logs_yesterday' ||
+      (norm.includes('نشاط') && (norm.includes('امس') || norm.includes('بارح'))) ||
+      (norm.includes('سجل') && (norm.includes('امس') || norm.includes('بارح')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط يوم أمس...</i>', 'HTML', override);
       const msg = await formatActivityLogsTelegramMessage('yesterday');
@@ -1279,14 +1342,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 14. /activity_week (Past 7 Days Activity) ──────────────────────────
+    // ─── 12b. Activity Week ─────────────────────────────────────────────────
     if (
-      cleanCmd === '/activity_week' ||
-      cleanCmd === '/logs_week' ||
-      cleanCmd === 'نشاط الاسبوع' ||
-      cleanCmd === 'سجلات الاسبوع' ||
-      cleanCmd === 'حركات الاسبوع' ||
-      cleanCmd === 'نشاط اخر 7 ايام'
+      slashCmd === '/activity_week' ||
+      slashCmd === '/logs_week' ||
+      (norm.includes('نشاط') && (norm.includes('اسبوع') || norm.includes('7'))) ||
+      (norm.includes('سجل') && (norm.includes('اسبوع') || norm.includes('7')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط آخر 7 أيام...</i>', 'HTML', override);
       const msg = await formatActivityLogsTelegramMessage('week');
@@ -1294,13 +1355,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 15. /activity_month (Month's Activity) ─────────────────────────────
+    // ─── 12c. Activity Month ────────────────────────────────────────────────
     if (
-      cleanCmd === '/activity_month' ||
-      cleanCmd === '/logs_month' ||
-      cleanCmd === 'نشاط الشهر' ||
-      cleanCmd === 'سجلات الشهر' ||
-      cleanCmd === 'حركات الشهر'
+      slashCmd === '/activity_month' ||
+      slashCmd === '/logs_month' ||
+      (norm.includes('نشاط') && norm.includes('شهر')) ||
+      (norm.includes('سجل') && norm.includes('شهر'))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط هذا الشهر...</i>', 'HTML', override);
       const msg = await formatActivityLogsTelegramMessage('month');
@@ -1308,14 +1368,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 16. /activity_all (Recent Activities) ──────────────────────────────
+    // ─── 12d. Activity All ──────────────────────────────────────────────────
     if (
-      cleanCmd === '/activity_all' ||
-      cleanCmd === '/logs_all' ||
-      cleanCmd === 'جميع السجلات' ||
-      cleanCmd === 'كل النشاطات' ||
-      cleanCmd === 'كل السجلات' ||
-      cleanCmd === 'اخر العمليات'
+      slashCmd === '/activity_all' ||
+      slashCmd === '/logs_all' ||
+      (norm.includes('نشاط') && (norm.includes('كل') || norm.includes('جميع'))) ||
+      (norm.includes('سجل') && (norm.includes('كل') || norm.includes('جميع')))
     ) {
       await sendTelegramMessage('⏳ <i>جاري جلب أحدث سجلات النشاط...</i>', 'HTML', override);
       const msg = await formatActivityLogsTelegramMessage('all');
@@ -1323,16 +1381,39 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 17. /start or /help or /menu ──────────────────────────────────────
+    // ─── 12e. /activity (Today's Activity / Default) ────────────────────────
     if (
-      cleanCmd === '/start' ||
-      cleanCmd === '/help' ||
-      cleanCmd === '/menu' ||
-      cleanCmd.includes('قائمة الأوامر') ||
-      cleanCmd.includes('قائمة الاوامر') ||
-      cleanCmd.includes('مساعدة') ||
-      cleanCmd.includes('الاوامر') ||
-      cleanCmd.includes('أوامر')
+      slashCmd === '/activity' ||
+      slashCmd === '/logs' ||
+      slashCmd === '/audit' ||
+      norm.includes('سجلات النشاط') ||
+      norm.includes('سجل النشاط') ||
+      norm.includes('نشاط اليوم') ||
+      norm.includes('سجلات اليوم') ||
+      norm === 'النشاط' ||
+      norm === 'نشاط' ||
+      norm === 'سجلات' ||
+      norm === 'حركات اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط اليوم...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 13. /start or /help or /menu ──────────────────────────────────────
+    if (
+      slashCmd === '/start' ||
+      slashCmd === '/help' ||
+      slashCmd === '/menu' ||
+      norm.includes('قائمه الاوامر') ||
+      norm.includes('الاوامر') ||
+      norm.includes('اوامر') ||
+      norm.includes('مساعده') ||
+      norm.includes('مساعدة') ||
+      norm.includes('قائمه') ||
+      norm.includes('منيو') ||
+      norm.includes('ازرار')
     ) {
       let helpMsg = `🤖 <b>أزرار وقائمة بوت كاشير EVA POS الذكي:</b>\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1377,7 +1458,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
     }
 
     // Default response for unhandled text
-    await sendTelegramMessage(`❓ أمر غير معروف. أرسل <b>/help</b> لعرض قائمة الأوامر أو اضغط على الأزرار أسفل الشاشة.`, 'HTML', override, MAIN_REPLY_KEYBOARD);
+    await sendTelegramMessage(`❓ أمر غير معروف: "${escapeHtml(commandText)}".\nاضغط على الأزرار أسفل الشاشة أو أرسل <b>/help</b>.`, 'HTML', override, MAIN_REPLY_KEYBOARD);
   } catch (cmdErr) {
     log.error('[telegram-bot] Command execution error:', cmdErr);
     await sendTelegramMessage(`❌ حدث خطأ أثناء معالجة الأمر: ${cmdErr instanceof Error ? cmdErr.message : String(cmdErr)}`, 'HTML', override);
