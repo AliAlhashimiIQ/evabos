@@ -43,6 +43,24 @@ import {
 // Set explicit application name to lock userData directory across updates
 app.setName('EVA POS');
 
+// Enforce single application instance (prevent opening multiple windows/tabs)
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  log.warn('[main] Another instance of EVA POS is already running. Terminating duplicate instance.');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    log.info('[main] Second instance detected. Restoring and focusing existing window.');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5174';
 
