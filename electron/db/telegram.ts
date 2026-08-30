@@ -574,105 +574,7 @@ export async function sendTelegramTest(): Promise<{ success: boolean; error?: st
   return sendTelegramMessage(testMessage, 'HTML');
 }
 
-// ─── Remote Manager Discount Approval System ──────────────────────────────────
 
-export interface DiscountApprovalRequest {
-  id: string;
-  subtotalIQD: number;
-  discountIQD: number;
-  discountPercent: number;
-  cashierName: string;
-  itemsSummary: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: number;
-  expiresAt: number;
-  chatId?: string;
-  messageId?: number;
-}
-
-const activeDiscountApprovals = new Map<string, DiscountApprovalRequest>();
-
-/**
- * Request remote authorization from the store manager via Telegram
- */
-export async function requestDiscountApproval(input: {
-  subtotalIQD: number;
-  discountIQD: number;
-  cashierName: string;
-  itemsSummary?: string;
-}): Promise<{ success: boolean; requestId?: string; error?: string }> {
-  try {
-    const settings = await getTelegramSettings();
-    if (!settings.enabled || !settings.botToken || !settings.chatId) {
-      return { success: false, error: 'بوت تيليجرام غير مفعّل أو غير مضبوط في النظام.' };
-    }
-
-    const id = `disc_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const discountPercent = input.subtotalIQD > 0 ? (input.discountIQD / input.subtotalIQD) * 100 : 0;
-    const finalAmount = Math.max(0, input.subtotalIQD - input.discountIQD);
-
-    const nowStr = new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    let text = `🔔 <b>طلب موافقة على خصم استثنائي!</b>\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `👤 <b>الكاشير:</b> <b>${escapeHtml(input.cashierName || 'كاشير')}</b>\n`;
-    text += `💰 <b>مجموع الفاتورة:</b> <code>${input.subtotalIQD.toLocaleString('en-IQ')} د.ع</code>\n`;
-    text += `🏷️ <b>الخصم المطلوب:</b> <b>${input.discountIQD.toLocaleString('en-IQ')} د.ع</b> (<b>${discountPercent.toFixed(1)}%</b>)\n`;
-    text += `💵 <b>المبلغ بعد الخصم:</b> <b>${finalAmount.toLocaleString('en-IQ')} د.ع</b>\n`;
-    if (input.itemsSummary) {
-      text += `📦 <b>الأصناف:</b> ${escapeHtml(input.itemsSummary)}\n`;
-    }
-    text += `🕒 <b>الوقت:</b> ${nowStr}\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `❓ <i>هل توافق على منح هذا الخصم للكاشير؟</i>`;
-
-    const inlineKeyboard = {
-      inline_keyboard: [
-        [
-          { text: '✅ موافقة على الخصم (Approve)', callback_data: `disc_app:${id}` },
-          { text: '❌ رفض الخصم (Reject)', callback_data: `disc_rej:${id}` },
-        ],
-      ],
-    };
-
-    const sendRes = await sendTelegramMessage(text, 'HTML', undefined, inlineKeyboard);
-    if (!sendRes.success) {
-      return { success: false, error: sendRes.error || 'فشل إرسال طلب الموافقة إلى تيليجرام.' };
-    }
-
-    const reqObj: DiscountApprovalRequest = {
-      id,
-      subtotalIQD: input.subtotalIQD,
-      discountIQD: input.discountIQD,
-      discountPercent,
-      cashierName: input.cashierName,
-      itemsSummary: input.itemsSummary || '',
-      status: 'pending',
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 3 * 60 * 1000, // 3 minutes timeout
-      chatId: settings.chatId,
-      messageId: sendRes.messageId,
-    };
-
-    activeDiscountApprovals.set(id, reqObj);
-    return { success: true, requestId: id };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-/**
- * Check the status of a pending discount approval request
- */
-export function checkDiscountApprovalStatus(requestId: string): { status: 'pending' | 'approved' | 'rejected' | 'expired' } {
-  const req = activeDiscountApprovals.get(requestId);
-  if (!req) return { status: 'expired' };
-  if (Date.now() > req.expiresAt && req.status === 'pending') {
-    req.status = 'rejected';
-    return { status: 'expired' };
-  }
-  return { status: req.status };
-}
 
 // ─── Interactive Telegram Bot Commands (Long-Polling) ─────────────────────────
 
@@ -749,38 +651,6 @@ export async function startTelegramBotPolling(): Promise<void> {
 
               if (currentSettings.chatId && chatIdStr !== currentSettings.chatId) {
                 await answerTelegramCallbackQuery(cb.id, '⛔ غير مصرح لك باستخدام هذا البوت', true, currentSettings.botToken);
-                continue;
-              }
-
-              if (cbData.startsWith('disc_app:')) {
-                const reqId = cbData.replace('disc_app:', '');
-                const req = activeDiscountApprovals.get(reqId);
-                if (req) {
-                  req.status = 'approved';
-                  await answerTelegramCallbackQuery(cb.id, '✅ تمت الموافقة على الخصم بنجاح', false, currentSettings.botToken);
-                  if (cb.message?.message_id) {
-                    const approvedMsg = `🔔 <b>طلب موافقة على خصم استثنائي</b>\n━━━━━━━━━━━━━━━━━━━━\n👤 <b>الكاشير:</b> ${escapeHtml(req.cashierName)}\n💰 <b>المجموع:</b> ${req.subtotalIQD.toLocaleString('en-IQ')} د.ع\n🏷️ <b>الخصم المعتمد:</b> <b>${req.discountIQD.toLocaleString('en-IQ')} د.ع (${req.discountPercent.toFixed(1)}%)</b>\n💵 <b>المبلغ النهائي:</b> <b>${Math.max(0, req.subtotalIQD - req.discountIQD).toLocaleString('en-IQ')} د.ع</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ <b>تمت الموافقة من قبل المدير بنجاح.</b>`;
-                    await editTelegramMessageText(chatIdStr, cb.message.message_id, approvedMsg, 'HTML', undefined, currentSettings.botToken);
-                  }
-                } else {
-                  await answerTelegramCallbackQuery(cb.id, '⚠️ انتهت صلاحية هذا الطلب أو تم الرد عليه مسبقاً', true, currentSettings.botToken);
-                }
-                continue;
-              }
-
-              if (cbData.startsWith('disc_rej:')) {
-                const reqId = cbData.replace('disc_rej:', '');
-                const req = activeDiscountApprovals.get(reqId);
-                if (req) {
-                  req.status = 'rejected';
-                  await answerTelegramCallbackQuery(cb.id, '❌ تم رفض طلب الخصم', false, currentSettings.botToken);
-                  if (cb.message?.message_id) {
-                    const rejectedMsg = `🔔 <b>طلب موافقة على خصم استثنائي</b>\n━━━━━━━━━━━━━━━━━━━━\n👤 <b>الكاشير:</b> ${escapeHtml(req.cashierName)}\n💰 <b>المجموع:</b> ${req.subtotalIQD.toLocaleString('en-IQ')} د.ع\n🏷️ <b>الخصم المطلوب:</b> ${req.discountIQD.toLocaleString('en-IQ')} د.ع (${req.discountPercent.toFixed(1)}%)\n━━━━━━━━━━━━━━━━━━━━\n❌ <b>تم رفض الخصم من قبل المدير.</b>`;
-                    await editTelegramMessageText(chatIdStr, cb.message.message_id, rejectedMsg, 'HTML', undefined, currentSettings.botToken);
-                  }
-                } else {
-                  await answerTelegramCallbackQuery(cb.id, '⚠️ انتهت صلاحية هذا الطلب أو تم الرد عليه مسبقاً', true, currentSettings.botToken);
-                }
                 continue;
               }
 

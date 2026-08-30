@@ -167,12 +167,6 @@ contextBridge.exposeInMainWorld('evaApi', {
     verifyUnlockOtp: (token: string, code: string) => ipcRenderer.invoke('telegram:verifyUnlockOtp', token, code),
     isUnlocked: (token: string) => ipcRenderer.invoke('telegram:isUnlocked', token),
     lock: (token: string) => ipcRenderer.invoke('telegram:lock', token),
-    requestDiscountApproval: (
-      token: string,
-      payload: { subtotalIQD: number; discountIQD: number; cashierName: string; itemsSummary?: string },
-    ) => ipcRenderer.invoke('telegram:requestDiscountApproval', token, payload),
-    checkDiscountApproval: (token: string, requestId: string) =>
-      ipcRenderer.invoke('telegram:checkDiscountApproval', token, requestId),
   },
   printing: {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),
