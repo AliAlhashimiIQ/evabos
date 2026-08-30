@@ -163,10 +163,14 @@ contextBridge.exposeInMainWorld('evaApi', {
     ) => ipcRenderer.invoke('telegram:saveSettings', token, settings),
     sendTest: (token: string) => ipcRenderer.invoke('telegram:sendTest', token),
     sendDailyReportNow: (token: string) => ipcRenderer.invoke('telegram:sendDailyReportNow', token),
+    requestUnlockOtp: (token: string) => ipcRenderer.invoke('telegram:requestUnlockOtp', token),
+    verifyUnlockOtp: (token: string, code: string) => ipcRenderer.invoke('telegram:verifyUnlockOtp', token, code),
+    isUnlocked: (token: string) => ipcRenderer.invoke('telegram:isUnlocked', token),
+    lock: (token: string) => ipcRenderer.invoke('telegram:lock', token),
   },
   printing: {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),
-    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) =>
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any; copies?: number }) =>
       ipcRenderer.invoke('printing:print', payload),
   },
   users: {

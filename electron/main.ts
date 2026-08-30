@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, powerMonitor } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import path from 'path';
@@ -36,7 +36,6 @@ import { createBackup } from './db/backup';
 import {
   getTelegramSettings,
   sendTelegramDailyReportAndBackup,
-  checkTelegramRecoveryOnStartup,
   startTelegramBotPolling,
   stopTelegramBotPolling,
 } from './db/telegram';
@@ -486,21 +485,8 @@ app.whenReady().then(async () => {
   registerEmployeesIpc();
   scheduleDailyBackup();
   scheduleDailyEmailReport();
-  scheduleTelegramPeriodicSync();
-  powerMonitor.on('shutdown', () => {
-    log.info('[main] Windows powerMonitor shutdown detected');
-    performExitTelegramRoutine();
-  });
-
-  powerMonitor.on('suspend', () => {
-    log.info('[main] Windows powerMonitor suspend detected');
-    performExitTelegramRoutine();
-  });
 
   await createWindow();
-  checkTelegramRecoveryOnStartup().catch((err) => {
-    log.error('[main] checkTelegramRecoveryOnStartup error:', err);
-  });
   startTelegramBotPolling().catch((err) => {
     log.error('[main] startTelegramBotPolling error:', err);
   });
@@ -517,27 +503,6 @@ app.whenReady().then(async () => {
   });
 });
 
-let telegramPeriodicSyncInterval: NodeJS.Timeout | null = null;
-
-function scheduleTelegramPeriodicSync(): void {
-  // Sync periodically every 30 minutes in the evening (>= 18:00) so report & backup are already delivered
-  telegramPeriodicSyncInterval = setInterval(async () => {
-    try {
-      const settings = await getTelegramSettings();
-      if (!settings.enabled || !settings.notifyOnClose || !settings.botToken || !settings.chatId) {
-        return;
-      }
-      const hour = new Date().getHours();
-      if (hour >= 18) {
-        log.info('[telegram] Periodic evening sync running...');
-        await sendTelegramDailyReportAndBackup();
-      }
-    } catch (err) {
-      log.error('[telegram] Error in periodic sync:', err);
-    }
-  }, 30 * 60 * 1000);
-}
-
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -549,7 +514,7 @@ app.on('before-quit', (event) => {
     return;
   }
 
-  // Prevent quit SYNCHRONOUSLY to hold Windows shutdown until reporting & backup finishes
+  // Prevent quit SYNCHRONOUSLY to hold process until close report & backup finishes
   event.preventDefault();
 
   stopTelegramBotPolling();
@@ -561,10 +526,6 @@ app.on('before-quit', (event) => {
   if (dailyBackupInterval) {
     clearInterval(dailyBackupInterval);
     dailyBackupInterval = null;
-  }
-  if (telegramPeriodicSyncInterval) {
-    clearInterval(telegramPeriodicSyncInterval);
-    telegramPeriodicSyncInterval = null;
   }
 
   (async () => {

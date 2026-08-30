@@ -330,36 +330,21 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
 
     try {
       setIsPrinting(true);
-      // Generate HTML for each label
       const labelHtml = generateLabelHtml();
+      const numCopies = Math.max(1, quantity);
 
-      // Print multiple labels
-      for (let i = 0; i < quantity; i++) {
-        try {
-          await window.evaApi.printing.print({
-            html: labelHtml,
-            printerName,
-            silent: true,
-            isLabel: true,
-            pageSize: { width: 50000, height: 25000 },
-          });
+      await window.evaApi.printing.print({
+        html: labelHtml,
+        printerName,
+        silent: true,
+        isLabel: true,
+        copies: numCopies,
+        pageSize: { width: 50000, height: 25000 },
+      });
 
-          // Small delay between prints
-          if (i < quantity - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 300));
-          }
-        } catch (error) {
-          console.error(`Failed to print label ${i + 1}:`, error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          alert(t('failedToPrintLabel', { index: (i + 1).toString(), error: errorMessage }));
-          return; // Stop printing on error
-        }
-      }
-
-      // Only close if all prints succeeded
       onClose();
     } catch (error) {
-      console.error('Failed to generate label HTML:', error);
+      console.error('Failed to print label(s):', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(t('failedToGenerateLabel', { error: errorMessage }));
     } finally {

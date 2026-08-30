@@ -35,9 +35,13 @@ import {
   Copy,
   Sparkles,
   LucideIcon,
+  Lock,
+  Unlock,
+  Key,
 } from 'lucide-react';
 import LabelSettingsSection from '../components/LabelSettingsSection';
 import NumberInput from '../components/NumberInput';
+import PortalModal from '../components/PortalModal';
 import { confirmDialog } from '../utils/confirmDialog';
 import './Pages.css';
 import './SettingsPage.css';
@@ -114,6 +118,13 @@ const SettingsPage = (): JSX.Element => {
   const [telegramReporting, setTelegramReporting] = useState(false);
   const [telegramMessage, setTelegramMessage] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // 2FA Security Lock State
+  const [isSecurityLocked, setIsSecurityLocked] = useState(true);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   // Receipt Settings
   const [receiptStoreName, setReceiptStoreName] = useState('EVA CLOTHING');
@@ -196,10 +207,62 @@ const SettingsPage = (): JSX.Element => {
         setTelegramEnabled(settings.enabled ?? false);
         setTelegramNotifyOnSale(settings.notifyOnSale ?? true);
         setTelegramNotifyOnClose(settings.notifyOnClose ?? true);
+
+        // Check if security is unlocked
+        const isUnlocked = await window.evaApi.telegram.isUnlocked(token);
+        setIsSecurityLocked(!isUnlocked);
       }
     } catch (err) {
       console.error('Failed to load telegram settings:', err);
     }
+  };
+
+  const handleRequestOtp = async () => {
+    if (!window.evaApi || !token) return;
+    try {
+      setOtpLoading(true);
+      setOtpError(null);
+      const res = await window.evaApi.telegram.requestUnlockOtp(token);
+      if (res.success) {
+        setShowOtpModal(true);
+      } else {
+        setTelegramMessage(res.error || t('unlockFailed'));
+      }
+    } catch (err: any) {
+      setTelegramMessage(err.message || 'Failed to request code');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!window.evaApi || !token || !otpCode) return;
+    try {
+      setOtpLoading(true);
+      setOtpError(null);
+      const res = await window.evaApi.telegram.verifyUnlockOtp(token, otpCode);
+      if (res.success) {
+        setIsSecurityLocked(false);
+        setShowOtpModal(false);
+        setOtpCode('');
+        setTelegramMessage(t('unlockSuccess'));
+        setTimeout(() => setTelegramMessage(null), 3000);
+      } else {
+        setOtpError(res.error || t('unlockFailed'));
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Verification failed');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleLockAgain = async () => {
+    if (!window.evaApi || !token) return;
+    await window.evaApi.telegram.lock(token);
+    setIsSecurityLocked(true);
+    setTelegramMessage(t('securityLocked'));
+    setTimeout(() => setTelegramMessage(null), 3000);
   };
 
   const loadReceiptSettings = async () => {
@@ -801,8 +864,108 @@ const SettingsPage = (): JSX.Element => {
         {/* 3. NOTIFICATIONS & CLOUD TAB */}
         {activeTab === 'notifications' && hasRole(['admin', 'manager']) && (
           <>
+            {/* 2FA Security Banner */}
+            {isSecurityLocked ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  padding: '1.1rem 1.35rem',
+                  borderRadius: '0.75rem',
+                  marginBottom: '1.25rem',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ef4444',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Lock size={22} />
+                  </div>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.98rem', color: 'var(--text-primary)', marginBottom: '3px' }}>
+                      {t('securityLocked')}
+                    </strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                      {t('securityLockedDesc')}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  className="SettingsPage-btn primary"
+                  style={{ background: '#ef4444', borderColor: '#ef4444', whiteSpace: 'nowrap' }}
+                  onClick={handleRequestOtp}
+                  disabled={otpLoading}
+                >
+                  {otpLoading ? <Loader2 size={16} className="spin" /> : <Key size={16} />}
+                  {otpLoading ? (t('loading') || '...') : t('requestUnlockCode')}
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  padding: '1.1rem 1.35rem',
+                  borderRadius: '0.75rem',
+                  marginBottom: '1.25rem',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#10b981',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Unlock size={22} />
+                  </div>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.98rem', color: 'var(--text-primary)', marginBottom: '3px' }}>
+                      {t('unlockedSession')}
+                    </strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                      {t('unlockSuccess')}
+                    </span>
+                  </div>
+                </div>
+
+                <button className="SettingsPage-btn secondary" onClick={handleLockAgain} style={{ whiteSpace: 'nowrap' }}>
+                  <Lock size={16} />
+                  {t('lockAgain')}
+                </button>
+              </div>
+            )}
+
             {/* Telegram Bot Card */}
-            <div className="SettingsPage-card">
+            <div className="SettingsPage-card" style={{ opacity: isSecurityLocked ? 0.85 : 1 }}>
               <div className="SettingsPage-cardHeader">
                 <div className="SettingsPage-cardHeaderLeft">
                   <div className="SettingsPage-cardHeaderIcon" style={{ color: '#0088cc', background: 'rgba(0, 136, 204, 0.12)' }}>
@@ -829,7 +992,8 @@ const SettingsPage = (): JSX.Element => {
               <div className="SettingsPage-form">
                 <div
                   className="SettingsPage-switchRow"
-                  onClick={() => setTelegramEnabled(!telegramEnabled)}
+                  onClick={() => !isSecurityLocked && setTelegramEnabled(!telegramEnabled)}
+                  style={{ cursor: isSecurityLocked ? 'not-allowed' : 'pointer' }}
                 >
                   <div className="SettingsPage-switchInfo">
                     <strong>{t('enableTelegramBot')}</strong>
@@ -840,6 +1004,7 @@ const SettingsPage = (): JSX.Element => {
                       type="checkbox"
                       checked={telegramEnabled}
                       onChange={(e) => setTelegramEnabled(e.target.checked)}
+                      disabled={isSecurityLocked}
                     />
                     <span className="SettingsPage-slider" />
                   </label>
@@ -855,6 +1020,7 @@ const SettingsPage = (): JSX.Element => {
                         onChange={(e) => setTelegramToken(e.target.value)}
                         placeholder="8853788294:AAH1-1l0iC1s19ZZLbJeNKOCU_YKEXezVYM"
                         style={{ fontFamily: 'monospace' }}
+                        disabled={isSecurityLocked}
                       />
                       <button
                         type="button"
@@ -876,6 +1042,7 @@ const SettingsPage = (): JSX.Element => {
                         onChange={(e) => setTelegramChatId(e.target.value)}
                         placeholder="e.g. 123456789"
                         style={{ fontFamily: 'monospace' }}
+                        disabled={isSecurityLocked}
                       />
                       {telegramChatId && (
                         <button
@@ -895,7 +1062,8 @@ const SettingsPage = (): JSX.Element => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <div
                     className="SettingsPage-switchRow"
-                    onClick={() => setTelegramNotifyOnSale(!telegramNotifyOnSale)}
+                    onClick={() => !isSecurityLocked && setTelegramNotifyOnSale(!telegramNotifyOnSale)}
+                    style={{ cursor: isSecurityLocked ? 'not-allowed' : 'pointer' }}
                   >
                     <div className="SettingsPage-switchInfo">
                       <strong>{t('telegramNotifyOnSale')}</strong>
@@ -906,6 +1074,7 @@ const SettingsPage = (): JSX.Element => {
                         type="checkbox"
                         checked={telegramNotifyOnSale}
                         onChange={(e) => setTelegramNotifyOnSale(e.target.checked)}
+                        disabled={isSecurityLocked}
                       />
                       <span className="SettingsPage-slider" />
                     </label>
@@ -913,7 +1082,8 @@ const SettingsPage = (): JSX.Element => {
 
                   <div
                     className="SettingsPage-switchRow"
-                    onClick={() => setTelegramNotifyOnClose(!telegramNotifyOnClose)}
+                    onClick={() => !isSecurityLocked && setTelegramNotifyOnClose(!telegramNotifyOnClose)}
+                    style={{ cursor: isSecurityLocked ? 'not-allowed' : 'pointer' }}
                   >
                     <div className="SettingsPage-switchInfo">
                       <strong>{t('telegramNotifyOnClose')}</strong>
@@ -924,6 +1094,7 @@ const SettingsPage = (): JSX.Element => {
                         type="checkbox"
                         checked={telegramNotifyOnClose}
                         onChange={(e) => setTelegramNotifyOnClose(e.target.checked)}
+                        disabled={isSecurityLocked}
                       />
                       <span className="SettingsPage-slider" />
                     </label>
@@ -941,10 +1112,10 @@ const SettingsPage = (): JSX.Element => {
                   <button
                     className="SettingsPage-btn primary"
                     onClick={handleSaveTelegramSettings}
-                    disabled={telegramSaving}
+                    disabled={telegramSaving || isSecurityLocked}
                   >
                     {telegramSaving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
-                    {telegramSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                    {telegramSaving ? (t('saving') || 'Saving...') : t('saveSettings')}
                   </button>
 
                   <button
@@ -953,7 +1124,7 @@ const SettingsPage = (): JSX.Element => {
                     disabled={telegramTesting || !telegramToken || !telegramChatId}
                   >
                     {telegramTesting ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
-                    {telegramTesting ? (t('sending') || 'Sending...') : (t('sendTestMessage') || 'Send Test Message')}
+                    {telegramTesting ? (t('sending') || 'Sending...') : t('sendTestMessage')}
                   </button>
 
                   <button
@@ -962,7 +1133,7 @@ const SettingsPage = (): JSX.Element => {
                     disabled={telegramReporting || !telegramToken || !telegramChatId}
                   >
                     {telegramReporting ? <Loader2 size={16} className="spin" /> : <Download size={16} />}
-                    {telegramReporting ? (t('sending') || 'Sending...') : (t('sendReportNow') || 'Send Daily Report & Backup Now')}
+                    {telegramReporting ? (t('sending') || 'Sending...') : t('sendReportNow')}
                   </button>
                 </div>
 
@@ -979,15 +1150,15 @@ const SettingsPage = (): JSX.Element => {
             </div>
 
             {/* Email Reports Card */}
-            <div className="SettingsPage-card">
+            <div className="SettingsPage-card" style={{ opacity: isSecurityLocked ? 0.85 : 1 }}>
               <div className="SettingsPage-cardHeader">
                 <div className="SettingsPage-cardHeaderLeft">
                   <div className="SettingsPage-cardHeaderIcon">
                     <Mail size={20} />
                   </div>
                   <div className="SettingsPage-cardHeaderTitle">
-                    <h2>{t('emailReports') || 'Email Reports'}</h2>
-                    <p>{t('emailReportsDesc') || 'Configure daily email reports with sales summary and database backups'}</p>
+                    <h2>{t('emailReports')}</h2>
+                    <p>{t('emailReportsDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -995,10 +1166,11 @@ const SettingsPage = (): JSX.Element => {
               <div className="SettingsPage-form">
                 <div
                   className="SettingsPage-switchRow"
-                  onClick={() => setEmailEnabled(!emailEnabled)}
+                  onClick={() => !isSecurityLocked && setEmailEnabled(!emailEnabled)}
+                  style={{ cursor: isSecurityLocked ? 'not-allowed' : 'pointer' }}
                 >
                   <div className="SettingsPage-switchInfo">
-                    <strong>{t('enableEmailReports') || 'Enable Email Reports'}</strong>
+                    <strong>{t('enableEmailReports')}</strong>
                     <span>{t('emailReportsDesc')}</span>
                   </div>
                   <label className="SettingsPage-switch" onClick={(e) => e.stopPropagation()}>
@@ -1006,6 +1178,7 @@ const SettingsPage = (): JSX.Element => {
                       type="checkbox"
                       checked={emailEnabled}
                       onChange={(e) => setEmailEnabled(e.target.checked)}
+                      disabled={isSecurityLocked}
                     />
                     <span className="SettingsPage-slider" />
                   </label>
@@ -1013,61 +1186,67 @@ const SettingsPage = (): JSX.Element => {
 
                 <div className="SettingsPage-formGrid">
                   <div className="SettingsPage-formRow">
-                    <label>{t('smtpHost') || 'SMTP Host'}</label>
+                    <label>{t('smtpHost')}</label>
                     <input
                       type="text"
                       value={emailHost}
                       onChange={(e) => setEmailHost(e.target.value)}
                       placeholder="smtp.gmail.com"
+                      disabled={isSecurityLocked}
                     />
                   </div>
 
                   <div className="SettingsPage-formRow">
-                    <label>{t('smtpPort') || 'SMTP Port'}</label>
+                    <label>{t('smtpPort')}</label>
                     <input
                       type="text"
                       value={emailPort}
                       onChange={(e) => setEmailPort(e.target.value)}
                       placeholder="587"
+                      disabled={isSecurityLocked}
                     />
                   </div>
 
                   <div className="SettingsPage-formRow">
-                    <label>{t('senderEmail') || 'Sender Email'}</label>
+                    <label>{t('senderEmail')}</label>
                     <input
                       type="email"
                       value={emailUser}
                       onChange={(e) => setEmailUser(e.target.value)}
                       placeholder="your-email@gmail.com"
+                      disabled={isSecurityLocked}
                     />
                   </div>
 
                   <div className="SettingsPage-formRow">
-                    <label>{t('emailPassword') || 'App Password'}</label>
+                    <label>{t('emailPassword')}</label>
                     <input
                       type="password"
                       value={emailPassword}
                       onChange={(e) => setEmailPassword(e.target.value)}
                       placeholder="••••••••••••"
+                      disabled={isSecurityLocked}
                     />
                   </div>
 
                   <div className="SettingsPage-formRow">
-                    <label>{t('recipientEmail') || 'Recipient Email'}</label>
+                    <label>{t('recipientEmail')}</label>
                     <input
                       type="email"
                       value={emailRecipient}
                       onChange={(e) => setEmailRecipient(e.target.value)}
                       placeholder="recipient@example.com"
+                      disabled={isSecurityLocked}
                     />
                   </div>
 
                   <div className="SettingsPage-formRow">
-                    <label>{t('dailySendTime') || 'Daily Send Time'}</label>
+                    <label>{t('dailySendTime')}</label>
                     <input
                       type="time"
                       value={emailSendTime}
                       onChange={(e) => setEmailSendTime(e.target.value)}
+                      disabled={isSecurityLocked}
                     />
                   </div>
                 </div>
@@ -1083,10 +1262,10 @@ const SettingsPage = (): JSX.Element => {
                   <button
                     className="SettingsPage-btn primary"
                     onClick={handleSaveEmailSettings}
-                    disabled={emailSaving}
+                    disabled={emailSaving || isSecurityLocked}
                   >
                     {emailSaving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
-                    {emailSaving ? (t('saving') || 'Saving...') : (t('saveSettings') || 'Save Settings')}
+                    {emailSaving ? (t('saving') || 'Saving...') : t('saveSettings')}
                   </button>
 
                   <button
@@ -1095,11 +1274,85 @@ const SettingsPage = (): JSX.Element => {
                     disabled={emailTesting || !emailUser || !emailRecipient}
                   >
                     {emailTesting ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
-                    {emailTesting ? (t('sending') || 'Sending...') : (t('sendTestEmail') || 'Send Test Email')}
+                    {emailTesting ? (t('sending') || 'Sending...') : t('sendTestEmail')}
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* 2FA OTP Verification Modal */}
+            {showOtpModal && (
+              <PortalModal onClose={() => setShowOtpModal(false)}>
+                <div style={{ width: '100%', maxWidth: '420px', padding: '1.75rem', textAlign: 'center' }}>
+                  <div
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 1rem',
+                      color: '#3b82f6',
+                    }}
+                  >
+                    <Key size={28} />
+                  </div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                    {t('enterOtpCode')}
+                  </h2>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
+                    {t('unlockCodeSent')}
+                  </p>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="• • • • • •"
+                    style={{
+                      width: '100%',
+                      height: '52px',
+                      fontSize: '1.75rem',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      letterSpacing: '0.5rem',
+                      borderRadius: '0.75rem',
+                      border: '2px solid var(--border-color)',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      marginBottom: '1rem',
+                      fontFamily: 'monospace',
+                    }}
+                    autoFocus
+                  />
+                  {otpError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem', fontWeight: 600 }}>
+                      {otpError}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <button
+                      className="SettingsPage-btn secondary"
+                      style={{ flex: 1 }}
+                      onClick={() => setShowOtpModal(false)}
+                    >
+                      {t('cancel')}
+                    </button>
+                    <button
+                      className="SettingsPage-btn primary"
+                      style={{ flex: 1 }}
+                      onClick={handleVerifyOtp}
+                      disabled={otpLoading || otpCode.length < 4}
+                    >
+                      {otpLoading ? <Loader2 size={16} className="spin" /> : <Check size={16} />}
+                      {t('verifyAndUnlock')}
+                    </button>
+                  </div>
+                </div>
+              </PortalModal>
+            )}
           </>
         )}
 

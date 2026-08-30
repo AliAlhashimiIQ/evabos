@@ -1965,6 +1965,11 @@ export async function logActivity(
     `,
     [userId, action, entity ?? null, entityId ?? null, metadata ? JSON.stringify(metadata) : null],
   );
+
+  // Send real-time Telegram alert for sensitive audit activities
+  import('./telegram')
+    .then((m) => m.notifyTelegramActivity(userId, action, entity, entityId, metadata))
+    .catch((err) => console.error('[activity-log] Failed to trigger telegram alert:', err));
 }
 
 export async function listActivityLogs(limit = 200): Promise<ActivityLogEntry[]> {

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { setSetting } from '../db/database';
 import { sendDailyReport, getEmailSettings } from '../db/emailReports';
 import { encryptCredential } from '../db/crypto';
+import { isTelegramSettingsUnlocked, getTelegramSettings } from '../db/telegram';
 import { requireRole } from './auth';
 
 let handlersRegistered = false;
@@ -28,6 +29,10 @@ export function registerEmailIpc(): void {
     ipcMain.handle(
         'email:saveSettings',
         requireRole(['admin'])(async (_event, _session, ...args) => {
+            const tg = await getTelegramSettings();
+            if (tg.botToken && tg.chatId && !isTelegramSettingsUnlocked()) {
+                throw new Error('الإعدادات مقفلة. يرجى طلب رمز التحقق عبر تيليجرام لفك القفل أولاً');
+            }
             const settings = args[0] as {
                 smtpHost: string;
                 smtpPort: number;

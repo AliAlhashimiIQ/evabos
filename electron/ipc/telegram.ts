@@ -6,6 +6,10 @@ import {
   sendTelegramDailyReportAndBackup,
   startTelegramBotPolling,
   stopTelegramBotPolling,
+  requestTelegramUnlockOtp,
+  verifyTelegramUnlockOtp,
+  isTelegramSettingsUnlocked,
+  lockTelegramSettings,
 } from '../db/telegram';
 import { requireRole } from './auth';
 
@@ -24,14 +28,59 @@ export function registerTelegramIpc(): void {
       return {
         ...settings,
         botToken: settings.botToken ? '••••••••' : '',
+        isConfigured: !!(settings.botToken && settings.chatId),
       };
     }),
   );
 
-  // Save Telegram settings
+  // Request 2FA OTP sent to owner's Telegram chat
+  ipcMain.handle(
+    'telegram:requestUnlockOtp',
+    requireRole(['admin', 'manager'])(async () => {
+      return requestTelegramUnlockOtp();
+    }),
+  );
+
+  // Verify 2FA OTP entered by user
+  ipcMain.handle(
+    'telegram:verifyUnlockOtp',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const code = String(args[0] || '');
+      return verifyTelegramUnlockOtp(code);
+    }),
+  );
+
+  // Check if settings are currently unlocked
+  ipcMain.handle(
+    'telegram:isUnlocked',
+    requireRole(['admin', 'manager'])(async () => {
+      const settings = await getTelegramSettings();
+      // If never configured, it's open for initial setup
+      if (!settings.botToken || !settings.chatId) {
+        return true;
+      }
+      return isTelegramSettingsUnlocked();
+    }),
+  );
+
+  // Lock settings again immediately
+  ipcMain.handle(
+    'telegram:lock',
+    requireRole(['admin', 'manager'])(async () => {
+      lockTelegramSettings();
+      return true;
+    }),
+  );
+
+  // Save Telegram settings (requires unlock if already configured)
   ipcMain.handle(
     'telegram:saveSettings',
     requireRole(['admin'])(async (_event, _session, ...args) => {
+      const current = await getTelegramSettings();
+      if (current.botToken && current.chatId && !isTelegramSettingsUnlocked()) {
+        throw new Error('الإعدادات مقفلة. يرجى طلب رمز التحقق عبر تيليجرام لفك القفل أولاً');
+      }
+
       const settings = args[0] as {
         botToken: string;
         chatId: string;

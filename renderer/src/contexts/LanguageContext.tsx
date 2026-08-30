@@ -785,6 +785,31 @@ const translations = {
     timestamp: 'Date & Time',
     details: 'Details / Notes',
     exportCSV: 'Export CSV',
+    noLogsFound: 'No activity logs found matching the filter.',
+
+    // Email Reports Keys
+    emailReports: 'Email Reports',
+    emailReportsDesc: 'Configure daily email reports with sales summary and database backups',
+    enableEmailReports: 'Enable Email Reports',
+    smtpHost: 'SMTP Host',
+    smtpPort: 'SMTP Port',
+    senderEmail: 'Sender Email',
+    emailPassword: 'App Password',
+    recipientEmail: 'Recipient Email',
+    dailySendTime: 'Daily Send Time',
+    sendTestEmail: 'Send Test Email',
+
+    // 2FA Security Keys
+    securityLocked: 'Security Protected & Locked',
+    securityLockedDesc: 'Settings are locked to prevent unauthorized tampering. Request a verification code sent to your Telegram bot to unlock.',
+    requestUnlockCode: 'Request Unlock Code via Telegram',
+    enterOtpCode: 'Enter 6-digit Telegram Code',
+    verifyAndUnlock: 'Verify & Unlock',
+    unlockedSession: 'Unlocked for editing (Active Session)',
+    lockAgain: 'Lock Settings Now',
+    unlockCodeSent: 'Verification code sent to your Telegram bot! Please check your chat.',
+    unlockSuccess: 'Settings unlocked successfully!',
+    unlockFailed: 'Invalid verification code or code expired.',
   },
 
   ar: {
@@ -1568,6 +1593,31 @@ const translations = {
     timestamp: 'التاريخ والوقت',
     details: 'التفاصيل والملاحظات',
     exportCSV: 'تصدير CSV',
+    noLogsFound: 'لا توجد سجلات نشاط مطابقة للتصفية.',
+
+    // Email Reports Keys
+    emailReports: 'تقارير البريد الإلكتروني',
+    emailReportsDesc: 'إرسال تقارير المبيعات اليومية والنسخ الاحتياطية تلقائياً عبر البريد',
+    enableEmailReports: 'تفعيل تقارير البريد الإلكتروني',
+    smtpHost: 'خادم البريد (SMTP Host)',
+    smtpPort: 'منفذ الخادم (SMTP Port)',
+    senderEmail: 'البريد الإلكتروني المرسل',
+    emailPassword: 'كلمة مرور التطبيق (App Password)',
+    recipientEmail: 'البريد الإلكتروني المستلم',
+    dailySendTime: 'وقت الإرسال اليومي',
+    sendTestEmail: 'إرسال بريد تجريبي',
+
+    // 2FA Security Keys
+    securityLocked: 'محمي ومقفل برمز الأمان',
+    securityLockedDesc: 'هذه الإعدادات مقفلة لمنع أي تلاعب. اطلب رمز التحقق عبر بوت تيليجرام لفك القفل.',
+    requestUnlockCode: 'طلب رمز فك القفل عبر تيليجرام',
+    enterOtpCode: 'أدخل الرمز السري المكون من 6 أرقام',
+    verifyAndUnlock: 'تحقق وفك القفل',
+    unlockedSession: 'مفتوح للتعديل حالياً (جلسة نشطة)',
+    lockAgain: 'إعادة القفل الآن',
+    unlockCodeSent: 'تم إرسال رمز التحقق إلى محادثة التيليجرام الخاصة بك!',
+    unlockSuccess: 'تم فك قفل الإعدادات بنجاح!',
+    unlockFailed: 'رمز التحقق غير صحيح أو منتهي الصلاحية.',
   },
 };
 

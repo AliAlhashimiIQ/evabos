@@ -13,7 +13,7 @@ const logError = (...args: any[]) => {
 
 const createPrintWindow = async (
   html: string,
-  options?: { printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }
+  options?: { printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any; copies?: number }
 ) => {
   log('[Print] Starting print job');
 
@@ -61,6 +61,7 @@ const createPrintWindow = async (
       printBackground: true,
       landscape: false,
       margins: { marginType: 'none' },
+      copies: Math.max(1, options?.copies ?? 1),
     };
 
     if (options?.pageSize) {
@@ -141,8 +142,8 @@ export function registerPrintingIpc(): void {
 
   ipcMain.handle(
     'printing:print',
-    async (_event, payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) => {
-      log('[Print] IPC received, printer:', payload.printerName || 'System Default', 'silent:', payload.silent, 'isLabel:', payload.isLabel);
+    async (_event, payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any; copies?: number }) => {
+      log('[Print] IPC received, printer:', payload.printerName || 'System Default', 'silent:', payload.silent, 'isLabel:', payload.isLabel, 'copies:', payload.copies);
 
       try {
         await createPrintWindow(payload.html, {
@@ -150,6 +151,7 @@ export function registerPrintingIpc(): void {
           silent: payload.silent,
           isLabel: payload.isLabel,
           pageSize: payload.pageSize,
+          copies: payload.copies,
         });
         return true;
       } catch (error) {
