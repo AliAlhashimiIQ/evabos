@@ -203,6 +203,16 @@ export async function notifyTelegramSale(sale: SaleDetail): Promise<void> {
       }
     }
 
+    let profitIQD = sale.profitIQD;
+    if (profitIQD === undefined || profitIQD === null) {
+      try {
+        const sRow = await get<{ profitIQD: number }>('SELECT profitIQD FROM sales WHERE id = ?', [sale.id]);
+        if (sRow) profitIQD = sRow.profitIQD;
+      } catch {
+        // ignore
+      }
+    }
+
     const totalQty = (sale.items || []).reduce((acc, item) => acc + (item.quantity || 1), 0);
 
     const paymentMap: Record<string, string> = {
@@ -237,6 +247,10 @@ export async function notifyTelegramSale(sale: SaleDetail): Promise<void> {
     message += `━━━━━━━━━━━━━━━━━━━━\n`;
     message += `🧾 <b>رقم الفاتورة:</b> #<code>${sale.id}</code>\n`;
     message += `💰 <b>الإجمالي:</b> <b>${sale.totalIQD.toLocaleString('en-IQ')} د.ع</b>\n`;
+
+    if (profitIQD !== undefined && profitIQD !== null && profitIQD !== 0) {
+      message += `📈 <b>الربح الصافي:</b> <b>${Math.round(profitIQD).toLocaleString('en-IQ')} د.ع</b>\n`;
+    }
 
     if (sale.discountIQD && sale.discountIQD > 0) {
       message += `🏷️ <b>الخصم:</b> ${sale.discountIQD.toLocaleString('en-IQ')} د.ع\n`;
@@ -722,42 +736,72 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 7. /expenses ───────────────────────────────────────────────────────
-    if (cleanCmd === '/expenses' || cleanCmd === '/exp' || cleanCmd === 'المصروفات' || cleanCmd === 'المصاريف' || cleanCmd === 'مصاريف اليوم') {
-      const todayExpenses = await all<{
-        category: string;
-        amountIQD: number;
-        notes: string | null;
-        createdAt: string;
-      }>(
-        `
-        SELECT category, amountIQD, notes, createdAt
-        FROM expenses
-        WHERE date(createdAt) = date('now', 'localtime')
-        ORDER BY createdAt DESC
-      `,
-      );
+    // ─── 7. /expenses (Today's Expenses) ───────────────────────────────────
+    if (
+      cleanCmd === '/expenses' ||
+      cleanCmd === '/exp' ||
+      cleanCmd === 'المصروفات' ||
+      cleanCmd === 'المصاريف' ||
+      cleanCmd === 'مصاريف اليوم' ||
+      cleanCmd === 'مصروفات اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات اليوم...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      const totalExp = todayExpenses.reduce((acc, row) => acc + row.amountIQD, 0);
+    // ─── 7b. /expenses_yesterday (Yesterday's Expenses) ─────────────────────
+    if (
+      cleanCmd === '/expenses_yesterday' ||
+      cleanCmd === '/exp_yesterday' ||
+      cleanCmd === 'مصاريف امس' ||
+      cleanCmd === 'مصروفات امس' ||
+      cleanCmd === 'مصاريف البارحة' ||
+      cleanCmd === 'مصروفات الامس'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات يوم أمس...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('yesterday');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      let msg = `📉 <b>مصروفات اليوم:</b>\n`;
-      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    // ─── 7c. /expenses_week (Past 7 Days Expenses) ──────────────────────────
+    if (
+      cleanCmd === '/expenses_week' ||
+      cleanCmd === '/exp_week' ||
+      cleanCmd === 'مصاريف الاسبوع' ||
+      cleanCmd === 'مصروفات الاسبوع' ||
+      cleanCmd === 'مصاريف اخر 7 ايام'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات آخر 7 أيام...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('week');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      if (todayExpenses.length === 0) {
-        msg += `✅ لم يتم تسجيل أي مصروفات اليوم.\n`;
-      } else {
-        todayExpenses.forEach((exp, idx) => {
-          msg += `${idx + 1}. <b>${escapeHtml(exp.category || 'عام')}:</b> ${exp.amountIQD.toLocaleString('en-IQ')} د.ع`;
-          if (exp.notes) {
-            msg += ` — <i>(${escapeHtml(exp.notes)})</i>`;
-          }
-          msg += `\n`;
-        });
-      }
+    // ─── 7d. /expenses_month (Month's Expenses) ─────────────────────────────
+    if (
+      cleanCmd === '/expenses_month' ||
+      cleanCmd === '/exp_month' ||
+      cleanCmd === 'مصاريف الشهر' ||
+      cleanCmd === 'مصروفات الشهر'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مصروفات هذا الشهر...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('month');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-      msg += `💰 <b>إجمالي مصروفات اليوم:</b> <b>${totalExp.toLocaleString('en-IQ')} د.ع</b>`;
-
+    // ─── 7e. /expenses_all (All Expenses) ───────────────────────────────────
+    if (
+      cleanCmd === '/expenses_all' ||
+      cleanCmd === '/exp_all' ||
+      cleanCmd === 'جميع المصاريف' ||
+      cleanCmd === 'كل المصروفات'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب أحدث المصروفات...</i>', 'HTML', override);
+      const msg = await formatExpensesTelegramMessage('all');
       await sendTelegramMessage(msg, 'HTML', override);
       return;
     }
@@ -817,41 +861,76 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 9. /employees ──────────────────────────────────────────────────────
-    if (cleanCmd === '/employees' || cleanCmd === '/staff' || cleanCmd === 'الموظفين' || cleanCmd === 'الكادر' || cleanCmd === 'الموظف') {
-      const empSales = await all<{
-        employeeName: string | null;
-        ordersCount: number;
-        totalSold: number;
-      }>(
-        `
-        SELECT 
-          IFNULL(e.name, 'كاشير عام / افتراضي') as employeeName,
-          COUNT(s.id) as ordersCount,
-          IFNULL(SUM(s.totalIQD), 0) as totalSold
-        FROM sales s
-        LEFT JOIN employees e ON e.id = s.employeeId
-        WHERE date(s.saleDate) = date('now', 'localtime')
-        GROUP BY s.employeeId
-        ORDER BY totalSold DESC
-      `,
-      );
+    // ─── 9. /employees (Today's Staff Sales) ───────────────────────────────
+    if (
+      cleanCmd === '/employees' ||
+      cleanCmd === '/staff' ||
+      cleanCmd === 'الموظفين' ||
+      cleanCmd === 'الكادر' ||
+      cleanCmd === 'مبيعات الكادر' ||
+      cleanCmd === 'مبيعات الموظفين' ||
+      cleanCmd === 'موظفين اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر اليوم...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      let msg = `👥 <b>مبيعات الموظفين والكادر (اليوم):</b>\n`;
-      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    // ─── 9b. /employees_yesterday (Yesterday's Staff Sales) ─────────────────
+    if (
+      cleanCmd === '/employees_yesterday' ||
+      cleanCmd === '/staff_yesterday' ||
+      cleanCmd === 'موظفين امس' ||
+      cleanCmd === 'مبيعات امس موظفين' ||
+      cleanCmd === 'كادر امس' ||
+      cleanCmd === 'مبيعات الموظفين امس'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر يوم أمس...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('yesterday');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      if (!empSales || empSales.length === 0) {
-        msg += `لا توجد مبيعات مسجلة للموظفين اليوم.\n`;
-      } else {
-        const medals = ['🥇', '🥈', '🥉', '👤'];
-        empSales.forEach((emp, idx) => {
-          const medal = medals[idx] || '👤';
-          msg += `${medal} <b>${escapeHtml(emp.employeeName || 'كاشير')}:</b>\n`;
-          msg += `   └ <b>${emp.totalSold.toLocaleString('en-IQ')} د.ع</b> (${emp.ordersCount} فاتورة)\n`;
-        });
-      }
+    // ─── 9c. /employees_week (Past 7 Days Staff Sales) ──────────────────────
+    if (
+      cleanCmd === '/employees_week' ||
+      cleanCmd === '/staff_week' ||
+      cleanCmd === 'موظفين الاسبوع' ||
+      cleanCmd === 'مبيعات الاسبوع موظفين' ||
+      cleanCmd === 'كادر الاسبوع' ||
+      cleanCmd === 'مبيعات الموظفين الاسبوع'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر آخر 7 أيام...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('week');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
 
-      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    // ─── 9d. /employees_month (Month's Staff Sales) ─────────────────────────
+    if (
+      cleanCmd === '/employees_month' ||
+      cleanCmd === '/staff_month' ||
+      cleanCmd === 'موظفين الشهر' ||
+      cleanCmd === 'مبيعات الشهر موظفين' ||
+      cleanCmd === 'كادر الشهر' ||
+      cleanCmd === 'مبيعات الموظفين الشهر'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب مبيعات الكادر هذا الشهر...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('month');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 9e. /employees_all (All-time Staff Sales) ──────────────────────────
+    if (
+      cleanCmd === '/employees_all' ||
+      cleanCmd === '/staff_all' ||
+      cleanCmd === 'جميع الموظفين' ||
+      cleanCmd === 'كل الكادر'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب إجمالي مبيعات الكادر...</i>', 'HTML', override);
+      const msg = await formatEmployeeSalesTelegramMessage('all');
       await sendTelegramMessage(msg, 'HTML', override);
       return;
     }
@@ -988,10 +1067,16 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       helpMsg += `  /stock — تنبيه بالنواقص والمنتجات المنتهية\n`;
       helpMsg += `  /top — أعلى 10 منتجات مبيعاً هذا الشهر\n`;
       helpMsg += `\n`;
-      helpMsg += `💰 <b>المالية والموظفين:</b>\n`;
+      helpMsg += `💰 <b>المالية والمصروفات والموظفين:</b>\n`;
       helpMsg += `  /cash — فحص الصندوق وحساب الكاش بالدرج\n`;
       helpMsg += `  /expenses — تقرير بمصروفات اليوم\n`;
+      helpMsg += `  /expenses_yesterday — تقرير مصروفات يوم أمس\n`;
+      helpMsg += `  /expenses_week — تقرير مصروفات آخر 7 أيام\n`;
+      helpMsg += `  /expenses_month — تقرير مصروفات الشهر الحالي\n`;
       helpMsg += `  /employees — مبيعات الكادر والموظفين اليوم\n`;
+      helpMsg += `  /employees_yesterday — مبيعات الكادر يوم أمس\n`;
+      helpMsg += `  /employees_week — مبيعات الكادر آخر 7 أيام\n`;
+      helpMsg += `  /employees_month — مبيعات الكادر الشهر الحالي\n`;
       helpMsg += `\n`;
       helpMsg += `⚙️ <b>النظام والأمان:</b>\n`;
       helpMsg += `  /status — فحص اتصال النظام وحالته\n`;
@@ -1170,6 +1255,195 @@ export async function formatActivityLogsTelegramMessage(
   } catch (err) {
     log.error('[telegram] Failed to format activity logs:', err);
     return `❌ حدث خطأ أثناء جلب سجلات النشاط: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+// ─── Expenses Formatter for Telegram Commands ─────────────────────────────────
+
+/**
+ * Format expenses history into a clean, comprehensive Telegram report
+ */
+export async function formatExpensesTelegramMessage(
+  filter: 'today' | 'yesterday' | 'week' | 'month' | 'all' = 'today',
+): Promise<string> {
+  try {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    let whereClause = `date(COALESCE(e.expenseDate, e.createdAt, 'now')) = ?`;
+    let params: any[] = [todayStr];
+    let titleStr = `مصروفات اليوم (${todayStr})`;
+
+    if (filter === 'yesterday') {
+      const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) = ?`;
+      params = [yestStr];
+      titleStr = `مصروفات يوم أمس (${yestStr})`;
+    } else if (filter === 'week') {
+      const weekAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
+      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) BETWEEN ? AND ?`;
+      params = [weekStr, todayStr];
+      titleStr = `مصروفات آخر 7 أيام (${weekStr} ⬅️ ${todayStr})`;
+    } else if (filter === 'month') {
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) BETWEEN ? AND ?`;
+      params = [monthStart, todayStr];
+      titleStr = `مصروفات شهر (${now.getMonth() + 1}/${now.getFullYear()})`;
+    } else if (filter === 'all') {
+      whereClause = `1=1`;
+      params = [];
+      titleStr = `أحدث المصروفات المسجلة`;
+    }
+
+    const rows = await all<{
+      id: number;
+      category: string;
+      amountIQD: number;
+      note?: string | null;
+      expenseDate: string;
+      enteredByName?: string;
+    }>(
+      `
+      SELECT e.id, e.category, e.amountIQD, e.note, e.expenseDate,
+             COALESCE(u.name, u.username, 'مستخدم #' || e.enteredBy) as enteredByName
+      FROM expenses e
+      LEFT JOIN users u ON u.id = e.enteredBy
+      WHERE ${whereClause}
+      ORDER BY datetime(COALESCE(e.expenseDate, e.createdAt)) DESC
+      LIMIT 30
+      `,
+      params,
+    );
+
+    const totalExp = rows.reduce((acc, row) => acc + (row.amountIQD || 0), 0);
+
+    let msg = `📉 <b>${escapeHtml(titleStr)}</b>\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (!rows || rows.length === 0) {
+      msg += `ℹ️ لم يتم تسجيل أي مصروفات لهذه الفترة.\n`;
+    } else {
+      msg += `📊 عدد القيود: <b>${rows.length} قيد</b>\n\n`;
+      rows.forEach((exp, idx) => {
+        const cat = exp.category || 'عام';
+        const amount = (exp.amountIQD || 0).toLocaleString('en-IQ');
+        const user = exp.enteredByName ? ` <i>[${escapeHtml(exp.enteredByName)}]</i>` : '';
+        const note = exp.note ? ` — (${escapeHtml(exp.note)})` : '';
+        msg += `${idx + 1}. <b>${escapeHtml(cat)}:</b> <code>${amount} د.ع</code>${user}${note}\n`;
+      });
+    }
+
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💰 <b>الإجمالي:</b> <b>${totalExp.toLocaleString('en-IQ')} د.ع</b>\n\n`;
+    msg += `💡 <b>أوامر المصروفات المتاحة:</b>\n`;
+    msg += `• /expenses — مصروفات اليوم\n`;
+    msg += `• /expenses_yesterday — مصروفات الأمس\n`;
+    msg += `• /expenses_week — مصروفات آخر 7 أيام\n`;
+    msg += `• /expenses_month — مصروفات هذا الشهر\n`;
+    msg += `• /expenses_all — أحدث المصروفات\n`;
+
+    return msg;
+  } catch (err) {
+    log.error('[telegram] Failed to format expenses:', err);
+    return `❌ حدث خطأ أثناء جلب المصروفات: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+// ─── Employee Sales Formatter for Telegram Commands ───────────────────────────
+
+/**
+ * Format employee sales history into a clean, comprehensive Telegram report
+ */
+export async function formatEmployeeSalesTelegramMessage(
+  filter: 'today' | 'yesterday' | 'week' | 'month' | 'all' = 'today',
+): Promise<string> {
+  try {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    let whereClause = `date(s.saleDate) = ?`;
+    let params: any[] = [todayStr];
+    let titleStr = `مبيعات الكادر والموظفين — اليوم (${todayStr})`;
+
+    if (filter === 'yesterday') {
+      const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+      whereClause = `date(s.saleDate) = ?`;
+      params = [yestStr];
+      titleStr = `مبيعات الكادر والموظفين — يوم أمس (${yestStr})`;
+    } else if (filter === 'week') {
+      const weekAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
+      whereClause = `date(s.saleDate) BETWEEN ? AND ?`;
+      params = [weekStr, todayStr];
+      titleStr = `مبيعات الكادر والموظفين — آخر 7 أيام (${weekStr} ⬅️ ${todayStr})`;
+    } else if (filter === 'month') {
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      whereClause = `date(s.saleDate) BETWEEN ? AND ?`;
+      params = [monthStart, todayStr];
+      titleStr = `مبيعات الكادر والموظفين — شهر (${now.getMonth() + 1}/${now.getFullYear()})`;
+    } else if (filter === 'all') {
+      whereClause = `1=1`;
+      params = [];
+      titleStr = `إجمالي مبيعات الكادر والموظفين (الكل)`;
+    }
+
+    const empSales = await all<{
+      employeeName: string | null;
+      ordersCount: number;
+      totalSold: number;
+      totalProfit: number;
+    }>(
+      `
+      SELECT 
+        IFNULL(e.name, 'كاشير عام / مباشر') as employeeName,
+        COUNT(s.id) as ordersCount,
+        IFNULL(SUM(s.totalIQD), 0) as totalSold,
+        IFNULL(SUM(s.profitIQD), 0) as totalProfit
+      FROM sales s
+      LEFT JOIN employees e ON e.id = s.employeeId
+      WHERE ${whereClause}
+      GROUP BY s.employeeId
+      ORDER BY totalSold DESC
+      `,
+      params,
+    );
+
+    const grandTotalSold = empSales.reduce((acc, row) => acc + (row.totalSold || 0), 0);
+    const grandTotalOrders = empSales.reduce((acc, row) => acc + (row.ordersCount || 0), 0);
+
+    let msg = `👥 <b>${escapeHtml(titleStr)}</b>\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (!empSales || empSales.length === 0) {
+      msg += `ℹ️ لا توجد مبيعات مسجلة للموظفين في هذه الفترة.\n`;
+    } else {
+      const medals = ['🥇', '🥈', '🥉'];
+      empSales.forEach((emp, idx) => {
+        const icon = medals[idx] || '👤';
+        msg += `${icon} <b>${escapeHtml(emp.employeeName || 'كاشير')}:</b>\n`;
+        msg += `   • المبيعات: <b>${emp.totalSold.toLocaleString('en-IQ')} د.ع</b> (${emp.ordersCount} فاتورة)\n`;
+        if (emp.totalProfit > 0) {
+          msg += `   • الأرباح: <code>${Math.round(emp.totalProfit).toLocaleString('en-IQ')} د.ع</code>\n`;
+        }
+      });
+    }
+
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💰 <b>إجمالي مبيعات الفترة:</b> <b>${grandTotalSold.toLocaleString('en-IQ')} د.ع</b> (${grandTotalOrders} فاتورة)\n\n`;
+    msg += `💡 <b>أوامر مبيعات الكادر المتاحة:</b>\n`;
+    msg += `• /employees — مبيعات الكادر اليوم\n`;
+    msg += `• /employees_yesterday — مبيعات الكادر أمس\n`;
+    msg += `• /employees_week — مبيعات الكادر آخر 7 أيام\n`;
+    msg += `• /employees_month — مبيعات الكادر هذا الشهر\n`;
+    msg += `• /employees_all — إجمالي الكادر\n`;
+
+    return msg;
+  } catch (err) {
+    log.error('[telegram] Failed to format employee sales:', err);
+    return `❌ حدث خطأ أثناء جلب مبيعات الموظفين: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 
