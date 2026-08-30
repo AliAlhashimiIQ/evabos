@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
 import log from 'electron-log';
-import { getAdvancedReports, listSaleItems } from './database';
 import { get, all, run, getSetting, setSetting } from './core';
 import { encryptCredential, decryptCredential } from './crypto';
 import { createBackup } from './backup';
@@ -69,6 +68,7 @@ export async function sendTelegramMessage(
     const chatId = overrideSettings?.chatId || settings.chatId;
 
     if (!token || !chatId) {
+      log.warn('[telegram] Cannot send: botToken or chatId is missing in DB settings');
       return { success: false, error: 'Telegram Bot Token or Chat ID is missing.' };
     }
 
@@ -86,9 +86,30 @@ export async function sendTelegramMessage(
     const data = (await response.json()) as { ok: boolean; description?: string };
     if (!data.ok) {
       log.error('[telegram] API error sending message:', data.description);
+
+      // Fallback: If Telegram failed due to entity HTML parsing error, strip HTML and resend as plain text
+      if (parseMode === 'HTML') {
+        log.warn('[telegram] Retrying message without HTML tags due to parsing error...');
+        const plainText = text.replace(/<[^>]*>/g, '');
+        const retryRes = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: plainText,
+          }),
+        });
+        const retryData = (await retryRes.json()) as { ok: boolean; description?: string };
+        if (retryData.ok) {
+          log.info('[telegram] Fallback plain text message sent successfully.');
+          return { success: true };
+        }
+      }
+
       return { success: false, error: data.description || 'Failed to send Telegram message' };
     }
 
+    log.info('[telegram] Message delivered successfully to chat_id:', chatId);
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -246,16 +267,29 @@ export async function notifyTelegramSale(sale: SaleDetail): Promise<void> {
   }
 }
 
+// ─── Internal Database Helpers for Bot Commands ─────────────────────────────
+
+async function getReportsHelper(range: DateRange): Promise<any> {
+  const db = await import('./database');
+  return db.getAdvancedReports(range);
+}
+
+async function listSaleItemsHelper(dateStr: string): Promise<any> {
+  const db = await import('./database');
+  return db.listSaleItems(dateStr);
+}
+
+// ─── End-of-Day Daily Report & Database Backup ───────────────────────────────
+
 /**
- * Send full End-of-Day report and upload latest database backup file
+ * Send daily sales summary report and SQLite database backup file to Telegram
  */
-export async function sendTelegramDailyReportAndBackup(customDateStr?: string): Promise<{ success: boolean; error?: string }> {
+export async function sendTelegramDailyReportAndBackup(
+  customDateStr?: string,
+  overrideSettings?: { botToken?: string; chatId?: string },
+): Promise<{ success: boolean; error?: string }> {
   try {
     const settings = await getTelegramSettings();
-    if (!settings.enabled) {
-      return { success: false, error: 'Telegram Bot is disabled in settings.' };
-    }
-
     if (!settings.botToken || !settings.chatId) {
       return { success: false, error: 'Telegram Bot Token or Chat ID is not configured.' };
     }
@@ -269,8 +303,8 @@ export async function sendTelegramDailyReportAndBackup(customDateStr?: string): 
     const range: DateRange = { startDate: todayStr, endDate: todayStr };
 
     // Get report data
-    const reports = await getAdvancedReports(range);
-    const itemsSold = await listSaleItems(todayStr);
+    const reports = await getReportsHelper(range);
+    const itemsSold = await listSaleItemsHelper(todayStr);
 
     const reportDateObj = new Date(todayStr + 'T12:00:00');
     const formattedDateStr = reportDateObj.toLocaleDateString('ar-IQ', {
@@ -288,7 +322,7 @@ export async function sendTelegramDailyReportAndBackup(customDateStr?: string): 
       profitMarginPercent: 0,
     };
     const returns = reports.returnsSummary || { count: 0, totalIQD: 0 };
-    const totalOrders = reports.dailySales?.reduce((acc, d) => acc + (d.orders || 0), 0) || 0;
+    const totalOrders = reports.dailySales?.reduce((acc: number, d: any) => acc + (d.orders || 0), 0) || 0;
     const totalItems = reports.totalItemsSold || 0;
     const grossProfitIQD = (profit.revenueIQD || 0) - (profit.costIQD || 0);
 
@@ -380,7 +414,7 @@ export async function checkTelegramRecoveryOnStartup(): Promise<void> {
 
     const lastSentDate = await getSetting('telegram_last_eod_sent_date');
     if (lastSentDate && lastSentDate !== todayLocalStr && lastSentDate !== yesterdayStr) {
-      const yesterdaySales = await getAdvancedReports({ startDate: yesterdayStr, endDate: yesterdayStr });
+      const yesterdaySales = await getReportsHelper({ startDate: yesterdayStr, endDate: yesterdayStr });
       if (yesterdaySales && (yesterdaySales.dailySales?.length || 0) > 0) {
         log.info('[telegram] Recovering missed daily report for yesterday:', yesterdayStr);
         await sendTelegramDailyReportAndBackup(yesterdayStr);
@@ -538,12 +572,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       const firstDayOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const reports = await getAdvancedReports({ startDate: firstDayOfMonth, endDate: todayStr });
+      const reports = await getReportsHelper({ startDate: firstDayOfMonth, endDate: todayStr });
       const revenue = reports?.profitAnalysis?.revenueIQD || 0;
       const profit = reports?.profitAnalysis?.netProfitIQD || 0;
       const margin = reports?.profitAnalysis?.profitMarginPercent || 0;
-      const orders = reports?.dailySales?.reduce((acc, d) => acc + (d.orders || 0), 0) || 0;
-      const itemsSold = reports?.dailySales?.reduce((acc, d) => acc + (d.itemsSold || 0), 0) || 0;
+      const orders = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.orders || 0), 0) || 0;
+      const itemsSold = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.itemsSold || 0), 0) || 0;
 
       // Month Expenses
       const monthExpenses = await get<{ totalExp: number; count: number }>(
@@ -576,11 +610,11 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       const startDate = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
       const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const reports = await getAdvancedReports({ startDate, endDate });
+      const reports = await getReportsHelper({ startDate, endDate });
       const revenue = reports?.profitAnalysis?.revenueIQD || 0;
       const profit = reports?.profitAnalysis?.netProfitIQD || 0;
-      const orders = reports?.dailySales?.reduce((acc, d) => acc + (d.orders || 0), 0) || 0;
-      const itemsSold = reports?.dailySales?.reduce((acc, d) => acc + (d.itemsSold || 0), 0) || 0;
+      const orders = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.orders || 0), 0) || 0;
+      const itemsSold = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.itemsSold || 0), 0) || 0;
 
       let msg = `📅 <b>تقرير آخر 7 أيام (${startDate} ⬅️ ${endDate})</b>\n`;
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -836,10 +870,10 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
     if (cleanCmd === '/status' || cleanCmd === 'الحالة' || cleanCmd === 'فحص') {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const reports = await getAdvancedReports({ startDate: todayStr, endDate: todayStr });
+      const reports = await getReportsHelper({ startDate: todayStr, endDate: todayStr });
       const totalRevenue = reports?.profitAnalysis?.revenueIQD || 0;
       const netProfit = reports?.profitAnalysis?.netProfitIQD || 0;
-      const totalOrders = reports?.dailySales?.reduce((acc, d) => acc + (d.orders || 0), 0) || 0;
+      const totalOrders = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.orders || 0), 0) || 0;
 
       let statusMsg = `🟢 <b>نظام EVA POS متصل ويعمل الآن</b>\n`;
       statusMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
