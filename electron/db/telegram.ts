@@ -888,15 +888,101 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 12. /start or /help ────────────────────────────────────────────────
+    // ─── 12. /activity (Today's Activity) ──────────────────────────────────
+    if (
+      cleanCmd === '/activity' ||
+      cleanCmd === '/logs' ||
+      cleanCmd === '/audit' ||
+      cleanCmd === 'النشاط' ||
+      cleanCmd === 'نشاط اليوم' ||
+      cleanCmd === 'سجلات اليوم' ||
+      cleanCmd === 'سجل النشاط' ||
+      cleanCmd === 'النشاطات' ||
+      cleanCmd === 'سجلات النشاط' ||
+      cleanCmd === 'حركات اليوم'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط اليوم...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('today');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 13. /activity_yesterday (Yesterday's Activity) ─────────────────────
+    if (
+      cleanCmd === '/activity_yesterday' ||
+      cleanCmd === '/logs_yesterday' ||
+      cleanCmd === 'نشاط امس' ||
+      cleanCmd === 'سجلات امس' ||
+      cleanCmd === 'نشاط البارحة' ||
+      cleanCmd === 'سجلات الامس' ||
+      cleanCmd === 'حركات امس'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط يوم أمس...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('yesterday');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 14. /activity_week (Past 7 Days Activity) ──────────────────────────
+    if (
+      cleanCmd === '/activity_week' ||
+      cleanCmd === '/logs_week' ||
+      cleanCmd === 'نشاط الاسبوع' ||
+      cleanCmd === 'سجلات الاسبوع' ||
+      cleanCmd === 'حركات الاسبوع' ||
+      cleanCmd === 'نشاط اخر 7 ايام'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط آخر 7 أيام...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('week');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 15. /activity_month (Month's Activity) ─────────────────────────────
+    if (
+      cleanCmd === '/activity_month' ||
+      cleanCmd === '/logs_month' ||
+      cleanCmd === 'نشاط الشهر' ||
+      cleanCmd === 'سجلات الشهر' ||
+      cleanCmd === 'حركات الشهر'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب سجلات نشاط هذا الشهر...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('month');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 16. /activity_all (Recent Activities) ──────────────────────────────
+    if (
+      cleanCmd === '/activity_all' ||
+      cleanCmd === '/logs_all' ||
+      cleanCmd === 'جميع السجلات' ||
+      cleanCmd === 'كل النشاطات' ||
+      cleanCmd === 'كل السجلات' ||
+      cleanCmd === 'اخر العمليات'
+    ) {
+      await sendTelegramMessage('⏳ <i>جاري جلب أحدث سجلات النشاط...</i>', 'HTML', override);
+      const msg = await formatActivityLogsTelegramMessage('all');
+      await sendTelegramMessage(msg, 'HTML', override);
+      return;
+    }
+
+    // ─── 17. /start or /help ────────────────────────────────────────────────
     if (cleanCmd === '/start' || cleanCmd === '/help' || cleanCmd === 'مساعدة' || cleanCmd === 'الاوامر' || cleanCmd === 'أوامر') {
       let helpMsg = `🤖 <b>أوامر بوت كاشير EVA POS الذكي:</b>\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
       helpMsg += `📊 <b>التقارير والمبيعات:</b>\n`;
       helpMsg += `  /report — تقرير مبيعات وأرباح اليوم\n`;
       helpMsg += `  /yesterday — تقرير مبيعات يوم أمس\n`;
-      helpMsg += `  /week — تقرير آخر 7 أيام\n`;
+      helpMsg += `  /week — تقرير مبيعات آخر 7 أيام\n`;
       helpMsg += `  /month — تقرير مبيعات الشهر الحالي\n`;
+      helpMsg += `\n`;
+      helpMsg += `📋 <b>سجلات النشاط والرقابة:</b>\n`;
+      helpMsg += `  /activity — سجلات عمليات ونشاط اليوم\n`;
+      helpMsg += `  /activity_yesterday — سجلات نشاط يوم أمس\n`;
+      helpMsg += `  /activity_week — سجلات نشاط آخر 7 أيام\n`;
+      helpMsg += `  /activity_month — سجلات نشاط الشهر الحالي\n`;
+      helpMsg += `  /activity_all — أحدث العمليات المسجلة\n`;
       helpMsg += `\n`;
       helpMsg += `📦 <b>المخزون والمنتجات:</b>\n`;
       helpMsg += `  /stock — تنبيه بالنواقص والمنتجات المنتهية\n`;
@@ -912,7 +998,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       helpMsg += `  /backup — طلب نسخة احتياطية فورية (.db)\n`;
       helpMsg += `  /help — عرض قائمة الأوامر هذه\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-      helpMsg += `<i>يمكنك إرسال الكلمات بالعربي أو الإنجليزي (مثل: تقرير، المخزون، الكاش، باك اب).</i>`;
+      helpMsg += `<i>يمكنك كتابة الكلمات بالعربي (مثل: تقرير، نشاط اليوم، نشاط امس، المخزون، الكاش).</i>`;
 
       await sendTelegramMessage(helpMsg, 'HTML', override);
       return;
@@ -938,154 +1024,152 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-// ─── Instant Activity Log Alert (Tamper / Sensitive Action Alert) ─────────────
+// ─── Activity Log Formatter for Telegram Commands ─────────────────────────────
 
-export async function notifyTelegramActivity(
-  userId: number,
-  action: string,
-  entity?: string | null,
-  entityId?: number | null,
-  metadata?: Record<string, unknown>,
-): Promise<void> {
+/**
+ * Format activity logs history into a clean, comprehensive Telegram report
+ */
+export async function formatActivityLogsTelegramMessage(
+  filter: 'today' | 'yesterday' | 'week' | 'month' | 'all' = 'today',
+): Promise<string> {
   try {
-    const settings = await getTelegramSettings();
-    if (!settings.botToken || !settings.chatId) {
-      log.info('[telegram] Activity alert skipped: Bot token or chat ID is missing.');
-      return;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    let whereClause = `date(a.createdAt, 'localtime') = ?`;
+    let params: any[] = [todayStr];
+    let titleStr = `سجلات نشاط اليوم (${todayStr})`;
+
+    if (filter === 'yesterday') {
+      const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+      whereClause = `date(a.createdAt, 'localtime') = ?`;
+      params = [yestStr];
+      titleStr = `سجلات نشاط يوم أمس (${yestStr})`;
+    } else if (filter === 'week') {
+      const weekAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
+      whereClause = `date(a.createdAt, 'localtime') BETWEEN ? AND ?`;
+      params = [weekStr, todayStr];
+      titleStr = `سجلات نشاط آخر 7 أيام (${weekStr} ⬅️ ${todayStr})`;
+    } else if (filter === 'month') {
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      whereClause = `date(a.createdAt, 'localtime') BETWEEN ? AND ?`;
+      params = [monthStart, todayStr];
+      titleStr = `سجلات نشاط شهر (${now.getMonth() + 1}/${now.getFullYear()})`;
+    } else if (filter === 'all') {
+      whereClause = `1=1`;
+      params = [];
+      titleStr = `أحدث سجلات النشاط والرقابة`;
     }
 
-    // Filter for sensitive actions that owner needs immediate alerts for
-    const sensitiveActions = [
-      'delete',
-      'update',
-      'bulk_update',
-      'reset',
-      'password_change',
-      'return',
-      'deactivate',
-      'inventory_adjust',
-      'reject',
-    ];
-    if (!sensitiveActions.includes(action.toLowerCase())) {
-      return;
-    }
+    const rows = await all<{
+      id: number;
+      userId: number;
+      action: string;
+      entity: string | null;
+      entityId: number | null;
+      metadata: string | null;
+      createdAt: string;
+      userName?: string;
+      username?: string;
+      userRole?: string;
+    }>(
+      `
+      SELECT a.id, a.userId, a.action, a.entity, a.entityId, a.metadata, a.createdAt,
+             u.name as userName, u.username, u.role as userRole
+      FROM activity_logs a
+      LEFT JOIN users u ON u.id = a.userId
+      WHERE ${whereClause}
+      ORDER BY datetime(a.createdAt) DESC
+      LIMIT 25
+      `,
+      params,
+    );
 
-    log.info(`[telegram] Sending activity tamper alert: action=${action}, entity=${entity}, entityId=${entityId}`);
-
-    // Lookup user name
-    let userName = 'مدير النظام';
-    let userRole = '';
-
-    if (userId) {
-      const userRow = await get<{ username: string; name?: string; role?: string }>(
-        `SELECT username, name, role FROM users WHERE id = ?`,
-        [userId],
-      );
-      if (userRow) {
-        userName = userRow.name || userRow.username || `مستخدم #${userId}`;
-        userRole = userRow.role ? `(${userRow.role})` : '';
-      } else {
-        const empRow = await get<{ name: string }>(`SELECT name FROM employees WHERE id = ?`, [userId]);
-        if (empRow) {
-          userName = empRow.name;
-        } else {
-          userName = `مستخدم #${userId}`;
-        }
-      }
+    if (!rows || rows.length === 0) {
+      return `📋 <b>${escapeHtml(titleStr)}</b>\n━━━━━━━━━━━━━━━━━━━━\nℹ️ لا توجد أي سجلات نشاط مسجلة لهذه الفترة.`;
     }
 
     const actionIcons: Record<string, string> = {
-      delete: '🗑️ <b>عملية حذف (Delete)</b>',
-      update: '✏️ <b>تعديل بيانات / سعر (Edit)</b>',
-      bulk_update: '📦 <b>تعديل جماعي (Bulk Edit)</b>',
-      reset: '🔥 <b>إعادة ضبط النظام (System Reset)</b>',
-      password_change: '🔑 <b>تغيير كلمة المرور</b>',
-      return: '🔄 <b>إرجاع / استرداد (Return)</b>',
-      deactivate: '⛔ <b>تعطيل حساب</b>',
-      inventory_adjust: '📊 <b>تعديل كمية المخزون (Stock Adjust)</b>',
-      reject: '❌ <b>إلغاء / رفض طلب</b>',
+      delete: '🗑️ عملية حذف',
+      update: '✏️ تعديل بيانات / سعر',
+      create: '➕ إضافة عنصر جديد',
+      bulk_update: '📦 تعديل جماعي',
+      reset: '🔥 تصفير النظام',
+      password_change: '🔑 تغيير كلمة المرور',
+      return: '🔄 إرجاع / استرداد',
+      deactivate: '⛔ تعطيل حساب',
+      inventory_adjust: '📊 تعديل كمية المخزون',
+      reject: '❌ إلغاء / رفض طلب',
+      login: '🔓 تسجيل دخول',
+      logout: '🔒 تسجيل خروج',
+      pos_lock: '🔒 قفل الشاشة',
+      pos_unlock: '🔓 فك قفل الشاشة',
     };
 
-    const actionLabel = actionIcons[action.toLowerCase()] || `⚡ <b>${escapeHtml(action)}</b>`;
+    let msg = `📋 <b>${escapeHtml(titleStr)}</b>\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📊 إجمالي العمليات المسجلة: <b>${rows.length} عملية</b>\n\n`;
 
-    let entityDisplay = entity ? `${entity} #${entityId ?? ''}` : 'عنصر';
-    let lookupDetails = '';
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const icon = actionIcons[row.action.toLowerCase()] || `⚡ ${escapeHtml(row.action)}`;
+      const who = row.userName || row.username || (row.userId ? `مستخدم #${row.userId}` : 'مدير النظام');
+      const role = row.userRole ? `(${row.userRole})` : '';
 
-    // Smart lookup based on entity
-    if (entity?.toLowerCase() === 'variant' && entityId) {
-      const v = await get<{ productName: string; size?: string; color?: string; defaultPriceIQD?: number }>(
-        `SELECT p.name as productName, v.size, v.color, v.defaultPriceIQD
-         FROM product_variants v
-         JOIN products p ON p.id = v.productId
-         WHERE v.id = ?`,
-        [entityId],
-      );
-      if (v) {
-        const variantDesc = [v.size, v.color].filter(Boolean).join(' - ');
-        entityDisplay = `👗 <b>${escapeHtml(v.productName)}</b> ${variantDesc ? `(${escapeHtml(variantDesc)})` : ''}`;
-        if (v.defaultPriceIQD) {
-          lookupDetails += `• السعر الحالي: <code>${v.defaultPriceIQD.toLocaleString()} د.ع</code>\n`;
+      let metaParsed: Record<string, unknown> = {};
+      if (row.metadata) {
+        try {
+          metaParsed = JSON.parse(row.metadata);
+        } catch {}
+      }
+
+      let itemDesc = row.entity ? `${row.entity} #${row.entityId ?? ''}` : '';
+      if (row.entity === 'variant' && metaParsed['المنتج']) {
+        itemDesc = String(metaParsed['المنتج']);
+      } else if (row.entity === 'product' && metaParsed['الاسم']) {
+        itemDesc = String(metaParsed['الاسم']);
+      } else if (row.entity === 'sale') {
+        itemDesc = `فاتورة بيع #${row.entityId}`;
+      }
+
+      const timeStr = new Date(row.createdAt.endsWith('Z') ? row.createdAt : row.createdAt + 'Z').toLocaleTimeString('ar-IQ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+
+      msg += `<b>${i + 1}. ${icon}</b>\n`;
+      msg += `   👤 <b>${escapeHtml(who)}</b> ${role}\n`;
+      if (itemDesc) {
+        msg += `   🏷️ ${escapeHtml(itemDesc)}\n`;
+      }
+
+      // Format metadata details
+      if (Object.keys(metaParsed).length > 0) {
+        for (const [k, v] of Object.entries(metaParsed)) {
+          if (k !== 'المنتج' && k !== 'الاسم') {
+            msg += `   • ${escapeHtml(k)}: <code>${escapeHtml(String(v))}</code>\n`;
+          }
         }
-      } else {
-        entityDisplay = `صنف / مقاس #${entityId}`;
       }
-    } else if (entity?.toLowerCase() === 'product' && entityId) {
-      const p = await get<{ name: string }>(`SELECT name FROM products WHERE id = ?`, [entityId]);
-      if (p) {
-        entityDisplay = `👗 <b>${escapeHtml(p.name)}</b> (#${entityId})`;
-      } else {
-        entityDisplay = `منتج #${entityId}`;
-      }
-    } else if (entity?.toLowerCase() === 'sale' && entityId) {
-      const s = await get<{ totalIQD: number; paymentMethod?: string }>(
-        `SELECT totalIQD, paymentMethod FROM sales WHERE id = ?`,
-        [entityId],
-      );
-      if (s) {
-        entityDisplay = `🧾 <b>فاتورة بيع #${entityId}</b>`;
-        lookupDetails += `• إجمالي الفاتورة: <code>${s.totalIQD.toLocaleString()} د.ع</code>\n`;
-      } else {
-        entityDisplay = `فاتورة بيع #${entityId}`;
-      }
-    } else if (entity?.toLowerCase() === 'employee' && entityId) {
-      const e = await get<{ name: string }>(`SELECT name FROM employees WHERE id = ?`, [entityId]);
-      entityDisplay = e ? `👤 موظف: <b>${escapeHtml(e.name)}</b>` : `موظف #${entityId}`;
-    } else if (entity?.toLowerCase() === 'user' && entityId) {
-      const u = await get<{ name?: string; username: string }>(`SELECT name, username FROM users WHERE id = ?`, [entityId]);
-      entityDisplay = u ? `👤 مستخدم: <b>${escapeHtml(u.name || u.username)}</b>` : `مستخدم #${entityId}`;
+
+      msg += `   🕒 <code>${timeStr}</code>\n\n`;
     }
 
-    const now = new Date().toLocaleString('ar-IQ', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    });
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💡 <b>أوامر السجلات الأخرى:</b>\n`;
+    msg += `• /activity — سجلات نشاط اليوم\n`;
+    msg += `• /activity_yesterday — سجلات نشاط الأمس\n`;
+    msg += `• /activity_week — سجلات آخر 7 أيام\n`;
+    msg += `• /activity_month — سجلات هذا الشهر\n`;
+    msg += `• /activity_all — أحدث العمليات\n`;
 
-    let text = `🚨 <b>تنبيه نشاط حساس في النظام:</b>\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `⚡ <b>العملية:</b> ${actionLabel}\n`;
-    text += `👤 <b>المستخدم:</b> <b>${escapeHtml(userName)}</b> ${userRole}\n`;
-    text += `🏷️ <b>العنصر:</b> ${entityDisplay}\n`;
-
-    if (lookupDetails) {
-      text += lookupDetails;
-    }
-
-    if (metadata && Object.keys(metadata).length > 0) {
-      const metaDetails = Object.entries(metadata)
-        .map(([k, v]) => `• ${k}: <code>${escapeHtml(String(v))}</code>`)
-        .join('\n');
-      text += `📝 <b>التفاصيل:</b>\n${metaDetails}\n`;
-    }
-
-    text += `🕒 <b>الوقت:</b> ${now}\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `🛡️ <i>سجلات الأمان والتدقيق - EVA POS</i>`;
-
-    await sendTelegramMessage(text, 'HTML');
+    return msg;
   } catch (err) {
-    log.error('[telegram] Failed to send activity alert:', err);
+    log.error('[telegram] Failed to format activity logs:', err);
+    return `❌ حدث خطأ أثناء جلب سجلات النشاط: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 

@@ -6,7 +6,6 @@
  */
 import crypto from 'crypto';
 import log from 'electron-log';
-import { notifyTelegramActivity } from './telegram';
 
 // Re-export core utilities (barrel pattern - all IPC handlers import from this file)
 export { initDatabase, closeDatabase, getSetting, setSetting, getAllSettings,
@@ -1966,11 +1965,6 @@ export async function logActivity(
     `,
     [userId, action, entity ?? null, entityId ?? null, metadata ? JSON.stringify(metadata) : null],
   );
-
-  // Send real-time Telegram alert directly for sensitive audit activities
-  notifyTelegramActivity(userId, action, entity, entityId, metadata).catch((err) => {
-    log.error('[activity-log] Failed to trigger telegram alert:', err);
-  });
 }
 
 export async function listActivityLogs(limit = 200): Promise<ActivityLogEntry[]> {
