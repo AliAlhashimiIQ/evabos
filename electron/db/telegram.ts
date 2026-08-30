@@ -976,7 +976,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
 
       // Month Expenses
       const monthExpenses = await get<{ totalExp: number; count: number }>(
-        `SELECT IFNULL(SUM(amountIQD), 0) as totalExp, COUNT(*) as count FROM expenses WHERE date(createdAt) BETWEEN date(?) AND date(?)`,
+        `SELECT IFNULL(SUM(amountIQD), 0) as totalExp, COUNT(*) as count FROM expenses WHERE date(expenseDate) BETWEEN date(?) AND date(?)`,
         [firstDayOfMonth, todayStr],
       );
       const totalExp = monthExpenses?.totalExp || 0;
@@ -1170,7 +1170,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       );
 
       const expenseSummary = await get<{ totalExp: number }>(
-        `SELECT IFNULL(SUM(amountIQD), 0) as totalExp FROM expenses WHERE date(createdAt) = date('now', 'localtime')`,
+        `SELECT IFNULL(SUM(amountIQD), 0) as totalExp FROM expenses WHERE date(expenseDate) = date('now', 'localtime')`,
       );
 
       const cashSales = paymentSummary?.cashSales || 0;
@@ -1497,25 +1497,25 @@ export async function formatExpensesTelegramMessage(
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    let whereClause = `date(COALESCE(e.expenseDate, e.createdAt, 'now')) = ?`;
+    let whereClause = `date(e.expenseDate) = ?`;
     let params: any[] = [todayStr];
     let titleStr = `مصروفات اليوم (${todayStr})`;
 
     if (filter === 'yesterday') {
       const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
-      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) = ?`;
+      whereClause = `date(e.expenseDate) = ?`;
       params = [yestStr];
       titleStr = `مصروفات يوم أمس (${yestStr})`;
     } else if (filter === 'week') {
       const weekAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
       const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
-      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) BETWEEN ? AND ?`;
+      whereClause = `date(e.expenseDate) BETWEEN ? AND ?`;
       params = [weekStr, todayStr];
       titleStr = `مصروفات آخر 7 أيام (${weekStr} ⬅️ ${todayStr})`;
     } else if (filter === 'month') {
       const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      whereClause = `date(COALESCE(e.expenseDate, e.createdAt)) BETWEEN ? AND ?`;
+      whereClause = `date(e.expenseDate) BETWEEN ? AND ?`;
       params = [monthStart, todayStr];
       titleStr = `مصروفات شهر (${now.getMonth() + 1}/${now.getFullYear()})`;
     } else if (filter === 'all') {
@@ -1538,7 +1538,7 @@ export async function formatExpensesTelegramMessage(
       FROM expenses e
       LEFT JOIN users u ON u.id = e.enteredBy
       WHERE ${whereClause}
-      ORDER BY datetime(COALESCE(e.expenseDate, e.createdAt)) DESC
+      ORDER BY datetime(e.expenseDate) DESC
       LIMIT 30
       `,
       params,
