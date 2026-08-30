@@ -1047,11 +1047,16 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
         salePriceIQD: number;
       }>(
         `
-        SELECT p.name as productName, pv.sku, pv.color, pv.size, pv.stockOnHand, pv.salePriceIQD
+        SELECT p.name as productName, pv.sku, pv.color, pv.size,
+               IFNULL(SUM(vs.quantity), 0) as stockOnHand,
+               pv.defaultPriceIQD as salePriceIQD
         FROM product_variants pv
         JOIN products p ON p.id = pv.productId
-        WHERE pv.stockOnHand <= 3
-        ORDER BY pv.stockOnHand ASC, p.name ASC
+        LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+        WHERE pv.isActive = 1 AND p.isActive = 1
+        GROUP BY pv.id
+        HAVING stockOnHand <= 3
+        ORDER BY stockOnHand ASC, p.name ASC
         LIMIT 25
       `,
       );
