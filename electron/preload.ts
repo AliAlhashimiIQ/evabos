@@ -50,7 +50,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-download-progress', subscription);
     return () => ipcRenderer.removeListener('update-download-progress', subscription);
   },
-  quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install')
+  quitAndInstall: () => ipcRenderer.invoke('app:quit-and-install'),
+  companion: {
+    getInfo: (token?: string) => ipcRenderer.invoke('companion:getInfo', token),
+    lookup: (token: string, query: string) => ipcRenderer.invoke('companion:lookup', token, query),
+    onBarcodeScanned: (callback: (payload: { barcode: string; source: string; timestamp: number; overridePrice?: number }) => void) => {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('companion:barcode-scanned', listener);
+      return () => {
+        ipcRenderer.removeListener('companion:barcode-scanned', listener);
+      };
+    },
+  },
 });
 
 contextBridge.exposeInMainWorld('evaApi', {
@@ -221,6 +232,17 @@ contextBridge.exposeInMainWorld('evaApi', {
     confirm: (token: string, orderId: number, exchangeRate: number) => ipcRenderer.invoke('onlineOrders:confirm', token, orderId, exchangeRate),
     reject: (token: string, orderId: number, reason?: string) => ipcRenderer.invoke('onlineOrders:reject', token, orderId, reason),
     getById: (token: string, orderId: number) => ipcRenderer.invoke('onlineOrders:getById', token, orderId),
+  },
+  companion: {
+    getInfo: (token: string) => ipcRenderer.invoke('companion:getInfo', token),
+    lookup: (token: string, query: string) => ipcRenderer.invoke('companion:lookup', token, query),
+    onBarcodeScanned: (callback: (payload: { barcode: string; source: string; timestamp: number; overridePrice?: number }) => void) => {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('companion:barcode-scanned', listener);
+      return () => {
+        ipcRenderer.removeListener('companion:barcode-scanned', listener);
+      };
+    },
   },
 });
 

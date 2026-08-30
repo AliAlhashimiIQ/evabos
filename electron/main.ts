@@ -32,6 +32,8 @@ import { registerEmailIpc } from './ipc/email';
 import { registerTelegramIpc } from './ipc/telegram';
 import { registerOnlineOrdersIpc } from './ipc/onlineOrders';
 import { registerEmployeesIpc } from './ipc/employees';
+import { registerCompanionIpc } from './ipc/companion';
+import { startCompanionServer, stopCompanionServer } from './server/companionServer';
 import { createBackup } from './db/backup';
 import {
   getTelegramSettings,
@@ -501,10 +503,14 @@ app.whenReady().then(async () => {
   registerTelegramIpc();
   registerOnlineOrdersIpc();
   registerEmployeesIpc();
+  registerCompanionIpc();
   scheduleDailyBackup();
   scheduleDailyEmailReport();
 
   await createWindow();
+  if (mainWindow) {
+    startCompanionServer(mainWindow);
+  }
   startTelegramBotPolling().catch((err) => {
     log.error('[main] startTelegramBotPolling error:', err);
   });
@@ -536,6 +542,7 @@ app.on('before-quit', (event) => {
   event.preventDefault();
 
   stopTelegramBotPolling();
+  stopCompanionServer();
 
   if (dailyBackupTimeout) {
     clearTimeout(dailyBackupTimeout);

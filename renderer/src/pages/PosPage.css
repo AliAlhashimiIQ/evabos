@@ -645,6 +645,169 @@
   padding-top: 0.4rem;
 }
 
+/* ── Speed-Checkout Tender & Change Section ──────────────────── */
+.Pos-tenderCard {
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.Pos-tenderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.Pos-tenderTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.Pos-tenderResetBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.Pos-tenderResetBtn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.Pos-tenderPresets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.Pos-presetBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 7px 4px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.Pos-presetBtn:hover {
+  background: var(--hover-bg);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.Pos-presetBtn:active {
+  transform: scale(0.96);
+}
+
+.Pos-presetBtn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+}
+
+.Pos-tenderIncrements {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.Pos-incrementBtn {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 4px 2px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.Pos-incrementBtn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.Pos-incrementBtn:active {
+  transform: scale(0.95);
+}
+
+.Pos-tenderInputBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.Pos-tenderInputBox input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.Pos-changeBox {
+  border-radius: 9px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.Pos-changeBox.due {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.Pos-changeBox.exact {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+.Pos-changeBox.short {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.Pos-changeBoxLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.Pos-changeBoxAmount {
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Complete Sale Button ────────────────────────────────────── */
 .Pos-completeButton {
   width: 100%;

@@ -821,6 +821,23 @@ export interface TelegramSettings {
   notifyOnClose: boolean;
 }
 
+export interface CompanionInfo {
+  url: string;
+  qrDataUrl: string;
+  ip: string;
+  port: number;
+  active: boolean;
+}
+
+export interface ElectronAPI {
+  companion: {
+    getInfo: (token: string) => Promise<CompanionInfo>;
+    lookup: (token: string, query: string) => Promise<any>;
+    onBarcodeScanned: (callback: (payload: { barcode: string; source: string; timestamp: number; overridePrice?: number }) => void) => () => void;
+  };
+  [key: string]: any;
+}
+
 declare global {
   interface Window {
     electronAPI: ElectronAPI;

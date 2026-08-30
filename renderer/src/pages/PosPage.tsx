@@ -10,10 +10,12 @@ import {
   RotateCcw,
   X,
   CheckCircle2,
+  XCircle,
   DollarSign,
   Banknote,
   Plus,
   Minus,
+  Smartphone,
 } from 'lucide-react';
 import './Pages.css';
 import './PosPage.css';
@@ -22,6 +24,7 @@ import { useShortcutKeys } from '../hooks/useShortcutKeys';
 import PrintingModal from '../components/PrintingModal';
 import NumberInput from '../components/NumberInput';
 import CalculatorInput from '../components/CalculatorInput';
+import CompanionQrModal from '../components/CompanionQrModal';
 import { confirmDialog } from '../utils/confirmDialog';
 
 type Product = import('../types/electron').Product;
@@ -33,6 +36,7 @@ type Employee = import('../types/electron').Employee;
 interface CartItem {
   product: Product;
   quantity: number;
+  overridePrice?: number; // price chosen on the mobile companion (e.g. discounted multiplier price)
 }
 
 const PROFILE_COUNT = 4;
@@ -45,6 +49,7 @@ interface PosProfile {
   discountValue: number;
   isManualDiscount: boolean; // New flag to track manual entry
   paymentMethod: 'cash' | 'card' | 'mixed';
+  tenderedIQD: number; // Cash tendered by customer for change calculation
   success: string | null;
   error: string | null;
   isSubmitting: boolean;
@@ -58,6 +63,7 @@ const createProfile = (): PosProfile => ({
   discountValue: 0,
   isManualDiscount: false, // Initialize as false
   paymentMethod: 'cash',
+  tenderedIQD: 0,
   success: null,
   error: null,
   isSubmitting: false,
@@ -292,7 +298,10 @@ const PosPage = (): JSX.Element => {
 
   const subtotalIQD = useMemo(
     () =>
-      cart.reduce((acc, item) => acc + item.product.salePriceIQD * item.quantity, 0),
+      cart.reduce((acc, item) => {
+        const unitPrice = item.overridePrice ?? item.product.salePriceIQD;
+        return acc + unitPrice * item.quantity;
+      }, 0),
     [cart],
   );
 
@@ -350,8 +359,11 @@ const PosPage = (): JSX.Element => {
   }, [totalCostIQD, totalIQD]);
 
 
+
+  const [isCompanionModalOpen, setIsCompanionModalOpen] = useState(false);
+
   const addToCart = useCallback(
-    (product: Product) => {
+    (product: Product, overridePrice?: number) => {
       // Check if product is out of stock
       if (product.stockOnHand <= 0) {
         updateCurrentProfile((profile) => ({
@@ -377,17 +389,19 @@ const PosPage = (): JSX.Element => {
           }
 
           const nextCart = profile.cart.map((item) =>
-            item.product.id === product.id ? { ...item, quantity: newQuantity } : item,
+            item.product.id === product.id
+              ? { ...item, quantity: newQuantity, overridePrice: overridePrice ?? item.overridePrice }
+              : item,
           );
           return { ...profile, cart: nextCart, error: null, success: null };
         } else {
           // Adding new item to cart
-          const nextCart = [...profile.cart, { product, quantity: 1 }];
+          const nextCart = [...profile.cart, { product, quantity: 1, overridePrice }];
           return { ...profile, cart: nextCart, error: null, success: null };
         }
       });
     },
-    [updateCurrentProfile],
+    [updateCurrentProfile, t],
   );
 
   const removeLastItem = useCallback(() => {
@@ -570,7 +584,10 @@ const PosPage = (): JSX.Element => {
         return;
       }
 
-      const subtotal = targetCart.reduce((acc, item) => acc + item.product.salePriceIQD * item.quantity, 0);
+      const subtotal = targetCart.reduce((acc, item) => {
+        const unitPrice = item.overridePrice ?? item.product.salePriceIQD;
+        return acc + unitPrice * item.quantity;
+      }, 0);
       const discount =
         targetDiscountMode === 'amount'
           ? Math.min(targetDiscountValue, subtotal)
@@ -610,13 +627,16 @@ const PosPage = (): JSX.Element => {
           discountIQD: discount,
           totalIQD: total,
           paymentMethod: targetPaymentMethod,
-          items: targetCart.map((item) => ({
-            variantId: item.product.id,
-            quantity: item.quantity,
-            unitPriceIQD: item.product.salePriceIQD,
-            unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
-            lineTotalIQD: item.product.salePriceIQD * item.quantity,
-          })),
+          items: targetCart.map((item) => {
+            const unitPrice = item.overridePrice ?? item.product.salePriceIQD;
+            return {
+              variantId: item.product.id,
+              quantity: item.quantity,
+              unitPriceIQD: unitPrice,
+              unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
+              lineTotalIQD: unitPrice * item.quantity,
+            };
+          }),
         };
 
         const created = await window.evaApi.sales.create(token, sale);
@@ -671,7 +691,7 @@ const PosPage = (): JSX.Element => {
   const isScanningRef = useRef(false);
 
   const handleScan = useCallback(
-    async (value: string) => {
+    async (value: string, overridePrice?: number) => {
       // Clear search term in case anything got typed
       setSearchTerm('');
       if (searchInputRef.current) {
@@ -740,8 +760,12 @@ const PosPage = (): JSX.Element => {
         if (variant.stockOnHand <= 0) {
           setScannerMessage(`"${variant.productName}" ${t('outOfStock')}`);
         } else {
-          addToCart(variant);
-          setScannerMessage(`${t('added')} ${variant.productName}`);
+          addToCart(variant, overridePrice);
+          if (overridePrice != null && overridePrice > 0) {
+            setScannerMessage(`${t('added')} ${variant.productName} (${overridePrice.toLocaleString('en-IQ')} IQD)`);
+          } else {
+            setScannerMessage(`${t('added')} ${variant.productName}`);
+          }
         }
       } else {
         setScannerMessage(`${t('noMatchFor')} ${value}`);
@@ -763,6 +787,19 @@ const PosPage = (): JSX.Element => {
   );
 
   useBarcodeScanner({ onScan: handleScan });
+
+  // ─── Listen for Real-Time Scans from Mobile Companion Scanner ─────────────
+  useEffect(() => {
+    if (!window.electronAPI?.companion?.onBarcodeScanned) return;
+    const unsubscribe = window.electronAPI.companion.onBarcodeScanned(({ barcode, overridePrice }) => {
+      if (barcode) {
+        handleScan(barcode, overridePrice);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [handleScan]);
 
   const shortcutMap = useMemo(
     () => ({
@@ -839,6 +876,28 @@ const PosPage = (): JSX.Element => {
               title={t('scan')}
             >
               {t('scan')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCompanionModalOpen(true)}
+              style={{
+                background: 'rgba(59, 130, 246, 0.12)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: '#60a5fa',
+                borderRadius: '8px',
+                padding: '0 10px',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                height: '38px',
+              }}
+              title="ربط كاميرا الهاتف كماسح باركود وفاحص أسعار عبر الواي فاي"
+            >
+              <Smartphone size={15} /> <span>ماسح الهاتف (QR)</span>
             </button>
           </div>
 
@@ -952,8 +1011,21 @@ const PosPage = (): JSX.Element => {
                           <button onClick={() => updateQuantity(item.product.id, 1)}><Plus size={12} /></button>
                         </div>
                       </td>
-                      <td className="Pos-priceCell">{item.product.salePriceIQD.toLocaleString('en-IQ')}</td>
-                      <td className="Pos-lineTotal">{(item.product.salePriceIQD * item.quantity).toLocaleString('en-IQ')}</td>
+                      <td className="Pos-priceCell">
+                        {item.overridePrice != null ? (
+                          <span>
+                            <span style={{ textDecoration: 'line-through', opacity: 0.45, fontSize: '0.78em', marginInlineEnd: 4 }}>
+                              {item.product.salePriceIQD.toLocaleString('en-IQ')}
+                            </span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>
+                              {item.overridePrice.toLocaleString('en-IQ')}
+                            </span>
+                          </span>
+                        ) : (
+                          item.product.salePriceIQD.toLocaleString('en-IQ')
+                        )}
+                      </td>
+                      <td className="Pos-lineTotal">{((item.overridePrice ?? item.product.salePriceIQD) * item.quantity).toLocaleString('en-IQ')}</td>
                       <td>
                         <button className="Pos-deleteButton" onClick={() => removeItem(item.product.id)} title={t('removeItem')}>
                           <X size={14} />
@@ -1226,6 +1298,8 @@ const PosPage = (): JSX.Element => {
             )}
           </div>
 
+
+
           {/* Complete Button */}
           <button
             className="Pos-completeButton"
@@ -1253,8 +1327,6 @@ const PosPage = (): JSX.Element => {
         </aside>
       </div>
 
-
-
       <PrintingModal
         visible={!!printSale}
         sale={printSale ?? undefined}
@@ -1262,6 +1334,11 @@ const PosPage = (): JSX.Element => {
         onPrinterChange={setPreferredPrinter}
         onClose={() => setPrintSale(null)}
         autoPrint={true}
+      />
+
+      <CompanionQrModal
+        isOpen={isCompanionModalOpen}
+        onClose={() => setIsCompanionModalOpen(false)}
       />
     </div>
   );

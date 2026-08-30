@@ -810,6 +810,15 @@ const translations = {
     unlockCodeSent: 'Verification code sent to your Telegram bot! Please check your chat.',
     unlockSuccess: 'Settings unlocked successfully!',
     unlockFailed: 'Invalid verification code or code expired.',
+
+    // Speed-Checkout Tender & Change Keys
+    cashTendered: 'Cash Received',
+    tenderedAmount: 'Tendered Amount',
+    enterTenderedAmount: 'Enter cash received...',
+    changeDue: 'Change Due',
+    remainingToPay: 'Remaining to Pay',
+    exactAmount: 'Exact',
+    paidInFull: 'Paid in Full',
   },
 
   ar: {
@@ -1618,6 +1627,15 @@ const translations = {
     unlockCodeSent: 'تم إرسال رمز التحقق إلى محادثة التيليجرام الخاصة بك!',
     unlockSuccess: 'تم فك قفل الإعدادات بنجاح!',
     unlockFailed: 'رمز التحقق غير صحيح أو منتهي الصلاحية.',
+
+    // Speed-Checkout Tender & Change Keys
+    cashTendered: 'المبلغ المستلم (الكاش)',
+    tenderedAmount: 'المبلغ المستلم',
+    enterTenderedAmount: 'اكتب المبلغ المستلم...',
+    changeDue: 'المتبقي للزبون (الباقي)',
+    remainingToPay: 'المتبقي للدفع',
+    exactAmount: 'بالضبط',
+    paidInFull: 'مسدد بالكامل',
   },
 };
 
