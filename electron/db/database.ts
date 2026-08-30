@@ -1968,7 +1968,13 @@ export async function logActivity(
 
   // Send real-time Telegram alert for sensitive audit activities
   import('./telegram')
-    .then((m) => m.notifyTelegramActivity(userId, action, entity, entityId, metadata))
+    .then((m) => {
+      if (typeof m.notifyTelegramActivity === 'function') {
+        m.notifyTelegramActivity(userId, action, entity, entityId, metadata);
+      } else {
+        console.error('[activity-log] notifyTelegramActivity is not a function on imported module:', m);
+      }
+    })
     .catch((err) => console.error('[activity-log] Failed to trigger telegram alert:', err));
 }
 

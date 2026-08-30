@@ -1,8 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import log from 'electron-log';
-import { getSetting, setSetting, getAdvancedReports, listSaleItems } from './database';
-import { get, all } from './core';
+import { getAdvancedReports, listSaleItems } from './database';
+import { get, all, run, getSetting, setSetting } from './core';
 import { encryptCredential, decryptCredential } from './crypto';
 import { createBackup } from './backup';
 import type { SaleDetail, DateRange } from './types';
@@ -915,7 +915,8 @@ export async function notifyTelegramActivity(
 ): Promise<void> {
   try {
     const settings = await getTelegramSettings();
-    if (!settings.enabled || !settings.botToken || !settings.chatId) {
+    if (!settings.botToken || !settings.chatId) {
+      log.info('[telegram] Activity alert skipped: Bot token or chat ID is missing.');
       return;
     }
 
@@ -935,13 +936,29 @@ export async function notifyTelegramActivity(
       return;
     }
 
+    log.info(`[telegram] Sending activity tamper alert: action=${action}, entity=${entity}, entityId=${entityId}`);
+
     // Lookup user name
-    const userRow = await get<{ username: string; name?: string; role?: string }>(
-      `SELECT username, name, role FROM users WHERE id = ?`,
-      [userId],
-    );
-    const userName = userRow?.name || userRow?.username || `مستخدم #${userId}`;
-    const userRole = userRow?.role ? `(${userRow.role})` : '';
+    let userName = 'مدير النظام';
+    let userRole = '';
+
+    if (userId) {
+      const userRow = await get<{ username: string; name?: string; role?: string }>(
+        `SELECT username, name, role FROM users WHERE id = ?`,
+        [userId],
+      );
+      if (userRow) {
+        userName = userRow.name || userRow.username || `مستخدم #${userId}`;
+        userRole = userRow.role ? `(${userRow.role})` : '';
+      } else {
+        const empRow = await get<{ name: string }>(`SELECT name FROM employees WHERE id = ?`, [userId]);
+        if (empRow) {
+          userName = empRow.name;
+        } else {
+          userName = `مستخدم #${userId}`;
+        }
+      }
+    }
 
     const actionIcons: Record<string, string> = {
       delete: '🗑️ <b>عملية حذف (Delete)</b>',

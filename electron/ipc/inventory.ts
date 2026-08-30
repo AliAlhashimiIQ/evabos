@@ -14,6 +14,7 @@ import {
   updateSupplier,
   deleteSupplier,
   getUniqueSeasons,
+  logActivity,
 } from '../db/database';
 import { importProductsFromExcel } from '../db/excelImport';
 import type { ProductInput, ProductUpdateInput, VariantUpdateInput, SupplierInput, PaginationParams } from '../db/types';
@@ -65,7 +66,7 @@ export function registerInventoryIpc(): void {
       }
       const product = await createProduct(payload);
       if (session) {
-        await (await import('../db/database')).logActivity(session.userId, 'create', 'product', product.id, {
+        await logActivity(session.userId, 'create', 'product', product.id, {
           'الاسم': product.name,
           'الموسم': product.season || '—',
         });
@@ -83,7 +84,7 @@ export function registerInventoryIpc(): void {
       const metadata: Record<string, unknown> = {};
       if (payload.name) metadata['الاسم الجديد'] = payload.name;
       if (payload.season) metadata['الموسم'] = payload.season;
-      await (await import('../db/database')).logActivity(session.userId, 'update', 'product', product.id, metadata);
+      await logActivity(session.userId, 'update', 'product', product.id, metadata);
       return product;
     }),
   );
@@ -99,7 +100,7 @@ export function registerInventoryIpc(): void {
       if (payload.purchaseCostUSD !== undefined) metadata['سعر التكلفة'] = `$${payload.purchaseCostUSD}`;
       if (payload.size) metadata['المقاس'] = payload.size;
       if (payload.color) metadata['اللون'] = payload.color;
-      await (await import('../db/database')).logActivity(session.userId, 'update', 'variant', payload.id, metadata);
+      await logActivity(session.userId, 'update', 'variant', payload.id, metadata);
       return true;
     }),
   );
@@ -123,7 +124,7 @@ export function registerInventoryIpc(): void {
         note: payload.note,
         adjustedBy: session.userId,
       });
-      await (await import('../db/database')).logActivity(session.userId, 'inventory_adjust', 'variant', payload.variantId, {
+      await logActivity(session.userId, 'inventory_adjust', 'variant', payload.variantId, {
         'الكمية المعدلة': `${payload.deltaQuantity > 0 ? '+' : ''}${payload.deltaQuantity}`,
         'السبب': payload.reason,
         'الملاحظات': payload.note || '—',
@@ -215,8 +216,7 @@ export function registerInventoryIpc(): void {
       if (!session) throw new Error('Unauthorized');
       const payload = args[0] as { productIds: number[]; season?: string | null };
       await bulkUpdateProducts(session.token, payload);
-      // Log activity for each product or one bulk log? Let's do one bulk log
-      await (await import('../db/database')).logActivity(session.userId, 'bulk_update', 'product', payload.productIds[0], { count: payload.productIds.length });
+      await logActivity(session.userId, 'bulk_update', 'product', payload.productIds[0], { count: payload.productIds.length });
       return true;
     }),
   );
