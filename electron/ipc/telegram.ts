@@ -10,6 +10,8 @@ import {
   verifyTelegramUnlockOtp,
   isTelegramSettingsUnlocked,
   lockTelegramSettings,
+  requestDiscountApproval,
+  checkDiscountApprovalStatus,
 } from '../db/telegram';
 import { requireRole } from './auth';
 
@@ -111,6 +113,29 @@ export function registerTelegramIpc(): void {
     'telegram:sendDailyReportNow',
     requireRole(['admin', 'manager'])(async () => {
       return sendTelegramDailyReportAndBackup();
+    }),
+  );
+
+  // Remote Discount Approval Request (Any logged-in cashier can request approval)
+  ipcMain.handle(
+    'telegram:requestDiscountApproval',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const payload = args[0] as {
+        subtotalIQD: number;
+        discountIQD: number;
+        cashierName: string;
+        itemsSummary?: string;
+      };
+      return requestDiscountApproval(payload);
+    }),
+  );
+
+  // Check Remote Discount Approval Status
+  ipcMain.handle(
+    'telegram:checkDiscountApproval',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const requestId = String(args[0] || '');
+      return checkDiscountApprovalStatus(requestId);
     }),
   );
 

@@ -54,6 +54,45 @@ export async function saveTelegramSettings(settings: {
   return true;
 }
 
+// ─── Keyboards & Menus ────────────────────────────────────────────────────────
+
+/**
+ * Persistent Reply Keyboard displayed at the bottom of the Telegram chat
+ */
+export const MAIN_REPLY_KEYBOARD = {
+  keyboard: [
+    [{ text: '📊 مبيعات اليوم' }, { text: '📅 مبيعات الأمس' }, { text: '🗓️ مبيعات الشهر' }],
+    [{ text: '📉 المصروفات' }, { text: '👥 مبيعات الكادر' }, { text: '💵 الكاش بالدرج' }],
+    [{ text: '📋 سجلات النشاط' }, { text: '⚠️ نواقص المخزون' }, { text: '🏆 الأكثر مبيعاً' }],
+    [{ text: '💾 نسخة احتياطية' }, { text: '🟢 فحص الحالة' }, { text: '❓ قائمة الأوامر' }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+/**
+ * Quick inline buttons displayed below report messages
+ */
+export const REPORT_INLINE_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '📊 اليوم', callback_data: 'cmd:report' },
+      { text: '📅 الأمس', callback_data: 'cmd:yesterday' },
+      { text: '🗓️ الشهر', callback_data: 'cmd:month' },
+    ],
+    [
+      { text: '📉 المصروفات', callback_data: 'cmd:expenses' },
+      { text: '👥 الكادر', callback_data: 'cmd:employees' },
+      { text: '💵 الكاش', callback_data: 'cmd:cash' },
+    ],
+    [
+      { text: '📋 سجلات النشاط', callback_data: 'cmd:activity' },
+      { text: '⚠️ النواقص', callback_data: 'cmd:stock' },
+      { text: '💾 نسخة احتياطية', callback_data: 'cmd:backup' },
+    ],
+  ],
+};
+
 /**
  * Send an HTML formatted text message to the configured Telegram chat
  */
@@ -61,7 +100,8 @@ export async function sendTelegramMessage(
   text: string,
   parseMode: string = 'HTML',
   overrideSettings?: { botToken?: string; chatId?: string },
-): Promise<{ success: boolean; error?: string }> {
+  replyMarkup?: Record<string, unknown>,
+): Promise<{ success: boolean; error?: string; messageId?: number }> {
   try {
     const settings = await getTelegramSettings();
     const token = overrideSettings?.botToken || settings.botToken;
@@ -72,18 +112,23 @@ export async function sendTelegramMessage(
       return { success: false, error: 'Telegram Bot Token or Chat ID is missing.' };
     }
 
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      text,
+      parse_mode: parseMode,
+    };
+    if (replyMarkup) {
+      payload.reply_markup = replyMarkup;
+    }
+
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: parseMode,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const data = (await response.json()) as { ok: boolean; description?: string };
+    const data = (await response.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
     if (!data.ok) {
       log.error('[telegram] API error sending message:', data.description);
 
@@ -91,18 +136,22 @@ export async function sendTelegramMessage(
       if (parseMode === 'HTML') {
         log.warn('[telegram] Retrying message without HTML tags due to parsing error...');
         const plainText = text.replace(/<[^>]*>/g, '');
+        const fallbackPayload: Record<string, unknown> = {
+          chat_id: chatId,
+          text: plainText,
+        };
+        if (replyMarkup) {
+          fallbackPayload.reply_markup = replyMarkup;
+        }
         const retryRes = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: plainText,
-          }),
+          body: JSON.stringify(fallbackPayload),
         });
-        const retryData = (await retryRes.json()) as { ok: boolean; description?: string };
+        const retryData = (await retryRes.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
         if (retryData.ok) {
           log.info('[telegram] Fallback plain text message sent successfully.');
-          return { success: true };
+          return { success: true, messageId: retryData.result?.message_id };
         }
       }
 
@@ -110,11 +159,78 @@ export async function sendTelegramMessage(
     }
 
     log.info('[telegram] Message delivered successfully to chat_id:', chatId);
-    return { success: true };
+    return { success: true, messageId: data.result?.message_id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log.error('[telegram] Exception in sendTelegramMessage:', message);
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Answer an inline button callback query
+ */
+export async function answerTelegramCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+  showAlert = false,
+  overrideToken?: string,
+): Promise<void> {
+  try {
+    const settings = await getTelegramSettings();
+    const token = overrideToken || settings.botToken;
+    if (!token) return;
+
+    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text,
+        show_alert: showAlert,
+      }),
+    });
+  } catch (err) {
+    log.error('[telegram] Error answering callback query:', err);
+  }
+}
+
+/**
+ * Edit an existing Telegram message's text (e.g. after approval/rejection button clicked)
+ */
+export async function editTelegramMessageText(
+  chatId: string | number,
+  messageId: number,
+  text: string,
+  parseMode = 'HTML',
+  replyMarkup?: Record<string, unknown>,
+  overrideToken?: string,
+): Promise<boolean> {
+  try {
+    const settings = await getTelegramSettings();
+    const token = overrideToken || settings.botToken;
+    if (!token) return false;
+
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: parseMode,
+    };
+    if (replyMarkup !== undefined) {
+      payload.reply_markup = replyMarkup;
+    }
+
+    const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json()) as { ok: boolean };
+    return !!data.ok;
+  } catch (err) {
+    log.error('[telegram] Error editing message text:', err);
+    return false;
   }
 }
 
@@ -458,6 +574,106 @@ export async function sendTelegramTest(): Promise<{ success: boolean; error?: st
   return sendTelegramMessage(testMessage, 'HTML');
 }
 
+// ─── Remote Manager Discount Approval System ──────────────────────────────────
+
+export interface DiscountApprovalRequest {
+  id: string;
+  subtotalIQD: number;
+  discountIQD: number;
+  discountPercent: number;
+  cashierName: string;
+  itemsSummary: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: number;
+  expiresAt: number;
+  chatId?: string;
+  messageId?: number;
+}
+
+const activeDiscountApprovals = new Map<string, DiscountApprovalRequest>();
+
+/**
+ * Request remote authorization from the store manager via Telegram
+ */
+export async function requestDiscountApproval(input: {
+  subtotalIQD: number;
+  discountIQD: number;
+  cashierName: string;
+  itemsSummary?: string;
+}): Promise<{ success: boolean; requestId?: string; error?: string }> {
+  try {
+    const settings = await getTelegramSettings();
+    if (!settings.enabled || !settings.botToken || !settings.chatId) {
+      return { success: false, error: 'بوت تيليجرام غير مفعّل أو غير مضبوط في النظام.' };
+    }
+
+    const id = `disc_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const discountPercent = input.subtotalIQD > 0 ? (input.discountIQD / input.subtotalIQD) * 100 : 0;
+    const finalAmount = Math.max(0, input.subtotalIQD - input.discountIQD);
+
+    const nowStr = new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let text = `🔔 <b>طلب موافقة على خصم استثنائي!</b>\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `👤 <b>الكاشير:</b> <b>${escapeHtml(input.cashierName || 'كاشير')}</b>\n`;
+    text += `💰 <b>مجموع الفاتورة:</b> <code>${input.subtotalIQD.toLocaleString('en-IQ')} د.ع</code>\n`;
+    text += `🏷️ <b>الخصم المطلوب:</b> <b>${input.discountIQD.toLocaleString('en-IQ')} د.ع</b> (<b>${discountPercent.toFixed(1)}%</b>)\n`;
+    text += `💵 <b>المبلغ بعد الخصم:</b> <b>${finalAmount.toLocaleString('en-IQ')} د.ع</b>\n`;
+    if (input.itemsSummary) {
+      text += `📦 <b>الأصناف:</b> ${escapeHtml(input.itemsSummary)}\n`;
+    }
+    text += `🕒 <b>الوقت:</b> ${nowStr}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `❓ <i>هل توافق على منح هذا الخصم للكاشير؟</i>`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '✅ موافقة على الخصم (Approve)', callback_data: `disc_app:${id}` },
+          { text: '❌ رفض الخصم (Reject)', callback_data: `disc_rej:${id}` },
+        ],
+      ],
+    };
+
+    const sendRes = await sendTelegramMessage(text, 'HTML', undefined, inlineKeyboard);
+    if (!sendRes.success) {
+      return { success: false, error: sendRes.error || 'فشل إرسال طلب الموافقة إلى تيليجرام.' };
+    }
+
+    const reqObj: DiscountApprovalRequest = {
+      id,
+      subtotalIQD: input.subtotalIQD,
+      discountIQD: input.discountIQD,
+      discountPercent,
+      cashierName: input.cashierName,
+      itemsSummary: input.itemsSummary || '',
+      status: 'pending',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 3 * 60 * 1000, // 3 minutes timeout
+      chatId: settings.chatId,
+      messageId: sendRes.messageId,
+    };
+
+    activeDiscountApprovals.set(id, reqObj);
+    return { success: true, requestId: id };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Check the status of a pending discount approval request
+ */
+export function checkDiscountApprovalStatus(requestId: string): { status: 'pending' | 'approved' | 'rejected' | 'expired' } {
+  const req = activeDiscountApprovals.get(requestId);
+  if (!req) return { status: 'expired' };
+  if (Date.now() > req.expiresAt && req.status === 'pending') {
+    req.status = 'rejected';
+    return { status: 'expired' };
+  }
+  return { status: req.status };
+}
+
 // ─── Interactive Telegram Bot Commands (Long-Polling) ─────────────────────────
 
 let pollingActive = false;
@@ -488,7 +704,7 @@ export async function startTelegramBotPolling(): Promise<void> {
           continue;
         }
 
-        const url = `https://api.telegram.org/bot${currentSettings.botToken}/getUpdates?offset=${lastUpdateId + 1}&timeout=20&allowed_updates=["message"]`;
+        const url = `https://api.telegram.org/bot${currentSettings.botToken}/getUpdates?offset=${lastUpdateId + 1}&timeout=20&allowed_updates=["message","callback_query"]`;
         const resp = await fetch(url, {
           signal: pollingAbortController?.signal,
         });
@@ -509,6 +725,15 @@ export async function startTelegramBotPolling(): Promise<void> {
               text?: string;
               date: number;
             };
+            callback_query?: {
+              id: string;
+              from: { id: number; first_name?: string; username?: string };
+              message?: {
+                message_id: number;
+                chat: { id: number | string; title?: string };
+              };
+              data?: string;
+            };
           }>;
         };
 
@@ -516,6 +741,58 @@ export async function startTelegramBotPolling(): Promise<void> {
           for (const update of data.result) {
             lastUpdateId = Math.max(lastUpdateId, update.update_id);
 
+            // Handle Inline Button Clicks (callback_query)
+            if (update.callback_query) {
+              const cb = update.callback_query;
+              const cbData = cb.data || '';
+              const chatIdStr = String(cb.message?.chat?.id || cb.from?.id);
+
+              if (currentSettings.chatId && chatIdStr !== currentSettings.chatId) {
+                await answerTelegramCallbackQuery(cb.id, '⛔ غير مصرح لك باستخدام هذا البوت', true, currentSettings.botToken);
+                continue;
+              }
+
+              if (cbData.startsWith('disc_app:')) {
+                const reqId = cbData.replace('disc_app:', '');
+                const req = activeDiscountApprovals.get(reqId);
+                if (req) {
+                  req.status = 'approved';
+                  await answerTelegramCallbackQuery(cb.id, '✅ تمت الموافقة على الخصم بنجاح', false, currentSettings.botToken);
+                  if (cb.message?.message_id) {
+                    const approvedMsg = `🔔 <b>طلب موافقة على خصم استثنائي</b>\n━━━━━━━━━━━━━━━━━━━━\n👤 <b>الكاشير:</b> ${escapeHtml(req.cashierName)}\n💰 <b>المجموع:</b> ${req.subtotalIQD.toLocaleString('en-IQ')} د.ع\n🏷️ <b>الخصم المعتمد:</b> <b>${req.discountIQD.toLocaleString('en-IQ')} د.ع (${req.discountPercent.toFixed(1)}%)</b>\n💵 <b>المبلغ النهائي:</b> <b>${Math.max(0, req.subtotalIQD - req.discountIQD).toLocaleString('en-IQ')} د.ع</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ <b>تمت الموافقة من قبل المدير بنجاح.</b>`;
+                    await editTelegramMessageText(chatIdStr, cb.message.message_id, approvedMsg, 'HTML', undefined, currentSettings.botToken);
+                  }
+                } else {
+                  await answerTelegramCallbackQuery(cb.id, '⚠️ انتهت صلاحية هذا الطلب أو تم الرد عليه مسبقاً', true, currentSettings.botToken);
+                }
+                continue;
+              }
+
+              if (cbData.startsWith('disc_rej:')) {
+                const reqId = cbData.replace('disc_rej:', '');
+                const req = activeDiscountApprovals.get(reqId);
+                if (req) {
+                  req.status = 'rejected';
+                  await answerTelegramCallbackQuery(cb.id, '❌ تم رفض طلب الخصم', false, currentSettings.botToken);
+                  if (cb.message?.message_id) {
+                    const rejectedMsg = `🔔 <b>طلب موافقة على خصم استثنائي</b>\n━━━━━━━━━━━━━━━━━━━━\n👤 <b>الكاشير:</b> ${escapeHtml(req.cashierName)}\n💰 <b>المجموع:</b> ${req.subtotalIQD.toLocaleString('en-IQ')} د.ع\n🏷️ <b>الخصم المطلوب:</b> ${req.discountIQD.toLocaleString('en-IQ')} د.ع (${req.discountPercent.toFixed(1)}%)\n━━━━━━━━━━━━━━━━━━━━\n❌ <b>تم رفض الخصم من قبل المدير.</b>`;
+                    await editTelegramMessageText(chatIdStr, cb.message.message_id, rejectedMsg, 'HTML', undefined, currentSettings.botToken);
+                  }
+                } else {
+                  await answerTelegramCallbackQuery(cb.id, '⚠️ انتهت صلاحية هذا الطلب أو تم الرد عليه مسبقاً', true, currentSettings.botToken);
+                }
+                continue;
+              }
+
+              if (cbData.startsWith('cmd:')) {
+                const cmd = '/' + cbData.replace('cmd:', '');
+                await answerTelegramCallbackQuery(cb.id, `⏳ جاري تنفيذ أمر ${cmd}...`, false, currentSettings.botToken);
+                await handleTelegramBotCommand(cmd, chatIdStr, currentSettings.botToken);
+                continue;
+              }
+            }
+
+            // Handle Standard Text Messages
             const msg = update.message;
             if (!msg || !msg.text) continue;
 
@@ -1046,10 +1323,20 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 17. /start or /help ────────────────────────────────────────────────
-    if (cleanCmd === '/start' || cleanCmd === '/help' || cleanCmd === 'مساعدة' || cleanCmd === 'الاوامر' || cleanCmd === 'أوامر') {
-      let helpMsg = `🤖 <b>أوامر بوت كاشير EVA POS الذكي:</b>\n`;
+    // ─── 17. /start or /help or /menu ──────────────────────────────────────
+    if (
+      cleanCmd === '/start' ||
+      cleanCmd === '/help' ||
+      cleanCmd === '/menu' ||
+      cleanCmd.includes('قائمة الأوامر') ||
+      cleanCmd.includes('قائمة الاوامر') ||
+      cleanCmd.includes('مساعدة') ||
+      cleanCmd.includes('الاوامر') ||
+      cleanCmd.includes('أوامر')
+    ) {
+      let helpMsg = `🤖 <b>أزرار وقائمة بوت كاشير EVA POS الذكي:</b>\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      helpMsg += `💡 <i>تم تفعيل أزرار التحكم السريعة أسفل الشاشة للوصول المباشر!</i>\n\n`;
       helpMsg += `📊 <b>التقارير والمبيعات:</b>\n`;
       helpMsg += `  /report — تقرير مبيعات وأرباح اليوم\n`;
       helpMsg += `  /yesterday — تقرير مبيعات يوم أمس\n`;
@@ -1078,19 +1365,19 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       helpMsg += `  /employees_week — مبيعات الكادر آخر 7 أيام\n`;
       helpMsg += `  /employees_month — مبيعات الكادر الشهر الحالي\n`;
       helpMsg += `\n`;
-      helpMsg += `⚙️ <b>النظام والأمان:</b>\n`;
+      helpMsg += `⚙️ <b>النظام والأمان والموافقات:</b>\n`;
       helpMsg += `  /status — فحص اتصال النظام وحالته\n`;
       helpMsg += `  /backup — طلب نسخة احتياطية فورية (.db)\n`;
       helpMsg += `  /help — عرض قائمة الأوامر هذه\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
-      helpMsg += `<i>يمكنك كتابة الكلمات بالعربي (مثل: تقرير، نشاط اليوم، نشاط امس، المخزون، الكاش).</i>`;
+      helpMsg += `✨ <i>يمكنك الضغط على الأزرار السريعة أو كتابة الكلمات بالعربي مباشرة.</i>`;
 
-      await sendTelegramMessage(helpMsg, 'HTML', override);
+      await sendTelegramMessage(helpMsg, 'HTML', override, MAIN_REPLY_KEYBOARD);
       return;
     }
 
     // Default response for unhandled text
-    await sendTelegramMessage(`❓ أمر غير معروف. أرسل <b>/help</b> لعرض قائمة الأوامر المتاحة.`, 'HTML', override);
+    await sendTelegramMessage(`❓ أمر غير معروف. أرسل <b>/help</b> لعرض قائمة الأوامر أو اضغط على الأزرار أسفل الشاشة.`, 'HTML', override, MAIN_REPLY_KEYBOARD);
   } catch (cmdErr) {
     log.error('[telegram-bot] Command execution error:', cmdErr);
     await sendTelegramMessage(`❌ حدث خطأ أثناء معالجة الأمر: ${cmdErr instanceof Error ? cmdErr.message : String(cmdErr)}`, 'HTML', override);

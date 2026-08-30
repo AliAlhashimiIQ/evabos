@@ -14,7 +14,10 @@ import {
   DollarSign,
   Banknote,
   Plus,
-  Minus
+  Minus,
+  Bell,
+  Send,
+  ShieldAlert,
 } from 'lucide-react';
 import './Pages.css';
 import './PosPage.css';
@@ -351,6 +354,105 @@ const PosPage = (): JSX.Element => {
     return totalCostIQD > 0 ? (totalIQD / totalCostIQD).toFixed(2) : '0.00';
   }, [totalCostIQD, totalIQD]);
 
+  // ─── Remote Manager Discount Approval System ───────────────────────────────
+  const [approvalState, setApprovalState] = useState<{
+    isOpen: boolean;
+    requestId: string | null;
+    status: 'idle' | 'requesting' | 'pending' | 'approved' | 'rejected' | 'error';
+    errorMessage: string | null;
+  }>({
+    isOpen: false,
+    requestId: null,
+    status: 'idle',
+    errorMessage: null,
+  });
+
+  const [approvedDiscountKey, setApprovedDiscountKey] = useState<string | null>(null);
+
+  const isDiscountApproved = useMemo(() => {
+    return approvedDiscountKey === `${subtotalIQD}_${discountIQD}`;
+  }, [approvedDiscountKey, subtotalIQD, discountIQD]);
+
+  const handleRequestDiscountApproval = useCallback(async () => {
+    if (discountIQD <= 0 || subtotalIQD <= 0 || !token) return;
+    setApprovalState({
+      isOpen: true,
+      requestId: null,
+      status: 'requesting',
+      errorMessage: null,
+    });
+
+    try {
+      const itemsSummary = cart
+        .slice(0, 3)
+        .map((i) => `${i.product.productName || (i.product as any).name || 'منتج'} × ${i.quantity}`)
+        .join(', ');
+
+      const res = await window.evaApi.telegram.requestDiscountApproval(token, {
+        subtotalIQD,
+        discountIQD,
+        cashierName: user?.name || user?.username || 'كاشير',
+        itemsSummary: itemsSummary ? `${itemsSummary}${cart.length > 3 ? '...' : ''}` : undefined,
+      });
+
+      if (!res.success) {
+        setApprovalState({
+          isOpen: true,
+          requestId: null,
+          status: 'error',
+          errorMessage: res.error || 'فشل إرسال طلب الموافقة إلى تيليجرام.',
+        });
+        return;
+      }
+
+      setApprovalState({
+        isOpen: true,
+        requestId: res.requestId || null,
+        status: 'pending',
+        errorMessage: null,
+      });
+    } catch (err: any) {
+      setApprovalState({
+        isOpen: true,
+        requestId: null,
+        status: 'error',
+        errorMessage: err.message || 'حدث خطأ غير متوقع أثناء إرسال الطلب.',
+      });
+    }
+  }, [cart, discountIQD, subtotalIQD, token, user]);
+
+  // Polling for Remote Approval Response
+  useEffect(() => {
+    if (!approvalState.isOpen || approvalState.status !== 'pending' || !approvalState.requestId || !token) {
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const check = await window.evaApi.telegram.checkDiscountApproval(token, approvalState.requestId!);
+        if (check.status === 'approved') {
+          setApprovalState((prev) => ({ ...prev, status: 'approved' }));
+          setApprovedDiscountKey(`${subtotalIQD}_${discountIQD}`);
+          clearInterval(interval);
+          setTimeout(() => {
+            setApprovalState((prev) => ({ ...prev, isOpen: false }));
+          }, 1500);
+        } else if (check.status === 'rejected' || check.status === 'expired') {
+          setApprovalState((prev) => ({
+            ...prev,
+            status: 'rejected',
+            errorMessage: check.status === 'expired' ? 'انتهت مهلة انتظار موافقة المدير (3 دقائق).' : 'تم رفض الخصم من قبل المدير.',
+          }));
+          clearInterval(interval);
+        }
+      } catch {
+        // ignore poll error
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [approvalState.isOpen, approvalState.status, approvalState.requestId, token, subtotalIQD, discountIQD]);
+
   const addToCart = useCallback(
     (product: Product) => {
       // Check if product is out of stock
@@ -581,6 +683,14 @@ const PosPage = (): JSX.Element => {
               ? Math.max(0, subtotal - Math.max(0, Math.min(targetDiscountValue, subtotal)))
               : 0;
       const total = Math.max(subtotal - discount, 0);
+
+      // Remote manager approval check: if discount > 15% and user is not admin
+      if (user?.role !== 'admin' && discount > 0 && subtotal > 0 && (discount / subtotal) > 0.15) {
+        if (approvedDiscountKey !== `${subtotal}_${discount}`) {
+          handleRequestDiscountApproval();
+          return;
+        }
+      }
 
       // NaN/Infinity guard — block sale if financial values are corrupt
       if (!isFinite(subtotal) || !isFinite(discount) || !isFinite(total) || total < 0) {
@@ -1180,6 +1290,43 @@ const PosPage = (): JSX.Element => {
                 </button>
               )}
             </div>
+
+            {/* Remote Approval Button / Status Badge */}
+            {discountIQD > 0 && (
+              <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                {isDiscountApproved ? (
+                  <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
+                    <CheckCircle2 size={13} /> تمت موافقة المدير على الخصم
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRequestDiscountApproval}
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#3b82f6',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: '600',
+                    }}
+                    title="طلب موافقة المدير عن بُعد عبر تيليجرام"
+                  >
+                    <Bell size={12} /> طلب موافقة المدير (تيليجرام)
+                  </button>
+                )}
+                {((discountIQD / subtotalIQD) > 0.15 && user?.role !== 'admin' && !isDiscountApproved) && (
+                  <span style={{ color: '#f59e0b', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <ShieldAlert size={11} /> خصم &gt; 15% يتطلب موافقة
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Divider */}
@@ -1249,6 +1396,129 @@ const PosPage = (): JSX.Element => {
 
         </aside>
       </div>
+
+      {/* Remote Discount Approval Modal */}
+      {approvalState.isOpen && (
+        <div className="Pos-modalOverlay" style={{ zIndex: 1000, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="Pos-modal" style={{ maxWidth: '420px', width: '90%', background: 'var(--card-bg, #1e222d)', border: '1px solid var(--border-color, #333b4d)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              {approvalState.status === 'approved' ? (
+                <CheckCircle2 size={48} color="#10b981" />
+              ) : approvalState.status === 'rejected' || approvalState.status === 'error' ? (
+                <XCircle size={48} color="#ef4444" />
+              ) : (
+                <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Loader2 size={48} color="#3b82f6" className="spin" />
+                  <Bell size={20} color="#3b82f6" style={{ position: 'absolute' }} />
+                </div>
+              )}
+            </div>
+
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.4rem', color: 'var(--text-primary, #fff)' }}>
+              {approvalState.status === 'approved'
+                ? 'تمت موافقة المدير بنجاح!'
+                : approvalState.status === 'rejected'
+                  ? 'تم رفض الخصم'
+                  : approvalState.status === 'error'
+                    ? 'تعذر إرسال الطلب'
+                    : 'طلب موافقة المدير عن بُعد'}
+            </h3>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #9ca3af)', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+              {approvalState.status === 'approved'
+                ? 'تم اعتماد الخصم من قبل المدير عبر تطبيق تيليجرام بنجاح.'
+                : approvalState.status === 'rejected'
+                  ? approvalState.errorMessage || 'رفض المدير منح هذا الخصم.'
+                  : approvalState.status === 'error'
+                    ? approvalState.errorMessage
+                    : 'تم إرسال إشعار فوري إلى تيليجرام المدير. بانتظار ضغط زر (✅ موافقة)...'}
+            </p>
+
+            <div
+              style={{
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                padding: '0.85rem',
+                borderRadius: '8px',
+                textAlign: 'right',
+                fontSize: '0.85rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary, #9ca3af)' }}>مجموع الفاتورة:</span>
+                <strong style={{ color: '#fff' }}>{subtotalIQD.toLocaleString('en-IQ')} د.ع</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                <span>الخصم المطلوب:</span>
+                <strong>−{discountIQD.toLocaleString('en-IQ')} د.ع ({subtotalIQD > 0 ? ((discountIQD / subtotalIQD) * 100).toFixed(1) : 0}%)</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.4rem' }}>
+                <span style={{ color: 'var(--text-secondary, #9ca3af)' }}>المبلغ بعد الخصم:</span>
+                <strong style={{ color: '#10b981' }}>{totalIQD.toLocaleString('en-IQ')} د.ع</strong>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              {(approvalState.status === 'pending' || approvalState.status === 'requesting') && (
+                <button
+                  type="button"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'transparent',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                  }}
+                  onClick={() => setApprovalState({ isOpen: false, requestId: null, status: 'idle', errorMessage: null })}
+                >
+                  إلغاء الطلب
+                </button>
+              )}
+              {(approvalState.status === 'rejected' || approvalState.status === 'error') && (
+                <>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'transparent',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                    }}
+                    onClick={() => setApprovalState({ isOpen: false, requestId: null, status: 'idle', errorMessage: null })}
+                  >
+                    إغلاق
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#3b82f6',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                    }}
+                    onClick={handleRequestDiscountApproval}
+                  >
+                    إعادة المحاولة
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <PrintingModal
         visible={!!printSale}
