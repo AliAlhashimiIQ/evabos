@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   resetFocus: () => ipcRenderer.invoke('app:reset-focus'),
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),
 
   // Auto Updater
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),

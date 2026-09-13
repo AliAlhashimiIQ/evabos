@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import path from 'path';
@@ -160,7 +160,19 @@ async function createWindow(): Promise<void> {
 
   mainWindow.maximize();
 
-  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (
+      url.startsWith('https:') ||
+      url.startsWith('http:') ||
+      url.startsWith('mailto:') ||
+      url.startsWith('tel:')
+    ) {
+      shell.openExternal(url).catch((err) => {
+        log.error('[main] Failed to open external URL:', err);
+      });
+    }
+    return { action: 'deny' };
+  });
 
   // Intercept navigation to ensure it stays within app:// protocol
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
@@ -309,6 +321,25 @@ const registerIpcHandlers = (): void => {
           mainWindow.focus();
         }
       }, 100);
+    }
+  });
+
+  ipcMain.handle('app:open-external', async (_event, url: string) => {
+    try {
+      if (
+        typeof url === 'string' &&
+        (url.startsWith('https://') ||
+          url.startsWith('http://') ||
+          url.startsWith('mailto:') ||
+          url.startsWith('tel:'))
+      ) {
+        await shell.openExternal(url);
+        return { success: true };
+      }
+      return { success: false, error: 'Invalid URL protocol' };
+    } catch (err: any) {
+      log.error('[main] app:open-external failed:', err);
+      return { success: false, error: err?.message || 'Failed to open URL' };
     }
   });
 

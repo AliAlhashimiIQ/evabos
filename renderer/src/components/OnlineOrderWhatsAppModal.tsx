@@ -108,7 +108,7 @@ export const OnlineOrderWhatsAppModal: React.FC<OnlineOrderWhatsAppModalProps> =
     }
   };
 
-  const handleOpenWhatsApp = () => {
+  const handleOpenWhatsApp = async () => {
     if (!phoneInfo.normalized) {
       toast.warning('يرجى التأكد من وجود رقم هاتف صحيح للعميل');
       return;
@@ -117,9 +117,17 @@ export const OnlineOrderWhatsAppModal: React.FC<OnlineOrderWhatsAppModalProps> =
     const encodedText = encodeURIComponent(customMessage);
     const waUrl = `https://wa.me/${phoneInfo.normalized}?text=${encodedText}`;
 
-    // Use window.open or electron shell
-    window.open(waUrl, '_blank');
-    toast.success('جاري فتح محادثة واتساب...');
+    try {
+      if (window.electronAPI?.openExternal) {
+        await window.electronAPI.openExternal(waUrl);
+      } else {
+        window.open(waUrl, '_blank');
+      }
+      toast.success('جاري فتح محادثة واتساب في المتصفح...');
+    } catch (err) {
+      console.error('Failed to open WhatsApp URL:', err);
+      toast.error('تعذر فتح الرابط في المتصفح');
+    }
   };
 
   return (
