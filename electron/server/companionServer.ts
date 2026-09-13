@@ -143,6 +143,43 @@ export async function getCompanionServerInfo(): Promise<{
 }
 
 /**
+ * Generate all variations of barcode (with/without leading zero, UPC-A/EAN-13 conversions)
+ */
+export function getBarcodeCandidates(raw: string): string[] {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return [];
+
+  const candidates = new Set<string>();
+  candidates.add(trimmed);
+
+  const stripped = trimmed.replace(/^0+/, '');
+  if (stripped) {
+    candidates.add(stripped);
+    candidates.add('0' + stripped);
+    candidates.add('00' + stripped);
+    candidates.add('000' + stripped);
+    candidates.add('0000' + stripped);
+  }
+
+  if (trimmed.startsWith('0')) {
+    const strippedOne = trimmed.substring(1);
+    if (strippedOne) candidates.add(strippedOne);
+  } else {
+    candidates.add('0' + trimmed);
+    candidates.add('00' + trimmed);
+  }
+
+  // UPC-A (12) <-> EAN-13 (13)
+  if (trimmed.length === 12) {
+    candidates.add('0' + trimmed);
+  } else if (trimmed.length === 13 && trimmed.startsWith('0')) {
+    candidates.add(trimmed.substring(1));
+  }
+
+  return Array.from(candidates).filter(Boolean);
+}
+
+/**
  * Lookup product info and calculate cost, multipliers, profits, and promotions
  */
 export async function lookupProductDetails(queryStr: string): Promise<ProductLookupResult> {
@@ -154,6 +191,11 @@ export async function lookupProductDetails(queryStr: string): Promise<ProductLoo
   try {
     const rateSetting = await get<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['exchangeRate']);
     const exchangeRate = rateSetting ? parseFloat(rateSetting.value) || 1520 : 1520;
+
+    const candidates = getBarcodeCandidates(q);
+    const placeholders = candidates.map(() => '?').join(', ');
+    const lowerPlaceholders = candidates.map(() => '?').join(', ');
+    const stripped = q.replace(/^0+/, '') || q;
 
     const row = await get<{
       variantId: number;
@@ -188,12 +230,38 @@ export async function lookupProductDetails(queryStr: string): Promise<ProductLoo
       FROM product_variants pv
       JOIN products p ON p.id = pv.productId
       LEFT JOIN variant_stock vs ON vs.variantId = pv.id
-      WHERE (pv.barcode = ? OR pv.sku = ? OR LOWER(pv.barcode) = LOWER(?) OR LOWER(pv.sku) = LOWER(?))
+      WHERE (
+        pv.barcode IN (${placeholders}) OR
+        pv.sku IN (${placeholders}) OR
+        LOWER(pv.barcode) IN (${lowerPlaceholders}) OR
+        LOWER(pv.sku) IN (${lowerPlaceholders})
+      )
         AND pv.isActive = 1 AND p.isActive = 1
       GROUP BY pv.id
+      ORDER BY
+        CASE
+          WHEN pv.barcode = ? THEN 1
+          WHEN pv.sku = ? THEN 2
+          WHEN pv.barcode = ? THEN 3
+          WHEN pv.sku = ? THEN 4
+          WHEN LOWER(pv.barcode) = LOWER(?) THEN 5
+          WHEN LOWER(pv.sku) = LOWER(?) THEN 6
+          ELSE 7
+        END
       LIMIT 1
     `,
-      [q, q, q, q],
+      [
+        ...candidates,
+        ...candidates,
+        ...candidates.map((c) => c.toLowerCase()),
+        ...candidates.map((c) => c.toLowerCase()),
+        q,
+        q,
+        stripped,
+        stripped,
+        q,
+        q,
+      ],
     );
 
     if (!row) {
@@ -523,6 +591,11 @@ function getCompanionHtml(): string {
       box-shadow: 0 0 0 9999px rgba(0,0,0,0.50);
       position: relative;
       overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .reticle-frame.locked {
+      border-color: #10b981 !important;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.50), 0 0 16px rgba(16,185,129,0.55) !important;
     }
     .reticle-beam {
       position: absolute;
@@ -531,9 +604,40 @@ function getCompanionHtml(): string {
       background: linear-gradient(90deg, transparent, var(--accent), transparent);
       animation: sweep 1.6s ease-in-out infinite alternate;
     }
+    .reticle-frame.locked .reticle-beam {
+      background: #10b981 !important;
+      animation: none !important;
+      top: 50% !important;
+    }
     @keyframes sweep {
       from { top: 6%; }
       to   { top: 94%; }
+    }
+
+    .scan-status-badge {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(6px);
+      color: #fff;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 999px;
+      z-index: 20;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .scan-status-badge.locked {
+      background: rgba(16, 185, 129, 0.95);
+      border-color: #10b981;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.45);
     }
 
     .scanner-controls {
@@ -899,15 +1003,18 @@ function getCompanionHtml(): string {
       <div class="scanner-viewport">
         <div id="reader"></div>
         <div class="reticle">
-          <div class="reticle-frame">
-            <div class="reticle-beam"></div>
+          <div class="reticle-frame" id="reticleFrame">
+            <div class="reticle-beam" id="reticleBeam"></div>
           </div>
         </div>
+        <div id="scanStatusBadge" class="scan-status-badge">وجه الكاميرا نحو الباركود</div>
       </div>
       <div class="scanner-controls">
-        <button class="ctrl-btn" id="btnTorch" onclick="toggleTorch()">الكشاف</button>
-        <button class="ctrl-btn" onclick="flipCamera()">تبديل الكاميرا</button>
-        <button class="ctrl-btn" id="btnPause" onclick="togglePause()">إيقاف مؤقت</button>
+        <button class="ctrl-btn" id="btnTorch" onclick="toggleTorch()">🔦 كشاف</button>
+        <button class="ctrl-btn" onclick="flipCamera()">🔄 تبديل</button>
+        <button class="ctrl-btn" id="btnPause" onclick="togglePause()">⏸ إيقاف</button>
+        <button class="ctrl-btn" id="btnReset" onclick="resetLock()" style="display:none;background:#ecfdf5;color:#065f46;border-color:#10b981;">🔄 صنف جديد</button>
+        <button class="ctrl-btn" id="btnRepeat" onclick="repeatPosScan()" style="display:none;background:#eff6ff;color:#1d4ed8;border-color:#3b82f6;">➕ قطعة أخرى</button>
       </div>
     </div>
 
@@ -922,7 +1029,10 @@ function getCompanionHtml(): string {
 
       <div class="prod-row">
         <div class="prod-name" id="pName">—</div>
-        <div class="stock-pill ok" id="pStock">0 قطعة</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div class="stock-pill ok" id="pStock">0 قطعة</div>
+          <button class="ctrl-btn" onclick="resetLock()" style="padding:4px 8px;font-size:0.75rem;background:var(--accent-dim);color:var(--accent);border-color:var(--accent);" title="فحص صنف آخر">🔄 فحص آخر</button>
+        </div>
       </div>
 
       <div class="meta-row">
@@ -1032,8 +1142,9 @@ function getCompanionHtml(): string {
     let facing = 'environment';
     let torchOn = false;
     let paused = false;
-    let lastCode = '';
-    let lastTime = 0;
+    let lockedBarcode = '';
+    let lastScanTime = 0;
+    let isLookingUp = false;
     let product = null;
     let multiplier = 2.0;
     let currentPrice = 0;
@@ -1054,7 +1165,60 @@ function getCompanionHtml(): string {
       document.getElementById('tabChecker').className = 'mode-btn' + (m === 'checker' ? ' active' : '');
       document.getElementById('productCard').style.display = m === 'checker' && product ? 'block' : 'none';
       document.getElementById('histCard').style.display    = m === 'pos' ? 'block' : 'none';
+      resetLock(true);
       toast(m === 'pos' ? 'وضع الكاشير: كل مسح يُرسل للكاشير مباشرة.' : 'وضع الفحص: امسح منتجاً لرؤية التكلفة والمضاعفات.');
+    }
+
+    function updateControlButtons() {
+      const btnReset = document.getElementById('btnReset');
+      const btnRepeat = document.getElementById('btnRepeat');
+      if (mode === 'checker') {
+        if (btnReset) btnReset.style.display = lockedBarcode ? 'inline-block' : 'none';
+        if (btnRepeat) btnRepeat.style.display = 'none';
+      } else {
+        if (btnReset) btnReset.style.display = 'none';
+        if (btnRepeat) btnRepeat.style.display = lockedBarcode ? 'inline-block' : 'none';
+      }
+    }
+
+    function resetLock(silent) {
+      lockedBarcode = '';
+      product = null;
+      lastScanTime = 0;
+      setReticleState(false);
+      updateControlButtons();
+      if (!silent) toast('جاهز لمسح صنف جديد');
+    }
+
+    function setReticleState(locked, label) {
+      const frame = document.getElementById('reticleFrame');
+      const badge = document.getElementById('scanStatusBadge');
+      if (frame) {
+        if (locked) frame.classList.add('locked');
+        else frame.classList.remove('locked');
+      }
+      if (badge) {
+        if (locked) {
+          badge.className = 'scan-status-badge locked';
+          badge.textContent = label || (mode === 'checker' ? '✓ تم الفحص — وجه الكاميرا لصنف آخر' : '✓ تم الإرسال للكاشير');
+        } else {
+          badge.className = 'scan-status-badge';
+          badge.textContent = mode === 'checker' ? 'وجه الكاميرا نحو الباركود لفحص السعر' : 'وجه الكاميرا نحو الباركود للإرسال للكاشير';
+        }
+      }
+    }
+
+    function isSameBarcode(a, b) {
+      if (!a || !b) return false;
+      const aClean = String(a).trim();
+      const bClean = String(b).trim();
+      if (aClean === bClean) return true;
+      if (aClean.toLowerCase() === bClean.toLowerCase()) return true;
+      const aStripped = aClean.replace(/^0+/, '');
+      const bStripped = bClean.replace(/^0+/, '');
+      if (aStripped && aStripped === bStripped) return true;
+      if ('0' + aClean === bClean || '0' + bClean === aClean) return true;
+      return false;
     }
 
     function chime() {
@@ -1081,47 +1245,43 @@ function getCompanionHtml(): string {
 
     function run() {
       scanner = new Html5Qrcode('reader', { verbose: false });
-      // Camera constraints: request HD resolution + continuous autofocus for best barcode reads
       const camConstraints = {
         facingMode: facing,
         width:  { ideal: 1280 },
         height: { ideal: 720 },
         advanced: [{ focusMode: 'continuous' }],
       };
-      // qrbox as a function so it tracks viewport size dynamically
       const qrbox = (vw, vh) => ({
         width:  Math.round(vw * 0.82),
         height: Math.round(vh * 0.55),
       });
+      const allFormats = [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.QR_CODE,
+      ];
       scanner.start(
         camConstraints,
         {
           fps: 30,
           qrbox,
-          // Do NOT set aspectRatio — let the camera run at its native ratio
           disableFlip: false,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.CODE_39,
-          ]
+          formatsToSupport: allFormats,
         },
         onScan, () => {}
       ).catch(err => {
-        // Retry without advanced constraints if browser rejects them
         scanner = new Html5Qrcode('reader', { verbose: false });
         scanner.start(
           { facingMode: facing },
           { fps: 30, qrbox: { width: 260, height: 140 }, disableFlip: false,
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.CODE_128,
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.CODE_39,
-            ]
+            formatsToSupport: allFormats,
           },
           onScan, () => {}
         ).catch(() => toast('يرجى منح إذن الكاميرا ثم أعد تحميل الصفحة.', true, 8000));
@@ -1142,20 +1302,99 @@ function getCompanionHtml(): string {
       document.getElementById('btnPause').textContent = paused ? 'استئناف' : 'إيقاف مؤقت';
     }
 
-    async function onScan(code) {
+    async function onScan(rawCode) {
+      if (!rawCode) return;
+      const code = String(rawCode).trim();
+      if (!code) return;
       const now = Date.now();
-      // Only debounce the exact same barcode; different codes fire immediately
-      if (code === lastCode && now - lastTime < 1800) return;
-      lastCode = code; lastTime = now;
-      chime();
-      if (mode === 'pos') {
+
+      // ─── 1. CHECKER MODE: Reads ONCE. Only re-reads if DIFFERENT barcode ───
+      if (mode === 'checker') {
+        const isCurrent = isSameBarcode(code, lockedBarcode) ||
+                          (product && (isSameBarcode(code, product.barcode) || isSameBarcode(code, product.sku)));
+        if (isCurrent) {
+          // Exactly the same barcode is still in front of the camera.
+          // SILENTLY IGNORE so the screen is rock-solid and does NOT reset or spam!
+          return;
+        }
+
+        if (isLookingUp) return;
+
+        // DIFFERENT barcode scanned!
+        lockedBarcode = code;
+        lastScanTime = now;
+        isLookingUp = true;
+        chime();
+        setReticleState(true, '⏳ جاري جلب التفاصيل...');
+        updateControlButtons();
+
         try {
-          const r = await fetch('/api/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ barcode: code, source: 'mobile' }) });
+          await lookup(code);
+        } finally {
+          isLookingUp = false;
+        }
+        return;
+      }
+
+      // ─── 2. POS MODE: Dispatch to cashier cart ────────────────────────────
+      if (mode === 'pos') {
+        // Prevent duplicate spam while camera is held over the same barcode
+        if (isSameBarcode(code, lockedBarcode) && now - lastScanTime < 3000) {
+          return;
+        }
+
+        lockedBarcode = code;
+        lastScanTime = now;
+        chime();
+        setReticleState(true, '✓ جاري الإرسال للكاشير...');
+        updateControlButtons();
+
+        try {
+          const r = await fetch('/api/scan', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ barcode: code, source: 'mobile' })
+          });
           const d = await r.json();
-          d.success ? (toast('تم إرسال (' + code + ') للكاشير'), addHistory(code)) : toast('صنف غير معروف: ' + code, true);
-        } catch { toast('تعذر الاتصال بالكاشير', true); }
-      } else {
-        await lookup(code);
+          if (d.success) {
+            const displayName = d.productName ? (d.productName + ' (' + (d.barcode || code) + ')') : code;
+            toast('✓ تم إرسال (' + displayName + ') للكاشير');
+            addHistory(displayName);
+            setReticleState(true, '✓ أُرسل: ' + (d.productName || code));
+          } else {
+            toast('صنف غير معروف: ' + code, true);
+            setReticleState(false);
+          }
+        } catch {
+          toast('تعذر الاتصال بالكاشير', true);
+          setReticleState(false);
+        }
+
+        setTimeout(() => {
+          if (mode === 'pos') {
+            setReticleState(false);
+          }
+        }, 1800);
+      }
+    }
+
+    async function repeatPosScan() {
+      if (!lockedBarcode || mode !== 'pos') return;
+      chime();
+      try {
+        const r = await fetch('/api/scan', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ barcode: lockedBarcode, source: 'mobile' })
+        });
+        const d = await r.json();
+        if (d.success) {
+          const displayName = d.productName ? (d.productName + ' (' + (d.barcode || lockedBarcode) + ')') : lockedBarcode;
+          toast('✓ تم تكرار (+1) (' + displayName + ')');
+          addHistory(displayName);
+        }
+      } catch {
+        toast('تعذر الاتصال بالكاشير', true);
       }
     }
 
@@ -1163,10 +1402,24 @@ function getCompanionHtml(): string {
       try {
         const r = await fetch('/api/product?query=' + encodeURIComponent(code));
         const d = await r.json();
-        if (!d.found) { toast('لا يوجد منتج بهذا الباركود: ' + code, true); document.getElementById('productCard').style.display = 'none'; return; }
+        if (!d.found) {
+          product = null;
+          toast('لا يوجد منتج بهذا الباركود: ' + code, true);
+          document.getElementById('productCard').style.display = 'none';
+          setReticleState(true, '⚠️ صنف غير مسجل: ' + code);
+          updateControlButtons();
+          return;
+        }
         product = d.product;
         renderProduct(d);
-      } catch { toast('خطأ في جلب بيانات المنتج', true); }
+        setReticleState(true, '✓ ' + d.product.name);
+        updateControlButtons();
+      } catch {
+        product = null;
+        toast('خطأ في جلب بيانات المنتج', true);
+        setReticleState(false);
+        updateControlButtons();
+      }
     }
 
     function fmt(n) { return Number(n).toLocaleString('en-IQ'); }
@@ -1425,17 +1678,27 @@ async function handleCompanionRequest(req: http.IncomingMessage, res: http.Serve
 
         log.info(`[companion-server] Received barcode scan from mobile: "${barcode}"`);
 
+        // Resolve canonical barcode/sku from DB so PosPage matches immediately
+        const lookup = await lookupProductDetails(barcode);
+        const resolvedBarcode = lookup.found && lookup.product ? (lookup.product.barcode || lookup.product.sku) : barcode;
+
         if (mainWindowRef && !mainWindowRef.isDestroyed()) {
           mainWindowRef.webContents.send('companion:barcode-scanned', {
-            barcode,
+            barcode: resolvedBarcode,
+            rawBarcode: barcode,
             source: 'mobile',
             overridePrice,
+            productName: lookup.product?.name || null,
             timestamp: Date.now(),
           });
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ success: true, barcode }));
+        res.end(JSON.stringify({
+          success: true,
+          barcode: resolvedBarcode,
+          productName: lookup.product?.name || null
+        }));
       } catch (parseErr) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: 'Invalid JSON payload' }));

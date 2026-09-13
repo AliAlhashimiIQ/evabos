@@ -1,13 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   ShoppingBag, CheckCircle2, XCircle, Clock, Plus, Search,
   Loader2, Instagram, Phone, MessageCircle, Globe, Package,
-  ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X, Printer, RefreshCw, Pause, Play, Filter,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { confirmDialog } from '../utils/confirmDialog';
+import WaybillPrintModal from '../components/WaybillPrintModal';
+import OnlineOrderWhatsAppModal from '../components/OnlineOrderWhatsAppModal';
 import './OnlineOrdersPage.css';
 
 type OnlineOrder = import('../types/electron').OnlineOrder;
@@ -23,7 +25,11 @@ const SOURCE_ICONS: Record<OnlineOrderSource, JSX.Element> = {
   other: <Globe size={14} style={{ color: '#6366f1' }} />,
 };
 const SOURCE_LABELS: Record<OnlineOrderSource, string> = {
-  instagram: 'Instagram', tiktok: 'TikTok', whatsapp: 'WhatsApp', phone: 'Phone', other: 'Other',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  whatsapp: 'WhatsApp',
+  phone: 'Phone',
+  other: 'Other',
 };
 const STATUS_CFG: Record<OnlineOrderStatus, { label: string; cls: string; icon: JSX.Element }> = {
   pending:   { label: 'قيد الانتظار',   cls: 'OO-badge--pending',   icon: <Clock size={12} /> },
@@ -55,6 +61,8 @@ const OnlineOrdersPage = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OnlineOrderStatus | 'all'>('pending');
+  const [sourceFilter, setSourceFilter] = useState<OnlineOrderSource | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -73,35 +81,138 @@ const OnlineOrdersPage = (): JSX.Element => {
   const [formError, setFormError] = useState<string | null>(null);
   const [scannerMessage, setScannerMessage] = useState<string | null>(null);
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
+
+  // New Modals State
+  const [printingOrder, setPrintingOrder] = useState<OnlineOrder | null>(null);
+  const [whatsAppOrder, setWhatsAppOrder] = useState<OnlineOrder | null>(null);
+  const [storeName, setStoreName] = useState('EVA POS');
+
+  // Auto-refresh state
+  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+  const [secondsAgo, setSecondsAgo] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Load all orders (unfiltered) ---
-  const loadOrders = useCallback(async () => {
+  // --- Load all orders ---
+  const loadOrders = useCallback(async (isSilent = false) => {
     if (!window.evaApi || !token) return;
     try {
-      setLoading(true); setError(null);
+      if (!isSilent) setLoading(true);
+      setError(null);
       const result = await window.evaApi.onlineOrders.list(token);
       setAllOrders(result);
+      setLastRefreshedAt(new Date());
+      setSecondsAgo(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally { setLoading(false); }
+      if (!isSilent) {
+        setError(err instanceof Error ? err.message : 'Failed to load');
+      }
+    } finally {
+      if (!isSilent) setLoading(false);
+      setIsRefreshing(false);
+    }
   }, [token]);
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
+  // Load store name for WhatsApp and Waybill
   useEffect(() => {
-    if (!window.evaApi) return;
-    window.evaApi.exchangeRates.getCurrent().then((r: any) => { if (r.currentRate) setExchangeRate(r.currentRate.rate); });
+    if (!window.electronAPI) return;
+    window.electronAPI.getSetting('receipt_store_name').then((val: string | null) => {
+      if (val) setStoreName(val);
+    }).catch(() => {});
   }, []);
 
-  // --- Client-side filtering + counts ---
-  const counts = {
+  useEffect(() => {
+    if (!window.evaApi) return;
+    window.evaApi.exchangeRates.getCurrent().then((r: any) => {
+      if (r.currentRate) setExchangeRate(r.currentRate.rate);
+    });
+  }, []);
+
+  // --- Auto-Refresh Polling (20s interval with non-intrusive modal guard) ---
+  useEffect(() => {
+    if (isAutoRefreshPaused) return;
+
+    const interval = setInterval(() => {
+      // Guard: Do not poll or disrupt if user is actively filling or interacting with a modal
+      if (showForm || editOrderId || printingOrder || whatsAppOrder) {
+        return;
+      }
+      loadOrders(true);
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [isAutoRefreshPaused, showForm, editOrderId, printingOrder, whatsAppOrder, loadOrders]);
+
+  // Timer for seconds since last refresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const diff = Math.floor((Date.now() - lastRefreshedAt.getTime()) / 1000);
+      setSecondsAgo(diff);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastRefreshedAt]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await loadOrders(false);
+    toast.success('تم تحديث قائمة الطلبات');
+  };
+
+  // --- Multi-Field Search & Counts ---
+  const counts = useMemo(() => ({
     all: allOrders.length,
     pending: allOrders.filter(o => o.status === 'pending').length,
     confirmed: allOrders.filter(o => o.status === 'confirmed').length,
     rejected: allOrders.filter(o => o.status === 'rejected').length,
-  };
-  const filteredOrders = statusFilter === 'all' ? allOrders : allOrders.filter(o => o.status === statusFilter);
+  }), [allOrders]);
+
+  const filteredOrders = useMemo(() => {
+    let result = allOrders;
+
+    // 1. Status Filter
+    if (statusFilter !== 'all') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+
+    // 2. Source Filter
+    if (sourceFilter !== 'all') {
+      result = result.filter(o => o.source === sourceFilter);
+    }
+
+    // 3. Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const qCleanDigits = q.replace(/[^\d]/g, '');
+
+      result = result.filter(o => {
+        // Match Order ID
+        const matchId = String(o.id) === q || `#${o.id}` === q;
+        // Match Customer Name
+        const matchName = o.customerName?.toLowerCase().includes(q);
+        // Match Customer Phone
+        const rawDigits = (o.customerPhone || '').replace(/[^\d]/g, '');
+        const matchPhone = (qCleanDigits && rawDigits.includes(qCleanDigits)) || o.customerPhone?.toLowerCase().includes(q);
+        // Match Note / Address
+        const matchNote = o.note?.toLowerCase().includes(q);
+        // Match Products in Order
+        const matchItem = o.items.some(
+          item =>
+            item.productName.toLowerCase().includes(q) ||
+            item.sku.toLowerCase().includes(q) ||
+            (item.color && item.color.toLowerCase().includes(q)) ||
+            (item.size && item.size.toLowerCase().includes(q))
+        );
+
+        return matchId || matchName || matchPhone || matchNote || matchItem;
+      });
+    }
+
+    return result;
+  }, [allOrders, statusFilter, sourceFilter, searchQuery]);
 
   // --- Products ---
   const loadProducts = useCallback(async () => {
@@ -152,9 +263,8 @@ const OnlineOrdersPage = (): JSX.Element => {
       setScannerMessage(`❌ لا يوجد تطابق: ${val}`);
     }
 
-    setProductSearch(''); // CLEAR INPUT
+    setProductSearch('');
     setTimeout(() => setScannerMessage(null), 2500);
-    // Refocus search input
     setTimeout(() => searchInputRef.current?.focus(), 100);
   }, [products, cart, showForm]);
 
@@ -174,7 +284,7 @@ const OnlineOrdersPage = (): JSX.Element => {
     try {
       const result = await window.evaApi.onlineOrders.confirm(token, orderId, exchangeRate);
       toast.success(`تم تأكيد الطلب #${orderId} — عملية بيع #${result.saleId}`);
-      await loadOrders();
+      await loadOrders(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'فشل التأكيد');
     } finally { setActionLoading(null); }
@@ -188,7 +298,7 @@ const OnlineOrdersPage = (): JSX.Element => {
       await window.evaApi.onlineOrders.reject(token, orderId, rejectReason || undefined);
       setRejectingId(null); setRejectReason('');
       toast.success(`تم رفض الطلب #${orderId}`);
-      await loadOrders();
+      await loadOrders(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'فشل الرفض');
     } finally { setActionLoading(null); }
@@ -269,7 +379,7 @@ const OnlineOrdersPage = (): JSX.Element => {
       
       setShowForm(false); setCart([]); setFormCustomerName(''); setFormCustomerPhone('');
       setFormNote(''); setFormDiscount(0); setProductSearch(''); setEditOrderId(null);
-      await loadOrders();
+      await loadOrders(true);
     } catch (err) { setFormError(err instanceof Error ? err.message : 'Failed'); }
     finally { setSubmitting(false); }
   };
@@ -295,7 +405,7 @@ const OnlineOrdersPage = (): JSX.Element => {
           size: item.size || null,
           barcode: null,
           salePriceIQD: item.unitPriceIQD,
-          stockOnHand: 9999, // Allow editing without stock errors if we don't have the full product
+          stockOnHand: 9999,
           avgCostUSD: 0
         } as Product,
         quantity: item.quantity,
@@ -318,7 +428,7 @@ const OnlineOrdersPage = (): JSX.Element => {
     try {
       await window.evaApi.onlineOrders.delete(token, orderId);
       toast.success('تم حذف الطلب بنجاح');
-      await loadOrders();
+      await loadOrders(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'فشل الحذف');
     } finally {
@@ -326,44 +436,108 @@ const OnlineOrdersPage = (): JSX.Element => {
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.stockOnHand > 0 &&
-    (productSearch === '' || 
-      p.productName.toLowerCase().includes(productSearch.toLowerCase()) || 
-      p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
-      (p.barcode && p.barcode.toLowerCase().includes(productSearch.toLowerCase()))
-    )
-  );
-
   return (
     <div className="Page OO">
+      {/* Header with Title & Action Controls */}
       <div className="OO-header">
         <div>
           <h1><ShoppingBag size={26} style={{ verticalAlign: 'middle', marginInlineEnd: '0.5rem' }} />الطلبات أونلاين</h1>
           <p>إدارة طلبات إنستغرام، تيك توك، وواتساب — يتم خصم المخزون <strong>فقط عند التأكيد</strong></p>
         </div>
-        <button className="OO-newBtn" onClick={() => {
-          setEditOrderId(null);
-          setCart([]); setFormCustomerName(''); setFormCustomerPhone(''); setFormNote(''); setFormDiscount(0);
-          setShowForm(true);
-        }}><Plus size={18} /> طلب جديد أونلاين</button>
+        <div className="OO-header-right">
+          {/* Live Sync Status Bar */}
+          <div className="OO-syncBar" title={isAutoRefreshPaused ? 'التحديث التلقائي متوقف مؤقتاً' : 'تحديث تلقائي كل 20 ثانية'}>
+            <span className={`OO-syncPulse ${isAutoRefreshPaused ? 'paused' : 'live'}`} />
+            <span className="OO-syncText">
+              {isAutoRefreshPaused ? 'متوقف مؤقتاً' : `محدث (قبل ${secondsAgo} ث)`}
+            </span>
+            <button
+              className="OO-syncBtn"
+              onClick={() => setIsAutoRefreshPaused(!isAutoRefreshPaused)}
+              title={isAutoRefreshPaused ? 'استئناف التحديث التلقائي' : 'إيقاف التحديث التلقائي مؤقتاً'}
+            >
+              {isAutoRefreshPaused ? <Play size={13} /> : <Pause size={13} />}
+            </button>
+            <button
+              className="OO-syncBtn"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              title="تحديث القائمة الآن"
+            >
+              <RefreshCw size={13} className={isRefreshing ? 'spin' : ''} />
+            </button>
+          </div>
+
+          <button className="OO-newBtn" onClick={() => {
+            setEditOrderId(null);
+            setCart([]); setFormCustomerName(''); setFormCustomerPhone(''); setFormNote(''); setFormDiscount(0);
+            setShowForm(true);
+          }}><Plus size={18} /> طلب جديد أونلاين</button>
+        </div>
       </div>
 
-      <div className="OO-tabs">
-        {(['all', 'pending', 'confirmed', 'rejected'] as const).map((s) => (
-          <button key={s} className={`OO-tab ${statusFilter === s ? 'OO-tab--active' : ''}`} onClick={() => setStatusFilter(s)}>
-            {s === 'all' ? 'الكل' : STATUS_CFG[s as OnlineOrderStatus].label}
-            <span className="OO-tab-count">{counts[s]}</span>
-          </button>
-        ))}
+      {/* Filter & Live Search Toolbar */}
+      <div className="OO-toolbar">
+        {/* Status Tabs */}
+        <div className="OO-tabs">
+          {(['all', 'pending', 'confirmed', 'rejected'] as const).map((s) => (
+            <button key={s} className={`OO-tab ${statusFilter === s ? 'OO-tab--active' : ''}`} onClick={() => setStatusFilter(s)}>
+              {s === 'all' ? 'الكل' : STATUS_CFG[s as OnlineOrderStatus].label}
+              <span className="OO-tab-count">{counts[s]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Live Multi-Field Search Bar */}
+        <div className="OO-searchBarWrap">
+          <div className="OO-searchIcon"><Search size={18} /></div>
+          <input
+            type="text"
+            className="OO-searchInput"
+            placeholder="بحث سريع برقم الطلب #، اسم العميل، الهاتف، أو المنتج…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="OO-searchClear" onClick={() => setSearchQuery('')}>
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        {/* Source Filter Select */}
+        <div className="OO-sourceFilterWrap">
+          <Filter size={15} className="OO-sourceFilterIcon" />
+          <select
+            className="OO-sourceFilterSelect"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as OnlineOrderSource | 'all')}
+          >
+            <option value="all">جميع المصادر</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="phone">Phone</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
       </div>
 
       {loading && <div className="OO-loading"><Loader2 size={28} className="spin" /> جاري التحميل…</div>}
       {error && <div className="OO-error">{error}</div>}
       {!loading && filteredOrders.length === 0 && (
-        <div className="OO-empty"><Package size={48} /><p>لا توجد طلبات بعد</p></div>
+        <div className="OO-empty">
+          <Package size={48} />
+          <p>{searchQuery ? 'لا توجد نتائج تطابق بحثك' : 'لا توجد طلبات في هذا القسم'}</p>
+          {searchQuery && (
+            <button className="OO-btn OO-btn--ghost" onClick={() => setSearchQuery('')}>
+              إلغاء تصفية البحث
+            </button>
+          )}
+        </div>
       )}
 
+      {/* Orders Cards List */}
       <div className="OO-list">
         {filteredOrders.map((order) => {
           const cfg = STATUS_CFG[order.status];
@@ -376,9 +550,40 @@ const OnlineOrdersPage = (): JSX.Element => {
                   <span className="OO-orderId">#{order.id}</span>
                   <span className="OO-source">{SOURCE_ICONS[order.source]} {SOURCE_LABELS[order.source]}</span>
                   {order.customerName && <span className="OO-customer">{order.customerName}</span>}
-                  {order.customerPhone && <span className="OO-phone">{order.customerPhone}</span>}
+                  {order.customerPhone && (
+                    <span className="OO-phone" dir="ltr">{order.customerPhone}</span>
+                  )}
                 </div>
+
                 <div className="OO-card-right">
+                  {/* Quick Card WhatsApp Action */}
+                  {order.customerPhone && (
+                    <button
+                      className="OO-card-actionBtn OO-card-actionBtn--wa"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setWhatsAppOrder(order);
+                      }}
+                      title="مراسلة سريعة عبر واتساب"
+                    >
+                      <MessageCircle size={14} />
+                      <span>واتساب</span>
+                    </button>
+                  )}
+
+                  {/* Quick Card Waybill Print Action */}
+                  <button
+                    className="OO-card-actionBtn OO-card-actionBtn--waybill"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPrintingOrder(order);
+                    }}
+                    title="طباعة فاتورة شحن وتوصيل حرارية"
+                  >
+                    <Printer size={14} />
+                    <span>فاتورة شحن</span>
+                  </button>
+
                   <span className="OO-total">{order.totalIQD.toLocaleString('en-IQ')} IQD</span>
                   <span className="OO-date" dir="ltr">{formatEnglishDateTime(order.createdAt)}</span>
                   {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -408,9 +613,22 @@ const OnlineOrdersPage = (): JSX.Element => {
                     {order.saleId && <div className="OO-saleRef">→ تم إنشاء عملية بيع #{order.saleId}</div>}
                     {order.rejectionReason && <div className="OO-rejReason">مرفوض: {order.rejectionReason}</div>}
                   </div>
-                  {order.status === 'pending' && (
-                    <div className="OO-actions">
-                      {rejectingId === order.id ? (
+
+                  {/* Actions Area */}
+                  <div className="OO-actions">
+                    {/* Communication & Waybill always available */}
+                    <button className="OO-btn OO-btn--waybill" onClick={() => setPrintingOrder(order)}>
+                      <Printer size={15} /> فاتورة شحن
+                    </button>
+
+                    {order.customerPhone && (
+                      <button className="OO-btn OO-btn--whatsapp" onClick={() => setWhatsAppOrder(order)}>
+                        <MessageCircle size={15} /> مراسلة واتساب
+                      </button>
+                    )}
+
+                    {order.status === 'pending' && (
+                      rejectingId === order.id ? (
                         <div className="OO-rejectForm">
                           <input placeholder="السبب (اختياري)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
                           <button className="OO-btn OO-btn--danger" disabled={actionLoading === order.id} onClick={() => handleReject(order.id)}>
@@ -433,9 +651,9 @@ const OnlineOrdersPage = (): JSX.Element => {
                             <X size={14} />
                           </button>
                         </>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -443,6 +661,7 @@ const OnlineOrdersPage = (): JSX.Element => {
         })}
       </div>
 
+      {/* New / Edit Order Modal */}
       {showForm && (
         <div className="OO-overlay" onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
           <div className="OO-modal OO-modal--large">
@@ -562,7 +781,7 @@ const OnlineOrdersPage = (): JSX.Element => {
                   </div>
 
                   {scannerMessage && (
-                    <div className={`OO-scannerFeedback ${scannerMessage.startsWith('✅') ? 'OO-scannerFeedback--success' : scannerMessage.startsWith('⚠') ? 'OO-scannerFeedback--warning' : 'OO-scannerFeedback--error'}`}>
+                    <div className={`OO-scannerFeedback ${scannerMessage.startsWith('✅') ? 'OO-scannerFeedback--success' : scannerMessage.startsWith('⚠️') ? 'OO-scannerFeedback--warning' : 'OO-scannerFeedback--error'}`}>
                       {scannerMessage}
                     </div>
                   )}
@@ -600,6 +819,21 @@ const OnlineOrdersPage = (): JSX.Element => {
           </div>
         </div>
       )}
+
+      {/* Waybill Print Modal */}
+      <WaybillPrintModal
+        visible={!!printingOrder}
+        order={printingOrder}
+        onClose={() => setPrintingOrder(null)}
+      />
+
+      {/* WhatsApp Dispatch Modal */}
+      <OnlineOrderWhatsAppModal
+        visible={!!whatsAppOrder}
+        order={whatsAppOrder}
+        storeName={storeName}
+        onClose={() => setWhatsAppOrder(null)}
+      />
     </div>
   );
 };

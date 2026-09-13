@@ -34,21 +34,42 @@ export function usePosScanner({
       if (isScanningRef.current) return;
       isScanningRef.current = true;
 
-      // 1. Exact match (barcode or SKU)
-      let variant = products.find(p => p.barcode === value || p.sku === value);
-
-      // 2. Case-insensitive
-      if (!variant) {
-        variant = products.find(
-          p => p.barcode?.toLowerCase() === value.toLowerCase() ||
-               p.sku.toLowerCase() === value.toLowerCase(),
-        );
+      const trimmedVal = (value || '').trim();
+      const candidates = new Set<string>();
+      candidates.add(trimmedVal);
+      const stripped = trimmedVal.replace(/^0+/, '');
+      if (stripped) {
+        candidates.add(stripped);
+        candidates.add('0' + stripped);
+        candidates.add('00' + stripped);
+        candidates.add('000' + stripped);
       }
+      if (trimmedVal.startsWith('0')) {
+        const s1 = trimmedVal.substring(1);
+        if (s1) candidates.add(s1);
+      } else {
+        candidates.add('0' + trimmedVal);
+      }
+      if (trimmedVal.length === 12) {
+        candidates.add('0' + trimmedVal);
+      } else if (trimmedVal.length === 13 && trimmedVal.startsWith('0')) {
+        candidates.add(trimmedVal.substring(1));
+      }
+      const candidateList = Array.from(candidates).filter(Boolean);
 
-      // 3. Leading-zero fix (some scanners strip the leading zero)
+      let variant: Product | undefined;
+      for (const c of candidateList) {
+        variant = products.find(p => p.barcode === c || p.sku === c);
+        if (variant) break;
+      }
       if (!variant) {
-        const withZero = '0' + value;
-        variant = products.find(p => p.barcode === withZero || p.sku === withZero);
+        for (const c of candidateList) {
+          const cLower = c.toLowerCase();
+          variant = products.find(
+            p => p.barcode?.toLowerCase() === cLower || p.sku.toLowerCase() === cLower,
+          );
+          if (variant) break;
+        }
       }
 
       if (variant) {

@@ -706,41 +706,59 @@ const PosPage = (): JSX.Element => {
       // Lock scanning
       isScanningRef.current = true;
 
-      // Try exact match first (barcode or SKU)
-      let variant = products.find((p) => p.barcode === value || p.sku === value);
-
-      // If no exact match, try case-insensitive
-      if (!variant) {
-        variant = products.find(
-          (p) =>
-            p.barcode?.toLowerCase() === value.toLowerCase() ||
-            p.sku.toLowerCase() === value.toLowerCase(),
-        );
+      const trimmedVal = (value || '').trim();
+      const candidates = new Set<string>();
+      candidates.add(trimmedVal);
+      const stripped = trimmedVal.replace(/^0+/, '');
+      if (stripped) {
+        candidates.add(stripped);
+        candidates.add('0' + stripped);
+        candidates.add('00' + stripped);
+        candidates.add('000' + stripped);
       }
-
-      // If still no match, try prepending a '0' (fix for scanners stripping leading zero)
-      if (!variant) {
-        const valueWithZero = '0' + value;
-        variant = products.find((p) => p.barcode === valueWithZero || p.sku === valueWithZero);
+      if (trimmedVal.startsWith('0')) {
+        const s1 = trimmedVal.substring(1);
+        if (s1) candidates.add(s1);
+      } else {
+        candidates.add('0' + trimmedVal);
       }
+      if (trimmedVal.length === 12) {
+        candidates.add('0' + trimmedVal);
+      } else if (trimmedVal.length === 13 && trimmedVal.startsWith('0')) {
+        candidates.add(trimmedVal.substring(1));
+      }
+      const candidateList = Array.from(candidates).filter(Boolean);
 
-      // If still not found in memory (e.g. it is an older product not in the first 100 pages), query the database
+      const findInList = (list: Product[]): Product | undefined => {
+        for (const c of candidateList) {
+          const match = list.find((p) => p.barcode === c || p.sku === c);
+          if (match) return match;
+        }
+        for (const c of candidateList) {
+          const cLower = c.toLowerCase();
+          const match = list.find(
+            (p) => p.barcode?.toLowerCase() === cLower || p.sku.toLowerCase() === cLower,
+          );
+          if (match) return match;
+        }
+        return undefined;
+      };
+
+      // 1. Check in-memory products
+      let variant = findInList(products);
+
+      // 2. If not found in memory, query the database
       if (!variant) {
         try {
-          const response = await window.evaApi.products.list(token, { search: value, limit: 10 });
-          const items = response.products || response.items || [];
-          
-          variant = items.find((p: Product) => p.barcode === value || p.sku === value);
-          if (!variant) {
-            variant = items.find(
-              (p: Product) =>
-                p.barcode?.toLowerCase() === value.toLowerCase() ||
-                p.sku.toLowerCase() === value.toLowerCase(),
-            );
-          }
-          if (!variant) {
-            const valueWithZero = '0' + value;
-            variant = items.find((p: Product) => p.barcode === valueWithZero || p.sku === valueWithZero);
+          const searchTerms = [trimmedVal];
+          if (stripped && stripped !== trimmedVal) searchTerms.push(stripped);
+          else searchTerms.push('0' + trimmedVal);
+
+          for (const term of searchTerms) {
+            const response = await window.evaApi.products.list(token, { search: term, limit: 10 });
+            const items = response.products || response.items || [];
+            variant = findInList(items);
+            if (variant) break;
           }
 
           if (variant) {
