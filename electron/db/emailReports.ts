@@ -3,26 +3,10 @@ import log from 'electron-log';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import { getSetting, getAdvancedReports, listSaleItems } from './database';
+import { getSetting, setSetting, getAdvancedReports, listSaleItems } from './database';
 import { decryptCredential } from './crypto';
+import { createBackup } from './backup';
 import type { DateRange } from './types';
-
-/** Find the most recent .db backup file from the EVA_POS/Backups folder */
-function findLatestBackup(): { path: string; name: string } | null {
-  try {
-    const backupDir = path.join(app.getPath('documents'), 'EVA_POS', 'Backups');
-    if (!fs.existsSync(backupDir)) return null;
-    const files = fs.readdirSync(backupDir)
-      .filter((f) => f.endsWith('.db'))
-      .sort(); // ISO timestamp names sort chronologically
-    if (files.length === 0) return null;
-    const latest = files[files.length - 1];
-    return { path: path.join(backupDir, latest), name: latest };
-  } catch (err) {
-    log.warn('[email] Could not find backup file:', err);
-    return null;
-  }
-}
 
 interface EmailSettings {
   smtpHost: string;
@@ -55,7 +39,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
   return settings;
 }
 
-export async function sendDailyReport(): Promise<{ success: boolean; error?: string }> {
+export async function sendDailyReport(customDateStr?: string): Promise<{ success: boolean; error?: string }> {
   const settings = await getEmailSettings();
 
   if (!settings.emailEnabled) {
@@ -75,19 +59,21 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
   }
 
   try {
-    // Get today's date range
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const range: DateRange = { startDate: todayStr, endDate: todayStr };
+    // Determine report date (today or recovered date)
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const targetDateStr = customDateStr || todayLocalStr;
+    const targetDateObj = new Date(targetDateStr + 'T12:00:00');
+    const range: DateRange = { startDate: targetDateStr, endDate: targetDateStr };
 
     // Get report data
     const reports = await getAdvancedReports(range);
 
-    // Get items sold today
-    const itemsSold = await listSaleItems(todayStr);
+    // Get items sold
+    const itemsSold = await listSaleItems(targetDateStr);
 
     // Build Arabic email content
-    const html = buildArabicEmailHtml(today, reports, itemsSold);
+    const html = buildArabicEmailHtml(targetDateObj, reports, itemsSold);
 
     // Configure transport
     const transporter = nodemailer.createTransport({
@@ -105,35 +91,65 @@ export async function sendDailyReport(): Promise<{ success: boolean; error?: str
       },
     });
 
-    // Attach latest backup if it exists
-    const latestBackup = findLatestBackup();
+    // Generate a fresh, live database backup containing 100% of all latest transactions
     const attachments: Array<{ filename: string; path: string; contentType: string }> = [];
-    if (latestBackup) {
+    try {
+      const freshBackup = await createBackup();
       attachments.push({
-        filename: `eva-pos-backup-${todayStr}.db`,
-        path: latestBackup.path,
+        filename: freshBackup.filename,
+        path: freshBackup.filepath,
         contentType: 'application/octet-stream',
       });
-      log.info('[email] Attaching backup:', latestBackup.name);
-    } else {
-      log.warn('[email] No backup found to attach');
+      log.info('[email] Generated and attaching fresh backup:', freshBackup.filename);
+    } catch (backupErr) {
+      log.error('[email] Failed to generate fresh backup for email:', backupErr);
     }
 
     // Send email
     await transporter.sendMail({
       from: settings.smtpUser,
       to: settings.emailRecipient,
-      subject: `📊 EVA POS - ملخص يومي - ${formatArabicDate(today)}`,
+      subject: `📊 EVA POS - ملخص يومي${customDateStr ? ' [استرجاع]' : ''} - ${formatArabicDate(targetDateObj)}`,
       html,
       attachments,
     });
 
-    log.info('[email] Daily report sent successfully');
+    await setSetting('email_last_sent_date', targetDateStr);
+    log.info('[email] Daily report sent successfully for', targetDateStr);
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     log.error('[email] Failed to send daily report:', errorMessage);
     return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Automatically checks on app startup if yesterday's email report was missed
+ * (e.g. power cut or PC closed without internet) and sends it.
+ */
+export async function checkEmailRecoveryOnStartup(): Promise<void> {
+  try {
+    const settings = await getEmailSettings();
+    if (!settings.emailEnabled || !settings.smtpUser || !settings.emailRecipient) {
+      return;
+    }
+
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    const lastSentDate = await getSetting('email_last_sent_date');
+    if (lastSentDate !== todayLocalStr && lastSentDate !== yesterdayStr) {
+      const yesterdaySales = await getAdvancedReports({ startDate: yesterdayStr, endDate: yesterdayStr });
+      if (yesterdaySales && (yesterdaySales.dailySales?.length || 0) > 0) {
+        log.info('[email] Recovering missed email report for yesterday:', yesterdayStr);
+        await sendDailyReport(yesterdayStr);
+      }
+    }
+  } catch (err) {
+    log.error('[email] Startup recovery check error:', err);
   }
 }
 

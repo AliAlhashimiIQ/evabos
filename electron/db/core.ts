@@ -72,6 +72,9 @@ const connect = (): sqlite3.Database => {
   database.on('error', (err) => log.error('[sqlite] unexpected error', err));
   database.exec('PRAGMA foreign_keys = ON;');
   database.exec('PRAGMA journal_mode = WAL;');
+  database.exec('PRAGMA synchronous = NORMAL;');
+  database.exec('PRAGMA wal_autocheckpoint = 1000;');
+  database.exec('PRAGMA busy_timeout = 5000;');
   return database;
 };
 
@@ -237,6 +240,7 @@ export async function initDatabase(): Promise<void> {
 async function runAutoBackup(): Promise<void> {
   if (!app.isPackaged) return;
   try {
+    await flushWalCheckpoint();
     const dbPath = resolveDbPath();
     const documentsPath = app.getPath('documents');
     const backupDir = path.join(documentsPath, 'EVA_POS', 'Backups');
@@ -263,8 +267,19 @@ async function runAutoBackup(): Promise<void> {
   }
 }
 
+export async function flushWalCheckpoint(): Promise<void> {
+  if (!dbInstance) return;
+  try {
+    await run('PRAGMA wal_checkpoint(TRUNCATE);');
+    log.info('[db] WAL checkpoint (TRUNCATE) succeeded.');
+  } catch (err) {
+    log.warn('[db] WAL checkpoint error:', err);
+  }
+}
+
 export async function closeDatabase(): Promise<void> {
   if (!dbInstance) return;
+  await flushWalCheckpoint();
   await new Promise<void>((resolve, reject) => {
     dbInstance?.close((err) => (err ? reject(err) : resolve()));
   });

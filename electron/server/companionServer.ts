@@ -7,6 +7,7 @@ import { BrowserWindow, app } from 'electron';
 import log from 'electron-log';
 import QRCode from 'qrcode';
 import selfsigned from 'selfsigned';
+import { exec } from 'child_process';
 import { get } from '../db/core';
 
 interface ProductLookupResult {
@@ -1719,10 +1720,20 @@ async function handleCompanionRequest(req: http.IncomingMessage, res: http.Serve
   res.end('Not Found');
 }
 
+function ensureWindowsFirewallRule(port: number): void {
+  if (process.platform !== 'win32') return;
+  try {
+    const ports = `${port - 1}-${port}`;
+    const cmd = `netsh advfirewall firewall show rule name="EVA POS Mobile Companion" >nul 2>&1 || netsh advfirewall firewall add rule name="EVA POS Mobile Companion" dir=in action=allow protocol=TCP localport=${ports} profile=private,domain`;
+    exec(cmd, () => {});
+  } catch {}
+}
+
 /**
  * Start the Companion HTTPS & HTTP server
  */
 export async function startCompanionServer(mainWindow: BrowserWindow, port = 8989): Promise<void> {
+  ensureWindowsFirewallRule(port);
   mainWindowRef = mainWindow;
   currentPort = port;
   httpRedirectPort = port - 1;

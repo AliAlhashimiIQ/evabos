@@ -499,6 +499,8 @@ export interface SaleDetailItem extends SaleItem {
   productName: string;
   color?: string | null;
   size?: string | null;
+  originalQuantity?: number;
+  alreadyReturnedQuantity?: number;
 }
 
 export interface SaleDetail extends Sale {

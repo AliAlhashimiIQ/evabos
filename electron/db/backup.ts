@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
+import { flushWalCheckpoint } from './core';
 
 export interface BackupInfo {
   filename: string;
@@ -11,7 +12,7 @@ export interface BackupInfo {
 }
 
 const BACKUP_DIR_NAME = 'EVA_POS';
-const BACKUP_SUBDIR = 'Backup';
+const BACKUP_SUBDIR = 'Backups';
 
 const getBackupDir = (): string => {
   if (!app.isReady()) {
@@ -53,6 +54,9 @@ export async function ensureBackupDir(): Promise<string> {
 }
 
 export async function createBackup(): Promise<BackupInfo> {
+  // 1. Force WAL checkpoint so eva-pos.db contains 100% of the latest sales & transactions
+  await flushWalCheckpoint();
+
   const dbPath = getDbPath();
   const backupDir = await ensureBackupDir();
 
@@ -71,6 +75,8 @@ export async function createBackup(): Promise<BackupInfo> {
     await fs.copyFile(dbPath, backupPath);
     const stats = await fs.stat(backupPath);
 
+    log.info('[backup] Fresh backup created successfully:', filename, `(${stats.size} bytes)`);
+
     return {
       filename,
       filepath: backupPath,
@@ -84,25 +90,47 @@ export async function createBackup(): Promise<BackupInfo> {
 }
 
 export async function listBackups(): Promise<BackupInfo[]> {
-  const backupDir = await ensureBackupDir();
+  const primaryDir = await ensureBackupDir();
+  const legacyDir = path.join(app.getPath('documents'), BACKUP_DIR_NAME, 'Backup');
+  const dirsToScan = [primaryDir];
+  if (legacyDir !== primaryDir) {
+    try {
+      await fs.access(legacyDir);
+      dirsToScan.push(legacyDir);
+    } catch {
+      // Legacy dir doesn't exist, ignore
+    }
+  }
 
   try {
-    const files = await fs.readdir(backupDir);
-    const backupFiles = files.filter((f) => f.startsWith('eva-pos-backup-') && f.endsWith('.db'));
-
     const backups: BackupInfo[] = [];
-    for (const file of backupFiles) {
-      const filepath = path.join(backupDir, file);
+    const seenFiles = new Set<string>();
+
+    for (const dir of dirsToScan) {
       try {
-        const stats = await fs.stat(filepath);
-        backups.push({
-          filename: file,
-          filepath,
-          size: stats.size,
-          createdAt: stats.birthtime.toISOString(),
-        });
+        const files = await fs.readdir(dir);
+        const backupFiles = files.filter(
+          (f) => (f.startsWith('eva-pos-backup-') || f.startsWith('eva-pos-autobackup-')) && f.endsWith('.db')
+        );
+
+        for (const file of backupFiles) {
+          if (seenFiles.has(file)) continue;
+          seenFiles.add(file);
+          const filepath = path.join(dir, file);
+          try {
+            const stats = await fs.stat(filepath);
+            backups.push({
+              filename: file,
+              filepath,
+              size: stats.size,
+              createdAt: stats.birthtime.toISOString(),
+            });
+          } catch {
+            // Skip files that can't be accessed
+          }
+        }
       } catch {
-        // Skip files that can't be accessed
+        // Skip inaccessible dir
       }
     }
 
@@ -120,9 +148,6 @@ export async function restoreBackup(backupPath: string): Promise<void> {
     // Check if backup file exists
     await fs.access(backupPath);
 
-    // Close current database connection if open
-    // (This should be handled by the caller)
-
     // Create a backup of current DB before restoring
     const currentBackupPath = `${dbPath}.pre-restore-${Date.now()}`;
     try {
@@ -131,11 +156,15 @@ export async function restoreBackup(backupPath: string): Promise<void> {
       // If current DB doesn't exist, that's okay
     }
 
+    // In WAL mode, delete any stale -wal and -shm files so they do not conflict with restored DB
+    const walPath = `${dbPath}-wal`;
+    const shmPath = `${dbPath}-shm`;
+    await fs.unlink(walPath).catch(() => {});
+    await fs.unlink(shmPath).catch(() => {});
+
     // Copy backup to database location
     await fs.copyFile(backupPath, dbPath);
-
-    // Clean up pre-restore backup after a short delay (optional)
-    // We'll leave it for manual cleanup if needed
+    log.info('[backup] Restored database from:', backupPath);
   } catch (err) {
     log.error('Failed to restore backup:', err);
     throw new Error(`Failed to restore backup: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -154,4 +183,5 @@ export async function deleteBackup(backupPath: string): Promise<void> {
 export function getBackupDirPath(): string {
   return getBackupDir();
 }
+
 

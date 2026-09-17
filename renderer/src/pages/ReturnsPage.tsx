@@ -194,18 +194,20 @@ const ReturnsPage = (): JSX.Element => {
   const handleAddAllSaleItems = () => {
     if (!saleInfo?.items?.length) return;
     const direction = form.type === 'exchange' ? 'exchange_out' : 'return';
-    const newItems: DraftReturnItem[] = saleInfo.items.map((entry) => ({
-      variantId: entry.variantId,
-      saleItemId: entry.id,
-      quantity: entry.quantity,
-      amountIQD: entry.lineTotalIQD,
-      direction,
-      productName: entry.productName,
-      color: entry.color ?? null,
-      size: entry.size ?? null,
-      maxQuantity: entry.quantity,
-      unitPriceIQD: entry.lineTotalIQD / entry.quantity,
-    }));
+    const newItems: DraftReturnItem[] = saleInfo.items
+      .filter((entry) => (entry.quantity ?? 0) > 0)
+      .map((entry) => ({
+        variantId: entry.variantId,
+        saleItemId: entry.id,
+        quantity: entry.quantity,
+        amountIQD: entry.lineTotalIQD,
+        direction,
+        productName: entry.productName,
+        color: entry.color ?? null,
+        size: entry.size ?? null,
+        maxQuantity: entry.quantity,
+        unitPriceIQD: entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0,
+      }));
     setItems(newItems);
   };
 
@@ -233,6 +235,10 @@ const ReturnsPage = (): JSX.Element => {
   useBarcodeScanner({ onScan: handleBarcodeScan, threshold: 50, minLength: 5 });
 
   const handleAddSaleItem = (entry: SaleDetail['items'][number]) => {
+    if ((entry.quantity ?? 0) <= 0) {
+      setError(t('itemAlreadyFullyReturned') || 'This item has already been fully returned.');
+      return;
+    }
     const exists = items.some((item) => item.saleItemId === entry.id);
     if (exists) {
       setError(t('itemAlreadyAdded') || 'This item is already in the return list.');
@@ -252,7 +258,7 @@ const ReturnsPage = (): JSX.Element => {
         color: entry.color ?? null,
         size: entry.size ?? null,
         maxQuantity: entry.quantity,
-        unitPriceIQD: entry.lineTotalIQD / entry.quantity,
+        unitPriceIQD: entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0,
       },
     ]);
   };
@@ -494,25 +500,55 @@ const ReturnsPage = (): JSX.Element => {
                     </tr>
                   </thead>
                   <tbody>
-                    {saleInfo.items.map((entry) => (
-                      <tr key={entry.id}>
-                        <td>
-                          <strong>{entry.productName}</strong>
-                          {(entry.color || entry.size) && (
-                            <span className="Reports-variantBadge" style={{ marginInlineStart: '0.5rem' }}>
-                              {[entry.color, entry.size].filter(Boolean).join(' / ')}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>{entry.quantity}</td>
-                        <td dir="ltr" style={{ textAlign: 'start' }}>{entry.lineTotalIQD.toLocaleString('en-IQ')} IQD</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button className="ReturnsPage-btnAddItem" onClick={() => handleAddSaleItem(entry)}>
-                            + {t('add') || 'إرجاع'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {saleInfo.items.map((entry) => {
+                      const isFullyReturned = (entry.quantity ?? 0) <= 0;
+                      return (
+                        <tr key={entry.id} style={isFullyReturned ? { opacity: 0.55 } : undefined}>
+                          <td>
+                            <strong>{entry.productName}</strong>
+                            {(entry.color || entry.size) && (
+                              <span className="Reports-variantBadge" style={{ marginInlineStart: '0.5rem' }}>
+                                {[entry.color, entry.size].filter(Boolean).join(' / ')}
+                              </span>
+                            )}
+                            {entry.alreadyReturnedQuantity != null && entry.alreadyReturnedQuantity > 0 && (
+                              <span
+                                style={{
+                                  marginInlineStart: '0.5rem',
+                                  fontSize: '0.75rem',
+                                  color: '#ef4444',
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {`${t('alreadyReturned') || 'Returned'}: ${entry.alreadyReturnedQuantity}`}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {entry.quantity}
+                            {entry.originalQuantity != null && entry.originalQuantity !== entry.quantity && (
+                              <span style={{ fontSize: '0.75rem', color: '#888', display: 'block' }}>
+                                {`/ ${entry.originalQuantity}`}
+                              </span>
+                            )}
+                          </td>
+                          <td dir="ltr" style={{ textAlign: 'start' }}>{entry.lineTotalIQD.toLocaleString('en-IQ')} IQD</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="ReturnsPage-btnAddItem"
+                              onClick={() => handleAddSaleItem(entry)}
+                              disabled={isFullyReturned}
+                              style={isFullyReturned ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                            >
+                              {isFullyReturned ? (t('fullyReturned') || 'Returned') : `+ ${t('add') || 'Return'}`}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

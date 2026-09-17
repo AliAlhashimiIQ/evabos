@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import JsBarcode from 'jsbarcode';
-import { Printer, X, Check, Loader2, FileText, Smartphone, MapPin, User, Package } from 'lucide-react';
+import { Printer, X, Loader2, FileText, Smartphone, MapPin, User, Package } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import './WaybillPrintModal.css';
 
@@ -65,7 +65,7 @@ export const generateWaybillHtml = (
       width: 100%;
       max-width: 70mm;
       margin: 0 auto;
-      padding: 3mm 3mm 8mm;
+      padding: 3mm 3mm 15mm;
       font-size: 13px;
       line-height: 1.35;
       color: #000;
@@ -73,7 +73,8 @@ export const generateWaybillHtml = (
     }
     @media print {
       body {
-        padding: 2mm;
+        margin: 0 auto;
+        padding: 2mm 3mm 25mm !important;
         box-shadow: none;
       }
     }
@@ -386,6 +387,11 @@ export const generateWaybillHtml = (
     <div style="margin-top: 3px; font-weight: 700;">طُبع بواسطة نظام كاشير EVA POS</div>
   </div>
 
+  <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar) -->
+  <div style="height: 38mm;"></div>
+  <div style="text-align: center; font-size: 9px; color: #555; line-height: 1;">.</div>
+  <div style="height: 6mm;"></div>
+
 </body>
 </html>`;
 };
@@ -419,7 +425,7 @@ const WaybillPrintModal: React.FC<WaybillPrintModalProps> = ({
           const list = await window.evaApi.printing.getPrinters();
           setPrinters(list || []);
           if (!selectedPrinter && list && list.length > 0) {
-            const def = list.find((p) => p.isDefault) || list[0];
+            const def = list.find((p: { isDefault?: boolean; name: string }) => p.isDefault) || list[0];
             setSelectedPrinter(def.name);
           }
         }

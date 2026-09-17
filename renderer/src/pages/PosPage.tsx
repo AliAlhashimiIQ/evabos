@@ -26,6 +26,7 @@ import NumberInput from '../components/NumberInput';
 import CalculatorInput from '../components/CalculatorInput';
 import CompanionQrModal from '../components/CompanionQrModal';
 import { confirmDialog } from '../utils/confirmDialog';
+import { playScanSuccessSound, playScanErrorSound } from '../utils/audio';
 
 type Product = import('../types/electron').Product;
 type Customer = import('../types/electron').Customer;
@@ -366,6 +367,7 @@ const PosPage = (): JSX.Element => {
     (product: Product, overridePrice?: number) => {
       // Check if product is out of stock
       if (product.stockOnHand <= 0) {
+        playScanErrorSound();
         updateCurrentProfile((profile) => ({
           ...profile,
           error: `"${product.productName}" ${t('outOfStock')}`,
@@ -381,6 +383,7 @@ const PosPage = (): JSX.Element => {
           // Check if adding one more would exceed available stock
           const newQuantity = existing.quantity + 1;
           if (newQuantity > product.stockOnHand) {
+            playScanErrorSound();
             return {
               ...profile,
               error: t('onlyXAvailable', { count: String(product.stockOnHand), item: product.stockOnHand === 1 ? t('item') : t('items'), name: product.productName }),
@@ -467,9 +470,16 @@ const PosPage = (): JSX.Element => {
   const handleCompleteSale = useCallback(
     async (profileIndex = activeProfileIndex) => {
       const targetProfile = profiles[profileIndex];
-      if (!targetProfile) {
+      if (!targetProfile || targetProfile.isSubmitting) {
         return;
       }
+
+      // Immediately lock submission to prevent rapid double-clicks
+      updateProfileAtIndex(profileIndex, (profile) => ({
+        ...profile,
+        isSubmitting: true,
+      }));
+
       const {
         cart: targetCart,
         selectedCustomerId: targetCustomerId,
@@ -480,10 +490,12 @@ const PosPage = (): JSX.Element => {
 
       if (!window.evaApi) {
         setGlobalError(t('desktopBridgeUnavailable'));
+        updateProfileAtIndex(profileIndex, (profile) => ({ ...profile, isSubmitting: false }));
         return;
       }
       if (!token) {
         setGlobalError('Authentication token missing.');
+        updateProfileAtIndex(profileIndex, (profile) => ({ ...profile, isSubmitting: false }));
         return;
       }
       if (targetCart.length === 0) {
@@ -491,6 +503,7 @@ const PosPage = (): JSX.Element => {
           ...profile,
           error: t('addAtLeastOne'),
           success: null,
+          isSubmitting: false,
         }));
         return;
       }
@@ -500,6 +513,7 @@ const PosPage = (): JSX.Element => {
           ...profile,
           error: t('pleaseSelectEmployee'),
           success: null,
+          isSubmitting: false,
         }));
         return;
       }
@@ -568,6 +582,7 @@ const PosPage = (): JSX.Element => {
           ...profile,
           error: t('cannotCompleteOutOfStock', { items: itemNames }),
           success: null,
+          isSubmitting: false,
         }));
         return;
       }
@@ -580,6 +595,7 @@ const PosPage = (): JSX.Element => {
           ...profile,
           error: t('cannotCompleteQuantity', { details: itemDetails }),
           success: null,
+          isSubmitting: false,
         }));
         return;
       }
@@ -606,6 +622,7 @@ const PosPage = (): JSX.Element => {
           ...profile,
           error: 'Invalid calculation detected. Please check prices and discount.',
           success: null,
+          isSubmitting: false,
         }));
         return;
       }
@@ -776,8 +793,10 @@ const PosPage = (): JSX.Element => {
       if (variant) {
         // Check stock before adding
         if (variant.stockOnHand <= 0) {
+          playScanErrorSound();
           setScannerMessage(`"${variant.productName}" ${t('outOfStock')}`);
         } else {
+          playScanSuccessSound();
           addToCart(variant, overridePrice);
           if (overridePrice != null && overridePrice > 0) {
             setScannerMessage(`${t('added')} ${variant.productName} (${overridePrice.toLocaleString('en-IQ')} IQD)`);
@@ -786,6 +805,7 @@ const PosPage = (): JSX.Element => {
           }
         }
       } else {
+        playScanErrorSound();
         setScannerMessage(`${t('noMatchFor')} ${value}`);
       }
 

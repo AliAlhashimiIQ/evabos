@@ -386,6 +386,8 @@ export interface SaleDetail extends Sale {
       productName: string;
       color?: string | null;
       size?: string | null;
+      originalQuantity?: number;
+      alreadyReturnedQuantity?: number;
     }
   >;
 }

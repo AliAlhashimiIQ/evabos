@@ -11,6 +11,7 @@ import {
   setSetting,
   getAllSettings,
   closeDatabase,
+  flushWalCheckpoint,
 } from './db/database';
 import { registerInventoryIpc } from './ipc/inventory';
 import { registerPurchasingIpc } from './ipc/purchasing';
@@ -40,7 +41,9 @@ import {
   sendTelegramDailyReportAndBackup,
   startTelegramBotPolling,
   stopTelegramBotPolling,
+  checkTelegramRecoveryOnStartup,
 } from './db/telegram';
+import { checkEmailRecoveryOnStartup } from './db/emailReports';
 
 // Set explicit application name to lock userData directory across updates
 app.setName('EVA POS');
@@ -117,6 +120,7 @@ async function performExitTelegramRoutine(): Promise<void> {
   hasExitTelegramRun = true;
 
   try {
+    await flushWalCheckpoint();
     const settings = await getTelegramSettings();
     if (settings.enabled && settings.notifyOnClose && settings.botToken && settings.chatId) {
       log.info('[main] Sending Telegram daily report & backup on application exit/shutdown...');
@@ -154,9 +158,14 @@ async function createWindow(): Promise<void> {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      devTools: isDev,
       // webSecurity is true by default - do NOT disable it
     },
   });
+
+  if (!isDev) {
+    mainWindow.removeMenu();
+  }
 
   mainWindow.maximize();
 
@@ -195,6 +204,21 @@ async function createWindow(): Promise<void> {
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
+  } else {
+    // In production: block inspection and developer hotkeys
+    mainWindow.webContents.on('devtools-opened', () => {
+      mainWindow?.webContents.closeDevTools();
+    });
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (
+        input.key === 'F12' ||
+        (input.control && input.shift && (input.key.toLowerCase() === 'i' || input.key.toLowerCase() === 'j')) ||
+        (input.control && input.key.toLowerCase() === 'r') ||
+        input.key === 'F5'
+      ) {
+        event.preventDefault();
+      }
+    });
   }
 
   // Fix Chromium focus desync bug on Windows
@@ -545,6 +569,12 @@ app.whenReady().then(async () => {
   startTelegramBotPolling().catch((err) => {
     log.error('[main] startTelegramBotPolling error:', err);
   });
+
+  // Check for missed Telegram & Email reports from yesterday (recovery check)
+  setTimeout(() => {
+    checkTelegramRecoveryOnStartup().catch((err) => log.error('[main] checkTelegramRecovery error:', err));
+    checkEmailRecoveryOnStartup().catch((err) => log.error('[main] checkEmailRecovery error:', err));
+  }, 5000);
 
   if (!isDev) {
     setupAutoUpdater();

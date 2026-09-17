@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import log from 'electron-log';
 
 // Re-export core utilities (barrel pattern - all IPC handlers import from this file)
-export { initDatabase, closeDatabase, getSetting, setSetting, getAllSettings,
+export { initDatabase, closeDatabase, flushWalCheckpoint, getSetting, setSetting, getAllSettings,
   ensureVariantStockRow, mapSaleItemRow,
 } from './core';
 export type { SettingRow, ProductVariantRow } from './core';
@@ -2489,6 +2489,31 @@ export async function bulkUpdateProducts(_token: string, payload: { productIds: 
 export async function createReturn(input: ReturnInput): Promise<ReturnResponse> {
   await run('BEGIN TRANSACTION');
   try {
+    // Validate return item quantities against original sale if saleItemId is provided
+    for (const item of input.items) {
+      if (item.saleItemId) {
+        const saleItem = await get<{ quantity: number; saleId: number }>(
+          'SELECT quantity, saleId FROM sale_items WHERE id = ?',
+          [item.saleItemId],
+        );
+        if (!saleItem) {
+          throw new Error(`Sale item #${item.saleItemId} not found.`);
+        }
+        const returnedRow = await get<{ totalReturned: number }>(
+          'SELECT IFNULL(SUM(quantity), 0) AS totalReturned FROM return_items WHERE saleItemId = ?',
+          [item.saleItemId],
+        );
+        const totalReturned = returnedRow?.totalReturned ?? 0;
+        const availableToReturn = saleItem.quantity - totalReturned;
+
+        if (item.quantity > availableToReturn) {
+          throw new Error(
+            `Cannot return ${item.quantity} units. Only ${availableToReturn} unit(s) remaining for return on this receipt.`,
+          );
+        }
+      }
+    }
+
     const refundAmount =
       input.refundAmountIQD ??
       input.items
@@ -2603,8 +2628,34 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
   }
 }
 
-export async function getSaleForReturn(saleId: number) {
-  return getSaleDetail(saleId);
+export async function getSaleForReturn(saleId: number): Promise<SaleDetail | null> {
+  const sale = await getSaleDetail(saleId);
+  if (!sale) return null;
+
+  const items = await Promise.all(
+    sale.items.map(async (item) => {
+      const returnedRow = await get<{ totalReturned: number }>(
+        'SELECT IFNULL(SUM(quantity), 0) AS totalReturned FROM return_items WHERE saleItemId = ?',
+        [item.id],
+      );
+      const totalReturned = returnedRow?.totalReturned ?? 0;
+      const remainingQty = Math.max(0, item.quantity - totalReturned);
+      const unitPrice = item.quantity > 0 ? item.lineTotalIQD / item.quantity : 0;
+
+      return {
+        ...item,
+        originalQuantity: item.quantity,
+        alreadyReturnedQuantity: totalReturned,
+        quantity: remainingQty,
+        lineTotalIQD: remainingQty * unitPrice,
+      };
+    }),
+  );
+
+  return {
+    ...sale,
+    items,
+  };
 }
 
 export async function fetchReturnById(id: number): Promise<ReturnResponse | null> {

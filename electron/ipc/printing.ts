@@ -98,11 +98,15 @@ const createPrintWindow = async (
           // Don't treat user cancellation as an error
           if (failureReason && failureReason.toLowerCase().includes('cancel')) {
             log('[Print] User cancelled');
-            setTimeout(() => win.close(), 500);
+            setTimeout(() => {
+              if (!win.isDestroyed()) win.close();
+            }, 500);
             resolve();
           } else {
             logError('[Print] Failed:', failureReason);
-            setTimeout(() => win.close(), 500);
+            setTimeout(() => {
+              if (!win.isDestroyed()) win.close();
+            }, 500);
             reject(new Error(failureReason || 'Print failed'));
           }
         } else {
@@ -122,7 +126,7 @@ const createPrintWindow = async (
     setTimeout(() => {
       if (!printCompleted) {
         logError('[Print] Timeout after 60 seconds');
-        win.close();
+        if (!win.isDestroyed()) win.close();
         reject(new Error('Print timeout - please try again'));
       }
     }, 60000); // 60 seconds

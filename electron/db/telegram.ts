@@ -63,8 +63,8 @@ export const MAIN_REPLY_KEYBOARD = {
   keyboard: [
     [{ text: '📊 مبيعات اليوم' }, { text: '📅 مبيعات الأمس' }, { text: '🗓️ مبيعات الشهر' }],
     [{ text: '📉 المصروفات' }, { text: '👥 مبيعات الكادر' }, { text: '💵 الكاش بالدرج' }],
-    [{ text: '📋 سجلات النشاط' }, { text: '⚠️ نواقص المخزون' }, { text: '🏆 الأكثر مبيعاً' }],
-    [{ text: '💾 نسخة احتياطية' }, { text: '🟢 فحص الحالة' }, { text: '❓ قائمة الأوامر' }],
+    [{ text: '🔍 فحص منتج / باركود' }, { text: '⚠️ نواقص المخزون' }, { text: '🏆 الأكثر مبيعاً' }],
+    [{ text: '📋 سجلات النشاط' }, { text: '💾 نسخة احتياطية' }, { text: '🟢 فحص الحالة' }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -543,7 +543,7 @@ export async function checkTelegramRecoveryOnStartup(): Promise<void> {
     const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
     const lastSentDate = await getSetting('telegram_last_eod_sent_date');
-    if (lastSentDate && lastSentDate !== todayLocalStr && lastSentDate !== yesterdayStr) {
+    if (lastSentDate !== todayLocalStr && lastSentDate !== yesterdayStr) {
       const yesterdaySales = await getReportsHelper({ startDate: yesterdayStr, endDate: yesterdayStr });
       if (yesterdaySales && (yesterdaySales.dailySales?.length || 0) > 0) {
         log.info('[telegram] Recovering missed daily report for yesterday:', yesterdayStr);
@@ -1138,7 +1138,52 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
-    // ─── 13. Start / Help / Menu ────────────────────────────────────────────
+    // ─── 13. Product & Barcode Price/Stock Lookup ───────────────────────────
+    if (
+      slashCmd === '/p' ||
+      slashCmd === '/product' ||
+      slashCmd === '/price' ||
+      slashCmd === '/item' ||
+      slashCmd === '/find' ||
+      slashCmd === '/barcode' ||
+      norm.includes('فحص منتج') ||
+      norm.includes('سعر') ||
+      norm.includes('باركود') ||
+      norm.includes('استعلام')
+    ) {
+      // Extract search query if passed like "/p 123456" or "سعر قميص"
+      let query = commandText.trim();
+      if (slashCmd.startsWith('/')) {
+        query = query.substring(slashCmd.length).trim();
+      } else {
+        // Strip out trigger words
+        query = query
+          .replace(/^(🔍\s*)?(فحص منتج\s*\/?\s*باركود|فحص منتج|فحص باركود|فحص|سعر|باركود|استعلام)\s*:?\s*/iu, '')
+          .trim();
+      }
+
+      if (!query) {
+        await sendTelegramMessage(
+          `🔍 <b>فحص واستعلام المنتجات والباركود:</b>\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `أرسل أي باركود أو اسم منتج أو كود SKU مباشرة وسيقوم البوت بالبحث الفوري عنه وعرض سعره وتكلفته ومخزونه.\n\n` +
+          `💡 <b>طرق الاستخدام:</b>\n` +
+          `  ▫️ أرسل الباركود مباشرة: <code>628100012345</code>\n` +
+          `  ▫️ أو اكتب: <code>/p قميص</code>\n` +
+          `  ▫️ أو اكتب: <code>سعر فستان</code>`,
+          'HTML',
+          override,
+          MAIN_REPLY_KEYBOARD,
+        );
+        return;
+      }
+
+      const resultMsg = await handleProductQueryTelegram(query);
+      await sendTelegramMessage(resultMsg, 'HTML', override, MAIN_REPLY_KEYBOARD);
+      return;
+    }
+
+    // ─── 14. Start / Help / Menu ────────────────────────────────────────────
     if (
       slashCmd === '/start' ||
       slashCmd === '/help' ||
@@ -1166,6 +1211,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       helpMsg += `  /activity_all — أحدث العمليات المسجلة\n`;
       helpMsg += `\n`;
       helpMsg += `📦 <b>المخزون والمنتجات:</b>\n`;
+      helpMsg += `  /p [اسم/باركود] — فحص سعر وتكلفة ومخزون أي منتج\n`;
       helpMsg += `  /stock — تنبيه بالنواقص والمنتجات المنتهية\n`;
       helpMsg += `  /top — أعلى 10 منتجات مبيعاً هذا الشهر\n`;
       helpMsg += `\n`;
@@ -1191,8 +1237,24 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       return;
     }
 
+    // ─── Auto-search Fallback: Check if message is a product name or barcode ──
+    const trimmedInput = commandText.trim();
+    if (trimmedInput && !trimmedInput.startsWith('/')) {
+      const searchResult = await handleProductQueryTelegram(trimmedInput);
+      if (!searchResult.startsWith('❌ لم يتم العثور')) {
+        await sendTelegramMessage(searchResult, 'HTML', override, MAIN_REPLY_KEYBOARD);
+        return;
+      }
+    }
+
     // Default response for unhandled text
-    await sendTelegramMessage(`❓ أمر غير معروف: "${escapeHtml(commandText)}".\nاضغط على الأزرار أسفل الشاشة أو أرسل <b>/help</b>.`, 'HTML', override, MAIN_REPLY_KEYBOARD);
+    await sendTelegramMessage(
+      `❓ أمر غير معروف: "<b>${escapeHtml(commandText)}</b>".\n` +
+      `اضغط على الأزرار أسفل الشاشة أو أرسل <b>/help</b>، أو أرسل أي باركود لفحصه مباشرة.`,
+      'HTML',
+      override,
+      MAIN_REPLY_KEYBOARD,
+    );
   } catch (cmdErr) {
     log.error('[telegram-bot] Command execution error:', cmdErr);
     await sendTelegramMessage(`❌ حدث خطأ أثناء معالجة الأمر: ${cmdErr instanceof Error ? cmdErr.message : String(cmdErr)}`, 'HTML', override);
@@ -1546,6 +1608,283 @@ export async function formatEmployeeSalesTelegramMessage(
   } catch (err) {
     log.error('[telegram] Failed to format employee sales:', err);
     return `❌ حدث خطأ أثناء جلب مبيعات الموظفين: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+// ─── Product & Stock Lookup for Telegram Commands ─────────────────────────────
+
+/**
+ * Query products and stock for Telegram bot
+ */
+export async function handleProductQueryTelegram(queryText: string): Promise<string> {
+  const q = (queryText || '').trim();
+  if (!q) {
+    return '🔍 <b>فحص واستعلام المنتجات:</b>\nأرسل الباركود أو اسم المنتج مباشرة لمعرفة سعره وتكلفته ومخزونه.';
+  }
+
+  try {
+    const rateSetting = await get<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['exchangeRate']);
+    const exchangeRate = rateSetting ? parseFloat(rateSetting.value) || 1520 : 1520;
+
+    // Generate candidates for barcode / SKU
+    const candidates = new Set<string>();
+    candidates.add(q);
+    const stripped = q.replace(/^0+/, '');
+    if (stripped) {
+      candidates.add(stripped);
+      candidates.add('0' + stripped);
+      candidates.add('00' + stripped);
+      candidates.add('000' + stripped);
+    }
+    if (q.startsWith('0')) {
+      const s1 = q.substring(1);
+      if (s1) candidates.add(s1);
+    } else {
+      candidates.add('0' + q);
+    }
+    if (q.length === 12) {
+      candidates.add('0' + q);
+    } else if (q.length === 13 && q.startsWith('0')) {
+      candidates.add(q.substring(1));
+    }
+    const candidateList = Array.from(candidates).filter(Boolean);
+    const placeholders = candidateList.map(() => '?').join(', ');
+    const lowerPlaceholders = candidateList.map(() => '?').join(', ');
+
+    const likeParam = `%${q.toLowerCase()}%`;
+
+    // 1. First try candidate / exact barcode & SKU matching
+    let rows = await all<{
+      productId: number;
+      productName: string;
+      category?: string | null;
+      variantId: number;
+      size?: string | null;
+      color?: string | null;
+      sku: string;
+      barcode?: string | null;
+      defaultPriceIQD: number;
+      avgCostUSD: number;
+      purchaseCostUSD: number;
+      lastPurchaseCostUSD: number;
+      stockOnHand: number;
+    }>(
+      `
+      SELECT
+        p.id AS productId,
+        p.name AS productName,
+        p.category,
+        pv.id AS variantId,
+        pv.size,
+        pv.color,
+        pv.sku,
+        pv.barcode,
+        pv.defaultPriceIQD,
+        pv.avgCostUSD,
+        pv.purchaseCostUSD,
+        pv.lastPurchaseCostUSD,
+        IFNULL(SUM(vs.quantity), 0) AS stockOnHand
+      FROM product_variants pv
+      JOIN products p ON p.id = pv.productId
+      LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+      WHERE pv.isActive = 1 AND p.isActive = 1
+        AND (
+          pv.barcode IN (${placeholders}) OR
+          pv.sku IN (${placeholders}) OR
+          LOWER(pv.barcode) IN (${lowerPlaceholders}) OR
+          LOWER(pv.sku) IN (${lowerPlaceholders})
+        )
+      GROUP BY pv.id
+      ORDER BY
+        CASE
+          WHEN pv.barcode = ? THEN 1
+          WHEN pv.sku = ? THEN 2
+          WHEN pv.barcode = ? THEN 3
+          WHEN pv.sku = ? THEN 4
+          ELSE 5
+        END
+      LIMIT 10
+      `,
+      [
+        ...candidateList,
+        ...candidateList,
+        ...candidateList.map((c) => c.toLowerCase()),
+        ...candidateList.map((c) => c.toLowerCase()),
+        q,
+        q,
+        stripped || q,
+        stripped || q,
+      ],
+    );
+
+    // 2. If no exact barcode match, search by product name / category
+    if (!rows || rows.length === 0) {
+      rows = await all<{
+        productId: number;
+        productName: string;
+        category?: string | null;
+        variantId: number;
+        size?: string | null;
+        color?: string | null;
+        sku: string;
+        barcode?: string | null;
+        defaultPriceIQD: number;
+        avgCostUSD: number;
+        purchaseCostUSD: number;
+        lastPurchaseCostUSD: number;
+        stockOnHand: number;
+      }>(
+        `
+        SELECT
+          p.id AS productId,
+          p.name AS productName,
+          p.category,
+          pv.id AS variantId,
+          pv.size,
+          pv.color,
+          pv.sku,
+          pv.barcode,
+          pv.defaultPriceIQD,
+          pv.avgCostUSD,
+          pv.purchaseCostUSD,
+          pv.lastPurchaseCostUSD,
+          IFNULL(SUM(vs.quantity), 0) AS stockOnHand
+        FROM product_variants pv
+        JOIN products p ON p.id = pv.productId
+        LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+        WHERE pv.isActive = 1 AND p.isActive = 1
+          AND (
+            LOWER(p.name) LIKE ? OR
+            LOWER(p.category) LIKE ? OR
+            LOWER(pv.sku) LIKE ? OR
+            LOWER(pv.barcode) LIKE ?
+          )
+        GROUP BY pv.id
+        ORDER BY
+          CASE
+            WHEN LOWER(p.name) = LOWER(?) THEN 1
+            WHEN LOWER(p.name) LIKE ? THEN 2
+            ELSE 3
+          END
+        LIMIT 25
+        `,
+        [likeParam, likeParam, likeParam, likeParam, q, `${q.toLowerCase()}%`],
+      );
+    }
+
+    if (!rows || rows.length === 0) {
+      return `❌ لم يتم العثور على أي منتج يطابق: "<b>${escapeHtml(q)}</b>"\n\n💡 <i>تأكد من كتابة الاسم أو الباركود بشكل صحيح، أو ابحث بجزء من الاسم.</i>`;
+    }
+
+    // Group rows by productId
+    const productsMap = new Map<
+      number,
+      {
+        productId: number;
+        productName: string;
+        category?: string | null;
+        variants: typeof rows;
+      }
+    >();
+
+    for (const r of rows) {
+      if (!productsMap.has(r.productId)) {
+        productsMap.set(r.productId, {
+          productId: r.productId,
+          productName: r.productName,
+          category: r.category,
+          variants: [],
+        });
+      }
+      productsMap.get(r.productId)!.variants.push(r);
+    }
+
+    const uniqueProducts = Array.from(productsMap.values());
+
+    // If multiple distinct products matched (e.g. searching "قميص" matched 3 different models)
+    if (uniqueProducts.length > 1) {
+      let listMsg = `🔍 <b>نتائج البحث عن "<code>${escapeHtml(q)}</code>" (${uniqueProducts.length} منتجات):</b>\n`;
+      listMsg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+      uniqueProducts.slice(0, 6).forEach((prod, idx) => {
+        const totalStock = prod.variants.reduce((acc, v) => acc + (v.stockOnHand || 0), 0);
+        const minPrice = Math.min(...prod.variants.map((v) => v.defaultPriceIQD || 0));
+        const maxPrice = Math.max(...prod.variants.map((v) => v.defaultPriceIQD || 0));
+        const priceStr =
+          minPrice === maxPrice
+            ? `${minPrice.toLocaleString('en-IQ')} د.ع`
+            : `${minPrice.toLocaleString('en-IQ')} - ${maxPrice.toLocaleString('en-IQ')} د.ع`;
+        const code = prod.variants[0]?.barcode || prod.variants[0]?.sku || '';
+
+        const stockBadge =
+          totalStock <= 0 ? '❌ نفد' : totalStock <= 3 ? `⚠️ ${totalStock} قطع` : `✅ ${totalStock} قطعة`;
+
+        listMsg += `<b>${idx + 1}. 🛍️ ${escapeHtml(prod.productName)}</b>\n`;
+        listMsg += `   💰 السعر: <b>${priceStr}</b> | المخزون: ${stockBadge}\n`;
+        if (code) {
+          listMsg += `   🏷️ الباركود / الكود: <code>${escapeHtml(code)}</code>\n`;
+        }
+        listMsg += `\n`;
+      });
+
+      listMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      listMsg += `💡 <i>لعرض تفاصيل التكلفة والأرباح والمقاسات بالكامل لأي صنف، أرسل اسمه أو الباركود الخاص به مباشرة.</i>`;
+      return listMsg;
+    }
+
+    // Exactly ONE product matched -> Render Full Financial & Stock Card!
+    const prod = uniqueProducts[0];
+    const firstVar = prod.variants[0];
+    const totalStock = prod.variants.reduce((acc, v) => acc + (v.stockOnHand || 0), 0);
+
+    const basePrice = firstVar.defaultPriceIQD || 0;
+    const costUSD =
+      firstVar.avgCostUSD > 0
+        ? firstVar.avgCostUSD
+        : firstVar.purchaseCostUSD > 0
+        ? firstVar.purchaseCostUSD
+        : firstVar.lastPurchaseCostUSD || 0;
+    const costIQD = Math.round(costUSD * exchangeRate);
+    const profitIQD = basePrice - costIQD;
+    const profitMarginPct = basePrice > 0 ? Math.round((profitIQD / basePrice) * 100) : 0;
+
+    const stockStatus =
+      totalStock <= 0
+        ? '❌ نفد من المخزن (0 قطعة)'
+        : totalStock <= 3
+        ? `⚠️ كمية قليلة حرجة (${totalStock} قطعة متبقية)`
+        : `✅ متوفر بالمخزن (${totalStock} قطعة)`;
+
+    let card = `🛍️ <b>${escapeHtml(prod.productName)}</b>`;
+    if (prod.category) card += ` • <i>${escapeHtml(prod.category)}</i>`;
+    card += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    card += `💰 <b>سعر البيع:</b> <b>${basePrice.toLocaleString('en-IQ')} د.ع</b>\n`;
+    card += `📉 <b>سعر التكلفة:</b> <code>${costIQD.toLocaleString('en-IQ')} د.ع</code> ($${costUSD.toFixed(2)})\n`;
+    card += `📈 <b>صافي الربح:</b> <b>+${profitIQD.toLocaleString('en-IQ')} د.ع</b> (${profitMarginPct}%)\n`;
+    card += `📦 <b>المخزون الإجمالي:</b> ${stockStatus}\n`;
+
+    // Sizes & Colors Breakdown
+    if (prod.variants.length > 1 || prod.variants[0]?.size || prod.variants[0]?.color) {
+      card += `━━━━━━━━━━━━━━━━━━━━\n`;
+      card += `🎨 <b>المقاسات والألوان المتوفرة:</b>\n`;
+      prod.variants.forEach((v) => {
+        const desc = [v.size, v.color].filter(Boolean).join(' / ') || 'افتراضي';
+        const vStock =
+          v.stockOnHand <= 0 ? '❌ 0' : v.stockOnHand <= 2 ? `⚠️ ${v.stockOnHand}` : `✅ ${v.stockOnHand}`;
+        card += `  ▫️ <b>${escapeHtml(desc)}:</b> ${vStock} قطعة (كود: <code>${escapeHtml(v.sku)}</code>)\n`;
+      });
+    }
+
+    card += `━━━━━━━━━━━━━━━━━━━━\n`;
+    if (firstVar.barcode) {
+      card += `🏷️ <b>الباركود:</b> <code>${escapeHtml(firstVar.barcode)}</code>\n`;
+    }
+    card += `🔖 <b>رمز SKU:</b> <code>${escapeHtml(firstVar.sku)}</code>`;
+
+    return card;
+  } catch (err: any) {
+    log.error('[telegram] Error looking up product for Telegram:', err);
+    return `❌ حدث خطأ أثناء فحص المنتج: ${err?.message || String(err)}`;
   }
 }
 
