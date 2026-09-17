@@ -49,7 +49,7 @@ export const CustomersTab = ({ reports, t }: Props): JSX.Element => {
                   const share = totalRevenue > 0 ? ((entry.amountIQD / totalRevenue) * 100).toFixed(1) : '0';
                   return (
                     <tr key={entry.name}>
-                      <td>{idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}</td>
+                      <td>#{idx + 1}</td>
                       <td>{entry.name}</td>
                       <td>{entry.quantity}</td>
                       <td>{fmt(entry.amountIQD)} IQD</td>

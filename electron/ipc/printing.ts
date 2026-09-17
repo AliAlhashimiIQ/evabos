@@ -109,8 +109,8 @@ try {
 } catch {
 }
 
-# Standard ESC/POS pulse: ESC p 0 25 250 (pin 2) and ESC p 1 25 250 (pin 5)
-$pulseBytes = [byte[]]@(0x1B, 0x70, 0x00, 0x19, 0xFA, 0x1B, 0x70, 0x01, 0x19, 0xFA)
+# Standard ESC/POS pulse: ESC p 0 25 250 (pin 2) - single clean kick pulse
+$pulseBytes = [byte[]]@(0x1B, 0x70, 0x00, 0x19, 0xFA)
 
 $result = [RawPrinterHelper]::SendBytesToPrinter($PrinterName, $pulseBytes)
 if ($result) {
@@ -122,7 +122,17 @@ if ($result) {
 }
 `;
 
+let lastKickTimestamp = 0;
+const KICK_DEBOUNCE_MS = 1200;
+
 const kickCashDrawer = async (targetPrinterName?: string | null): Promise<boolean> => {
+  const now = Date.now();
+  if (now - lastKickTimestamp < KICK_DEBOUNCE_MS) {
+    log('[Drawer] Kick skipped due to debounce window (' + (now - lastKickTimestamp) + 'ms)');
+    return true;
+  }
+  lastKickTimestamp = now;
+
   return new Promise(async (resolve, reject) => {
     try {
       let printer = targetPrinterName?.trim();

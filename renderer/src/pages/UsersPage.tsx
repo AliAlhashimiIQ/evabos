@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
@@ -394,8 +395,8 @@ const UsersPage = (): JSX.Element => {
           <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Users-modalHeader">
               <h2>{editingUser ? t('edit') : t('add')} {t('users')}</h2>
-              <button className="Users-modalClose" onClick={handleCloseUserModal}>
-                ✕
+              <button className="Users-modalClose" onClick={handleCloseUserModal} aria-label="Close">
+                <X size={18} />
               </button>
             </div>
             <form className="Users-form" onSubmit={handleUserSubmit}>
@@ -487,8 +488,8 @@ const UsersPage = (): JSX.Element => {
           <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Users-modalHeader">
               <h2>{editingEmployee ? t('editEmployee') : t('addEmployee')}</h2>
-              <button className="Users-modalClose" onClick={handleCloseEmployeeModal}>
-                ✕
+              <button className="Users-modalClose" onClick={handleCloseEmployeeModal} aria-label="Close">
+                <X size={18} />
               </button>
             </div>
             <form className="Users-form" onSubmit={handleEmployeeSubmit}>

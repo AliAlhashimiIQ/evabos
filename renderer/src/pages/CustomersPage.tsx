@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Ticket, Printer, Trash2, Calendar, Award, DollarSign } from 'lucide-react';
+import { Plus, Ticket, Printer, Trash2, Calendar, Award, DollarSign, X } from 'lucide-react';
 import './Pages.css';
 import './CustomersPage.css';
 import { confirmDialog } from '../utils/confirmDialog';
@@ -328,7 +328,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                     <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h3>{t('newCustomer')}</h3>
-                            <button onClick={() => setModalOpen(false)}>✕</button>
+                            <button onClick={() => setModalOpen(false)} aria-label="Close"><X size={18} /></button>
                         </header>
                         <form onSubmit={handleSubmit}>
                             <label>
@@ -375,7 +375,7 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                     <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h3>{t('createVoucher')}</h3>
-                            <button onClick={() => setVoucherModalOpen(false)}>✕</button>
+                            <button onClick={() => setVoucherModalOpen(false)} aria-label="Close"><X size={18} /></button>
                         </header>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>

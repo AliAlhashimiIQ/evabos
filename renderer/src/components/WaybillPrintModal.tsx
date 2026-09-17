@@ -313,8 +313,7 @@ export const generateWaybillHtml = (
   <!-- Customer Box -->
   <div class="customer-box">
     <div class="customer-title">
-      <span>👤 بيانات الزبون والمستلم</span>
-      <span>${order.customerPhone ? '📲' : ''}</span>
+      <span>بيانات الزبون والمستلم</span>
     </div>
     <div class="cust-row">
       <strong>الاسم:</strong>

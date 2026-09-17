@@ -64,22 +64,24 @@ export const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({
   useEffect(() => {
     if (!visible) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (e.key === 'F9') {
         e.preventDefault();
+        e.stopPropagation();
         window.evaApi?.printing?.kickDrawer?.().catch(console.error);
       }
       if (e.key === 'Escape') {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [visible, onClose]);
 
   // Calculate live expected cash
   const expectedCash = useMemo(() => {
     if (!summary) return 0;
-    const cashIn = (openingCash || 0) + (summary.cashSalesIQD || 0) + (summary.exchangeCashIQD || 0);
+    const cashIn = (openingCash || 0) + (summary.cashSalesIQD || 0) + (summary.mixedSalesIQD || 0) + (summary.exchangeCashIQD || 0);
     const cashOut = (summary.cashRefundsIQD || 0) + (summary.expensesIQD || 0);
     return Math.max(0, cashIn - cashOut);
   }, [summary, openingCash]);

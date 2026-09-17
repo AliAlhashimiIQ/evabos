@@ -76,7 +76,7 @@ export const MonthlyTab = ({ reports, expensesByCategory, t }: Props): JSX.Eleme
   for (const m of monthMap.values()) {
     m.avgTicketIQD = m.orders > 0 ? Math.round(m.revenueIQD / m.orders) : 0;
     m.grossProfitIQD = m.revenueIQD - m.costIQD;
-    m.netIQD = m.revenueIQD - m.costIQD - m.expensesIQD; // ✅ correct: revenue - COGS - opex
+    m.netIQD = m.revenueIQD - m.costIQD - m.expensesIQD; // Net profit = revenue - COGS - expenses
   }
 
   const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));

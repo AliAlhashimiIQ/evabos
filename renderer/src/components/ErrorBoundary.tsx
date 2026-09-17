@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -60,7 +61,19 @@ class ErrorBoundary extends Component<Props, State> {
             textAlign: 'center',
             boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: '#f87171',
+              marginBottom: '1rem',
+            }}>
+              <AlertTriangle size={32} />
+            </div>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f8fafc' }}>
               حدث خطأ غير متوقع
             </h1>

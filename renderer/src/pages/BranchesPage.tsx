@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Pages.css';
 import './BranchesPage.css';
@@ -180,8 +181,8 @@ const BranchesPage = (): JSX.Element => {
           <div className="Branches-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Branches-modalHeader">
               <h2>{editingBranch ? 'Edit Branch' : 'Add Branch'}</h2>
-              <button className="Branches-modalClose" onClick={handleCloseModal}>
-                ✕
+              <button className="Branches-modalClose" onClick={handleCloseModal} aria-label="Close">
+                <X size={18} />
               </button>
             </div>
             <form className="Branches-form" onSubmit={handleSubmit}>

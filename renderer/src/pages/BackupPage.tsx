@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FolderOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
@@ -174,7 +175,11 @@ const BackupPage = (): JSX.Element => {
               className="BackupPage-createButton"
               style={{ backgroundColor: '#27ae60' }}
             >
-              {restoring ? t('restoring') : `📁 ${t('selectBackupFile')}`}
+              {restoring ? t('restoring') : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <FolderOpen size={16} /> {t('selectBackupFile')}
+                </span>
+              )}
             </button>
           )}
           <button onClick={handleCreateBackup} disabled={creating || loading} className="BackupPage-createButton">

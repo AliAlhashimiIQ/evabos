@@ -163,7 +163,7 @@ export const EmployeesTab = ({ employeeSales, startDate, endDate, token }: Props
                       style={{ cursor: 'pointer' }}
                       title={t('clickToSeeDetails') || 'Click to view sold products'}
                     >
-                      <td>{idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}</td>
+                      <td>#{idx + 1}</td>
                       <td>
                         <span style={{ color: 'var(--text-link)', textDecoration: 'underline', fontWeight: 600 }}>
                           {entry.employeeName}

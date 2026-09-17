@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './ExcelImportModal.css';
 
@@ -77,8 +78,8 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
       <div className="ExcelImportModal-content" onClick={(e) => e.stopPropagation()}>
         <div className="ExcelImportModal-header">
           <h2>Import Products from Excel</h2>
-          <button className="ExcelImportModal-close" onClick={onClose}>
-            ✕
+          <button className="ExcelImportModal-close" onClick={onClose} aria-label="Close">
+            <X size={18} />
           </button>
         </div>
 

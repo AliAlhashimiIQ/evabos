@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
-  ShoppingBag, CheckCircle2, XCircle, Clock, Plus, Search,
+  ShoppingBag, CheckCircle2, XCircle, AlertTriangle, Clock, Plus, Search,
   Loader2, Instagram, Phone, MessageCircle, Globe, Package,
   ChevronDown, ChevronUp, X, Printer, RefreshCw, Pause, Play, Filter,
 } from 'lucide-react';
@@ -79,7 +79,7 @@ const OnlineOrdersPage = (): JSX.Element => {
   const [formDiscount, setFormDiscount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [scannerMessage, setScannerMessage] = useState<string | null>(null);
+  const [scannerMessage, setScannerMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
   const [editOrderId, setEditOrderId] = useState<number | null>(null);
 
   // New Modals State
@@ -249,18 +249,18 @@ const OnlineOrdersPage = (): JSX.Element => {
 
     if (variant) {
       if (variant.stockOnHand <= 0) {
-        setScannerMessage(`❌ "${variant.productName}" — نفذ المخزون`);
+        setScannerMessage({ text: `"${variant.productName}" — نفذ المخزون`, type: 'error' });
       } else {
         const existing = cart.find(i => i.product.id === variant!.id);
         if (existing && existing.quantity >= variant.stockOnHand) {
-          setScannerMessage(`⚠️ "${variant.productName}" — الكمية القصوى (${variant.stockOnHand})`);
+          setScannerMessage({ text: `"${variant.productName}" — الكمية القصوى (${variant.stockOnHand})`, type: 'warning' });
         } else {
           addToCart(variant);
-          setScannerMessage(`✅ ${variant.productName}`);
+          setScannerMessage({ text: variant.productName, type: 'success' });
         }
       }
     } else {
-      setScannerMessage(`❌ لا يوجد تطابق: ${val}`);
+      setScannerMessage({ text: `لا يوجد تطابق: ${val}`, type: 'error' });
     }
 
     setProductSearch('');
@@ -781,8 +781,11 @@ const OnlineOrdersPage = (): JSX.Element => {
                   </div>
 
                   {scannerMessage && (
-                    <div className={`OO-scannerFeedback ${scannerMessage.startsWith('✅') ? 'OO-scannerFeedback--success' : scannerMessage.startsWith('⚠️') ? 'OO-scannerFeedback--warning' : 'OO-scannerFeedback--error'}`}>
-                      {scannerMessage}
+                    <div className={`OO-scannerFeedback OO-scannerFeedback--${scannerMessage.type}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                      {scannerMessage.type === 'success' && <CheckCircle2 size={16} />}
+                      {scannerMessage.type === 'warning' && <AlertTriangle size={16} />}
+                      {scannerMessage.type === 'error' && <XCircle size={16} />}
+                      <span>{scannerMessage.text}</span>
                     </div>
                   )}
 

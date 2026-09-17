@@ -653,7 +653,7 @@ const DashboardPage = (): JSX.Element => {
                   return (
                     <div key={idx} className="Dashboard-podiumRow">
                       <div className={`Dashboard-podiumRank ${rankClass}`}>
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                        #{idx + 1}
                       </div>
                       <div className="Dashboard-podiumInfo">
                         <span className="Dashboard-podiumName">{item.productName}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
+import { X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import './BarcodeLabelModal.css';
 import NumberInput from './NumberInput';
@@ -180,8 +181,8 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
         <div style={{ width: '100%', maxWidth: '700px' }}>
           <div className="BarcodeLabelModal-header">
             <h2>{t('printBarcodeLabel')}</h2>
-            <button className="BarcodeLabelModal-close" onClick={onClose}>
-              ✕
+            <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="Close">
+              <X size={18} />
             </button>
           </div>
           <div className="BarcodeLabelModal-body">
@@ -359,8 +360,8 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       <div style={{ width: '100%', maxWidth: '700px' }}>
         <div className="BarcodeLabelModal-header">
           <h2>{t('printBarcodeLabel')}</h2>
-          <button className="BarcodeLabelModal-close" onClick={onClose}>
-            ✕
+          <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="Close">
+            <X size={18} />
           </button>
         </div>
 

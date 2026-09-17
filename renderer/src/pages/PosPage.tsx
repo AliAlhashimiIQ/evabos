@@ -141,7 +141,12 @@ const PosPage = (): JSX.Element => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
+  const lastKickTimeRef = useRef<number>(0);
   const handleKickDrawer = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastKickTimeRef.current < 1200) return;
+    lastKickTimeRef.current = now;
+
     if (window.evaApi?.printing?.kickDrawer) {
       try {
         await window.evaApi.printing.kickDrawer(preferredPrinter);

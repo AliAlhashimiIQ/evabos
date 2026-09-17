@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './PosLockOverlay.css';
 
@@ -34,7 +35,9 @@ export function PosLockOverlay(): JSX.Element | null {
   return (
     <div className="PosLockOverlay">
       <div className="PosLockOverlay-content">
-        <div className="PosLockOverlay-icon">🔒</div>
+        <div className="PosLockOverlay-icon">
+          <Lock size={44} />
+        </div>
         <h2>POS Locked</h2>
         <p>The POS system is currently locked.</p>
         {canUnlock ? (

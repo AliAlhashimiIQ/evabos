@@ -94,8 +94,8 @@ try {
     # Type might already be loaded in session
 }
 
-# ESC p 0 25 250 (pin 2) and ESC p 1 25 250 (pin 5)
-$pulseBytes = [byte[]]@(0x1B, 0x70, 0x00, 0x19, 0xFA, 0x1B, 0x70, 0x01, 0x19, 0xFA)
+# Standard ESC/POS pulse: ESC p 0 25 250 (pin 2) - single clean kick pulse
+$pulseBytes = [byte[]]@(0x1B, 0x70, 0x00, 0x19, 0xFA)
 
 $result = [RawPrinterHelper]::SendBytesToPrinter($PrinterName, $pulseBytes)
 if ($result) {

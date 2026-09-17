@@ -4099,8 +4099,8 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
   const expensesCount = Number(expensesRows[0]?.count || 0);
   const expensesIQD = Number(expensesRows[0]?.total || 0);
 
-  // Expected Cash = Opening Cash + Cash Sales + Exchange Cash - Cash Refunds - Expenses
-  const expectedCashIQD = Math.max(0, openingCashIQD + cashSalesIQD + exchangeCashIQD - cashRefundsIQD - expensesIQD);
+  // Expected Cash = Opening Cash + Cash Sales + Mixed Cash Sales + Exchange Cash - Cash Refunds - Expenses
+  const expectedCashIQD = Math.max(0, openingCashIQD + cashSalesIQD + (mixedSalesIQD || 0) + exchangeCashIQD - cashRefundsIQD - expensesIQD);
 
   return {
     branchId,

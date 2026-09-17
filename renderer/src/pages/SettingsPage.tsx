@@ -333,9 +333,9 @@ const SettingsPage = (): JSX.Element => {
     try {
       const success = await window.evaApi.printing.kickDrawer(receiptPrinterName || null);
       if (success) {
-        setPrinterMessage('✅ تم إرسال إشارة فتح درج الكاش إلى الطابعة بنجاح!');
+        setPrinterMessage('تم إرسال إشارة فتح درج الكاش إلى الطابعة بنجاح.');
       } else {
-        setPrinterMessage('⚠️ تعذر إرسال نبضة الدرج، تأكد من توصيل الطابعة وسلك RJ11 الخاص بالدرج.');
+        setPrinterMessage('تعذر إرسال نبضة الدرج، تأكد من توصيل الطابعة وسلك RJ11 الخاص بالدرج.');
       }
     } catch (err) {
       setPrinterMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
@@ -697,7 +697,7 @@ const SettingsPage = (): JSX.Element => {
                   onClick={() => setLanguage('ar')}
                 >
                   <div className="SettingsPage-optionIcon">
-                    <span>🇮🇶</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.5px' }}>AR</span>
                   </div>
                   <div>
                     <div className="SettingsPage-optionLabel">{t('arabic')}</div>
@@ -711,7 +711,7 @@ const SettingsPage = (): JSX.Element => {
                   onClick={() => setLanguage('en')}
                 >
                   <div className="SettingsPage-optionIcon">
-                    <span>🇬🇧</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.5px' }}>EN</span>
                   </div>
                   <div>
                     <div className="SettingsPage-optionLabel">{t('english')}</div>

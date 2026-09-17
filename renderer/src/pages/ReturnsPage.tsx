@@ -4,7 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import PrintingModal, { ReturnPrintData } from '../components/PrintingModal';
 import NumberInput from '../components/NumberInput';
-import { Search, Receipt, Plus, Trash2, History, Check, Loader2, Package, AlertTriangle } from 'lucide-react';
+import { Search, Receipt, Plus, Trash2, History, Check, Loader2, Package, AlertTriangle, X } from 'lucide-react';
 import './Pages.css';
 import './ReturnsPage.css';
 
@@ -959,7 +959,7 @@ const ReturnsPage = (): JSX.Element => {
               <h3>
                 <Receipt size={18} /> {t('returnDetails') || 'تفاصيل المرتجع'} #{selectedReturnDetail.id}
               </h3>
-              <button onClick={() => setSelectedReturnDetail(null)}>✕</button>
+              <button onClick={() => setSelectedReturnDetail(null)} aria-label="Close"><X size={18} /></button>
             </header>
             <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', fontSize: '0.88rem' }}>
@@ -1077,7 +1077,7 @@ const ReturnsPage = (): JSX.Element => {
               <h3>
                 <Package size={18} /> {t('selectVariant') || 'اختر متغير المنتج للإرجاع أو الاستبدال'}
               </h3>
-              <button onClick={() => setShowVariantPicker(false)}>✕</button>
+              <button onClick={() => setShowVariantPicker(false)} aria-label="Close"><X size={18} /></button>
             </header>
 
             {/* Filter & Search Bar */}

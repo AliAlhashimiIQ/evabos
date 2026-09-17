@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import JsBarcode from 'jsbarcode';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './PrintingModal.css';
 
@@ -433,21 +434,21 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="margin-bottom: 15px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 200px; max-height: 100px; object-fit: contain;" /></div>` : ''}
         <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
         <div class="store-info">
-          ${payload.branchName ? `<div><strong>📍 Branch:</strong> ${payload.branchName}</div>` : ''}
+          ${payload.branchName ? `<div><strong>Branch:</strong> ${payload.branchName}</div>` : ''}
           ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
-          ${payload.branchPhone ? `<div>📞 Tel: ${payload.branchPhone}</div>` : ''}
+          ${payload.branchPhone ? `<div>Tel: ${payload.branchPhone}</div>` : ''}
         </div>
         <div class="sale-header">
           <h2>${payload.title}</h2>
           <p><strong>${payload.subtitle}</strong></p>
-          <p>📅 Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
+          <p>Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
           })}</p>
-          ${payload.showCustomer && payload.customer ? `<p><strong>👤 Customer:</strong> ${payload.customer}</p>` : ''}
+          ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
         </div>
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
@@ -489,8 +490,8 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     </table>
     ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
       <div class="payment-section">
-        ${payload.paymentMethod ? `<p><strong>💳 Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
-        ${payload.showCashier && payload.cashierName ? `<p><strong>👤 Cashier:</strong> ${payload.cashierName}</p>` : ''}
+        ${payload.paymentMethod ? `<p><strong>Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
+        ${payload.showCashier && payload.cashierName ? `<p><strong>Cashier:</strong> ${payload.cashierName}</p>` : ''}
       </div>
     ` : ''}
     <div class="footer">${payload.footer}</div>
@@ -1087,7 +1088,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
         <div className="PrintingModal-card">
           <header>
             <h3>Print {salesSummary ? 'Report' : (zReportData ? 'Z-Report' : (sale ? 'Receipt' : 'Return'))}</h3>
-            <button onClick={onClose}>✕</button>
+            <button onClick={onClose} aria-label="Close"><X size={18} /></button>
           </header>
           <div className="PrintingModal-controls">
             {!salesSummary && (

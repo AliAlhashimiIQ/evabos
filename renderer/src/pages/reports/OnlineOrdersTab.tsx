@@ -181,7 +181,7 @@ export const OnlineOrdersTab: React.FC<Props> = ({ data, range, t }) => {
               <TrendingUp size={18} style={{ color: '#10b981' }} /> {t('dailyOnlineSalesTrend') || 'مسار المبيعات الأونلاين اليومي'}
             </h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.2rem 0.6rem', borderRadius: '0.4rem' }}>
-              {range.startDate} ➔ {range.endDate}
+              {range.startDate} → {range.endDate}
             </span>
           </div>
 
@@ -397,8 +397,8 @@ export const OnlineOrdersTab: React.FC<Props> = ({ data, range, t }) => {
                 <tbody>
                   {data.topProducts.map((p, idx) => (
                     <tr key={p.variantId}>
-                      <td style={{ fontWeight: 700, color: idx < 3 ? '#f59e0b' : 'var(--text-secondary)' }}>
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                      <td style={{ fontWeight: 700, color: idx < 3 ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                        #{idx + 1}
                       </td>
                       <td>
                         <strong style={{ color: 'var(--text-primary)', display: 'block' }}>{p.productName}</strong>

@@ -83,11 +83,11 @@ export const OnlineOrderWhatsAppModal: React.FC<OnlineOrderWhatsAppModalProps> =
 
     let msg = '';
     if (selectedTemplate === 'confirm') {
-      msg = `مرحباً ${custName} 🌸\nشكراً لطلبك من ${storeName}!\n\nتفاصيل طلبك (#${order.id}):\n${itemsList}\n\n💰 المبلغ الإجمالي: ${totalFormatted}\n${order.note ? `📍 العنوان / ملاحظاتك: ${order.note}\n` : ''}\nتم تأكيد طلبك وجاري تجهيز الشحنة والتوصيل إليك قريباً! 🛵✨`;
+      msg = `مرحباً ${custName}\nشكراً لطلبك من ${storeName}.\n\nتفاصيل طلبك (#${order.id}):\n${itemsList}\n\nالمبلغ الإجمالي: ${totalFormatted}\n${order.note ? `العنوان / الملاحظات: ${order.note}\n` : ''}\nتم تأكيد طلبك وجاري تجهيز الشحنة للتوصيل.`;
     } else if (selectedTemplate === 'out_for_delivery') {
-      msg = `مرحباً ${custName} 🌸\nنود إعلامك بأن طلبك (#${order.id}) من ${storeName} قد خرج مع مندوب التوصيل وهو في الطريق إليك الآن 🛵📦\n\n💰 المبلغ المطلوب عند الاستلام: ${totalFormatted}\n${order.note ? `📍 العنوان: ${order.note}\n` : ''}\nيرجى إبقاء الهاتف متاحاً للتنسيق مع المندوب. شكراً لتسوقك معنا!`;
+      msg = `مرحباً ${custName}\nنود إعلامك بأن طلبك (#${order.id}) من ${storeName} قد خرج مع مندوب التوصيل وهو في الطريق إليك.\n\nالمبلغ المطلوب عند الاستلام: ${totalFormatted}\n${order.note ? `العنوان: ${order.note}\n` : ''}\nيرجى إبقاء الهاتف متاحاً للتنسيق مع المندوب. شكراً لتسوقك معنا.`;
     } else if (selectedTemplate === 'ready_pickup') {
-      msg = `مرحباً ${custName} 🌸\nنود إعلامك بأن طلبك (#${order.id}) أصبح جاهزاً للاستلام من فرعنا 🛍️✨\n\n💰 المبلغ المطلوب: ${totalFormatted}\nبانتظار تشريفكم في أي وقت خلال ساعات العمل!`;
+      msg = `مرحباً ${custName}\nنود إعلامك بأن طلبك (#${order.id}) أصبح جاهزاً للاستلام من فرعنا.\n\nالمبلغ المطلوب: ${totalFormatted}\nأهلاً وسهلاً بك في أي وقت خلال ساعات العمل الرسمية.`;
     }
 
     setCustomMessage(msg);

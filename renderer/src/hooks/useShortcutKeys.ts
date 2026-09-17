@@ -7,6 +7,11 @@ interface ShortcutMap {
 export function useShortcutKeys(map: ShortcutMap): void {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      // Ignore typematic key repeats (e.g. holding down F9 or another shortcut key)
+      if (event.repeat) {
+        return;
+      }
+
       const target = event.target as HTMLElement;
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
       const isModifierPressed = event.altKey || event.ctrlKey;

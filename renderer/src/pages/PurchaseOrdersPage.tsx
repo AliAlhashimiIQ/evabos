@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import ProductVariantTable from '../components/ProductVariantTable';
@@ -317,7 +318,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
           <div className="PurchaseOrdersPage-variantsCard">
             <header>
               <h3>Select Variants</h3>
-              <button onClick={() => setShowVariants(false)}>✕</button>
+              <button onClick={() => setShowVariants(false)} aria-label="Close"><X size={18} /></button>
             </header>
             <ProductVariantTable
               products={products}
