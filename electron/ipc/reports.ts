@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { getAdvancedReports, getPeakHoursData, getPeakDaysData, getLeastProfitableItems, getLeastProfitableSuppliers, getInventoryAging, getExpensesByCategory, getSalesBySeason } from '../db/database';
+import { getAdvancedReports, getPeakHoursData, getPeakDaysData, getLeastProfitableItems, getLeastProfitableSuppliers, getInventoryAging, getExpensesByCategory, getSalesBySeason, getOnlineOrdersAnalytics } from '../db/database';
 import type { DateRange } from '../db/types';
 import { requireRole } from './auth';
 
@@ -71,6 +71,14 @@ export function registerReportsIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
       const { startDate, endDate } = args[0] as { startDate: string; endDate: string };
       return getSalesBySeason(startDate, endDate);
+    }),
+  );
+
+  ipcMain.handle(
+    'reports:onlineOrders',
+    requireRole(['admin', 'manager'])(async (_event, _session, ...args) => {
+      const { startDate, endDate, branchId } = args[0] as { startDate: string; endDate: string; branchId?: number };
+      return getOnlineOrdersAnalytics(startDate, endDate, branchId);
     }),
   );
 

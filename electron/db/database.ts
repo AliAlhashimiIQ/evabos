@@ -76,6 +76,7 @@ import {
   OnlineOrder,
   OnlineOrderInput,
   OnlineOrderItem,
+  OnlineOrdersAnalytics,
   Employee,
   EmployeeInput,
 } from './types';
@@ -3602,3 +3603,309 @@ export async function getEmployeeDetailedSales(
   `;
   return all<EmployeeDetailedSalesEntry>(query, params);
 }
+
+// ==================== ONLINE ORDERS ANALYTICS ====================
+
+export async function getOnlineOrdersAnalytics(
+  startDate: string,
+  endDate: string,
+  branchId?: number,
+): Promise<OnlineOrdersAnalytics> {
+  const branchFilter = branchId ? ' AND o.branchId = ? ' : '';
+  const branchParams = branchId ? [branchId] : [];
+
+  // 1. Overall Summary
+  const summaryRow = await get<{
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    totalRevenueIQD: number;
+    pendingRevenueIQD: number;
+    rejectedLostRevenueIQD: number;
+    totalDiscountIQD: number;
+    uniqueCustomersCount: number;
+  }>(
+    `SELECT
+       COUNT(*) AS totalOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN 1 ELSE 0 END), 0) AS confirmedOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END), 0) AS pendingOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejectedOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN o.totalIQD ELSE 0 END), 0) AS totalRevenueIQD,
+       IFNULL(SUM(CASE WHEN o.status = 'pending' THEN o.totalIQD ELSE 0 END), 0) AS pendingRevenueIQD,
+       IFNULL(SUM(CASE WHEN o.status = 'rejected' THEN o.totalIQD ELSE 0 END), 0) AS rejectedLostRevenueIQD,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN o.discountIQD ELSE 0 END), 0) AS totalDiscountIQD,
+       COUNT(DISTINCT CASE 
+         WHEN o.customerPhone IS NOT NULL AND TRIM(o.customerPhone) != '' THEN TRIM(o.customerPhone)
+         WHEN o.customerId IS NOT NULL THEN 'C_' || o.customerId
+         WHEN o.customerName IS NOT NULL AND TRIM(o.customerName) != '' THEN TRIM(o.customerName)
+         ELSE NULL END) AS uniqueCustomersCount
+     FROM online_orders o
+     WHERE date(o.createdAt) BETWEEN date(?) AND date(?)
+     ${branchFilter}`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  // 2. Items Sold in Confirmed Orders
+  const itemsRow = await get<{ totalItemsSold: number }>(
+    `SELECT IFNULL(SUM(oi.quantity), 0) AS totalItemsSold
+     FROM online_order_items oi
+     JOIN online_orders o ON o.id = oi.orderId
+     WHERE o.status = 'confirmed'
+       AND date(o.createdAt) BETWEEN date(?) AND date(?)
+       ${branchFilter}`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  const totalOrders = summaryRow?.totalOrders ?? 0;
+  const confirmedOrders = summaryRow?.confirmedOrders ?? 0;
+  const pendingOrders = summaryRow?.pendingOrders ?? 0;
+  const rejectedOrders = summaryRow?.rejectedOrders ?? 0;
+  const totalRevenueIQD = summaryRow?.totalRevenueIQD ?? 0;
+  const pendingRevenueIQD = summaryRow?.pendingRevenueIQD ?? 0;
+  const rejectedLostRevenueIQD = summaryRow?.rejectedLostRevenueIQD ?? 0;
+  const totalDiscountIQD = summaryRow?.totalDiscountIQD ?? 0;
+  const uniqueCustomersCount = summaryRow?.uniqueCustomersCount ?? 0;
+  const totalItemsSold = itemsRow?.totalItemsSold ?? 0;
+
+  const confirmationRate = totalOrders > 0 ? parseFloat(((confirmedOrders / totalOrders) * 100).toFixed(1)) : 0;
+  const rejectionRate = totalOrders > 0 ? parseFloat(((rejectedOrders / totalOrders) * 100).toFixed(1)) : 0;
+  const avgOrderValueIQD = confirmedOrders > 0 ? Math.round(totalRevenueIQD / confirmedOrders) : 0;
+
+  // 3. Performance by Source (Instagram, WhatsApp, TikTok, Phone, etc.)
+  const sourceRows = await all<{
+    source: string;
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    revenueIQD: number;
+  }>(
+    `SELECT
+       o.source,
+       COUNT(*) AS totalOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN 1 ELSE 0 END), 0) AS confirmedOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END), 0) AS pendingOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejectedOrders,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN o.totalIQD ELSE 0 END), 0) AS revenueIQD
+     FROM online_orders o
+     WHERE date(o.createdAt) BETWEEN date(?) AND date(?)
+     ${branchFilter}
+     GROUP BY o.source
+     ORDER BY revenueIQD DESC, totalOrders DESC`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  const bySource = sourceRows.map(row => {
+    const avgTicket = row.confirmedOrders > 0 ? Math.round(row.revenueIQD / row.confirmedOrders) : 0;
+    const pctOfRev = totalRevenueIQD > 0 ? parseFloat(((row.revenueIQD / totalRevenueIQD) * 100).toFixed(1)) : 0;
+    const confRate = row.totalOrders > 0 ? parseFloat(((row.confirmedOrders / row.totalOrders) * 100).toFixed(1)) : 0;
+    return {
+      source: row.source,
+      totalOrders: row.totalOrders,
+      confirmedOrders: row.confirmedOrders,
+      pendingOrders: row.pendingOrders,
+      rejectedOrders: row.rejectedOrders,
+      revenueIQD: row.revenueIQD,
+      avgTicketIQD: avgTicket,
+      percentageOfRevenue: pctOfRev,
+      confirmationRate: confRate,
+    };
+  });
+
+  // 4. Status Breakdown
+  const statusRows = await all<{
+    status: string;
+    count: number;
+    totalIQD: number;
+  }>(
+    `SELECT
+       o.status,
+       COUNT(*) AS count,
+       IFNULL(SUM(o.totalIQD), 0) AS totalIQD
+     FROM online_orders o
+     WHERE date(o.createdAt) BETWEEN date(?) AND date(?)
+     ${branchFilter}
+     GROUP BY o.status
+     ORDER BY count DESC`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  const byStatus = statusRows.map(row => ({
+    status: row.status,
+    count: row.count,
+    totalIQD: row.totalIQD,
+    percentage: totalOrders > 0 ? parseFloat(((row.count / totalOrders) * 100).toFixed(1)) : 0,
+  }));
+
+  // 5. Daily Trend
+  const dailyTrend = await all<{
+    date: string;
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    revenueIQD: number;
+    itemsSold: number;
+  }>(
+    `WITH daily_orders AS (
+       SELECT
+         date(o.createdAt) AS date,
+         COUNT(*) AS totalOrders,
+         IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN 1 ELSE 0 END), 0) AS confirmedOrders,
+         IFNULL(SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END), 0) AS pendingOrders,
+         IFNULL(SUM(CASE WHEN o.status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejectedOrders,
+         IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN o.totalIQD ELSE 0 END), 0) AS revenueIQD
+       FROM online_orders o
+       WHERE date(o.createdAt) BETWEEN date(?1) AND date(?2)
+       ${branchFilter}
+       GROUP BY date(o.createdAt)
+     ),
+     daily_items AS (
+       SELECT
+         date(o.createdAt) AS date,
+         IFNULL(SUM(oi.quantity), 0) AS itemsSold
+       FROM online_order_items oi
+       JOIN online_orders o ON o.id = oi.orderId
+       WHERE o.status = 'confirmed'
+         AND date(o.createdAt) BETWEEN date(?1) AND date(?2)
+       ${branchFilter}
+       GROUP BY date(o.createdAt)
+     )
+     SELECT
+       d.date,
+       d.totalOrders,
+       d.confirmedOrders,
+       d.pendingOrders,
+       d.rejectedOrders,
+       d.revenueIQD,
+       IFNULL(i.itemsSold, 0) AS itemsSold
+     FROM daily_orders d
+     LEFT JOIN daily_items i ON i.date = d.date
+     ORDER BY d.date ASC`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  // 6. Top Selling Products via Confirmed Online Orders
+  const topProducts = await all<{
+    variantId: number;
+    productName: string;
+    sku: string;
+    color: string | null;
+    size: string | null;
+    quantitySold: number;
+    totalRevenueIQD: number;
+    ordersCount: number;
+  }>(
+    `SELECT
+       oi.variantId,
+       p.name AS productName,
+       pv.sku,
+       pv.color,
+       pv.size,
+       IFNULL(SUM(oi.quantity), 0) AS quantitySold,
+       IFNULL(SUM(oi.lineTotalIQD), 0) AS totalRevenueIQD,
+       COUNT(DISTINCT oi.orderId) AS ordersCount
+     FROM online_order_items oi
+     JOIN online_orders o ON o.id = oi.orderId
+     JOIN product_variants pv ON pv.id = oi.variantId
+     JOIN products p ON p.id = pv.productId
+     WHERE o.status = 'confirmed'
+       AND date(o.createdAt) BETWEEN date(?) AND date(?)
+       ${branchFilter}
+     GROUP BY oi.variantId
+     ORDER BY quantitySold DESC, totalRevenueIQD DESC
+     LIMIT 25`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  // 7. Top Online Customers
+  const topCustomers = await all<{
+    customerName: string;
+    customerPhone: string;
+    ordersCount: number;
+    totalSpentIQD: number;
+    lastOrderDate: string;
+    favoriteSource: string;
+  }>(
+    `SELECT
+       COALESCE(NULLIF(o.customerName, ''), 'عميل أونلاين') AS customerName,
+       COALESCE(NULLIF(o.customerPhone, ''), '—') AS customerPhone,
+       COUNT(*) AS ordersCount,
+       IFNULL(SUM(o.totalIQD), 0) AS totalSpentIQD,
+       MAX(o.createdAt) AS lastOrderDate,
+       o.source AS favoriteSource
+     FROM online_orders o
+     WHERE o.status = 'confirmed'
+       AND date(o.createdAt) BETWEEN date(?) AND date(?)
+       ${branchFilter}
+     GROUP BY COALESCE(NULLIF(o.customerPhone, ''), NULLIF(o.customerName, ''), o.id)
+     ORDER BY totalSpentIQD DESC, ordersCount DESC
+     LIMIT 20`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  // 8. Rejection Reasons
+  const rejectionReasons = await all<{
+    reason: string;
+    count: number;
+    lostValueIQD: number;
+  }>(
+    `SELECT
+       COALESCE(NULLIF(TRIM(o.rejectionReason), ''), 'غير محدد') AS reason,
+       COUNT(*) AS count,
+       IFNULL(SUM(o.totalIQD), 0) AS lostValueIQD
+     FROM online_orders o
+     WHERE o.status = 'rejected'
+       AND date(o.createdAt) BETWEEN date(?) AND date(?)
+       ${branchFilter}
+     GROUP BY COALESCE(NULLIF(TRIM(o.rejectionReason), ''), 'غير محدد')
+     ORDER BY count DESC
+     LIMIT 15`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  // 9. Hourly Trend (0-23)
+  const hourlyTrend = await all<{
+    hour: number;
+    orders: number;
+    revenueIQD: number;
+  }>(
+    `SELECT
+       CAST(strftime('%H', o.createdAt) AS INTEGER) AS hour,
+       COUNT(*) AS orders,
+       IFNULL(SUM(CASE WHEN o.status = 'confirmed' THEN o.totalIQD ELSE 0 END), 0) AS revenueIQD
+     FROM online_orders o
+     WHERE date(o.createdAt) BETWEEN date(?) AND date(?)
+     ${branchFilter}
+     GROUP BY hour
+     ORDER BY hour ASC`,
+    [startDate, endDate, ...branchParams],
+  );
+
+  return {
+    summary: {
+      totalOrders,
+      confirmedOrders,
+      pendingOrders,
+      rejectedOrders,
+      confirmationRate,
+      rejectionRate,
+      totalRevenueIQD,
+      pendingRevenueIQD,
+      rejectedLostRevenueIQD,
+      totalDiscountIQD,
+      avgOrderValueIQD,
+      totalItemsSold,
+      uniqueCustomersCount,
+    },
+    bySource,
+    byStatus,
+    dailyTrend,
+    topProducts,
+    topCustomers,
+    rejectionReasons,
+    hourlyTrend,
+  };
+}
+

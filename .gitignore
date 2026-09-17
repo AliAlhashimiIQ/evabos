@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-electron/
 dist-package/
+release/
 *.log
 .DS_Store
 *.db

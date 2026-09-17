@@ -36,7 +36,7 @@
     ],
     "productName": "EVA POS",
     "directories": {
-      "output": "dist-package",
+      "output": "release",
       "buildResources": "build"
     },
     "files": [

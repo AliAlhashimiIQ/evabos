@@ -179,6 +179,10 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE INDEX IF NOT EXISTS idx_variant_stock_lookup ON variant_stock(variantId, branchId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_returns_date ON returns(createdAt)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_returns_sale ON returns(saleId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_online_orders_date ON online_orders(createdAt)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_online_orders_status ON online_orders(status)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_order ON online_order_items(orderId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_variant ON online_order_items(variantId)`);
 };
 
 const seedInitialData = async (): Promise<void> => {

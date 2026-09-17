@@ -147,6 +147,7 @@ contextBridge.exposeInMainWorld('evaApi', {
     inventoryAging: (token: string, params: { limit?: number; season?: string | null }) => ipcRenderer.invoke('reports:inventoryAging', token, params),
     expensesByCategory: (token: string, params: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:expensesByCategory', token, params),
     salesBySeason: (token: string, params: { startDate: string; endDate: string }) => ipcRenderer.invoke('reports:salesBySeason', token, params),
+    onlineOrders: (token: string, params: { startDate: string; endDate: string; branchId?: number }) => ipcRenderer.invoke('reports:onlineOrders', token, params),
   },
   email: {
     getSettings: (token: string) => ipcRenderer.invoke('email:getSettings', token),

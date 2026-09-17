@@ -831,6 +831,78 @@ export interface CompanionInfo {
   active: boolean;
 }
 
+export interface OnlineOrdersAnalytics {
+  summary: {
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    confirmationRate: number;
+    rejectionRate: number;
+    totalRevenueIQD: number;
+    pendingRevenueIQD: number;
+    rejectedLostRevenueIQD: number;
+    totalDiscountIQD: number;
+    avgOrderValueIQD: number;
+    totalItemsSold: number;
+    uniqueCustomersCount: number;
+  };
+  bySource: Array<{
+    source: string;
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    revenueIQD: number;
+    avgTicketIQD: number;
+    percentageOfRevenue: number;
+    confirmationRate: number;
+  }>;
+  byStatus: Array<{
+    status: string;
+    count: number;
+    totalIQD: number;
+    percentage: number;
+  }>;
+  dailyTrend: Array<{
+    date: string;
+    totalOrders: number;
+    confirmedOrders: number;
+    pendingOrders: number;
+    rejectedOrders: number;
+    revenueIQD: number;
+    itemsSold: number;
+  }>;
+  topProducts: Array<{
+    variantId: number;
+    productName: string;
+    sku: string;
+    color?: string | null;
+    size?: string | null;
+    quantitySold: number;
+    totalRevenueIQD: number;
+    ordersCount: number;
+  }>;
+  topCustomers: Array<{
+    customerName: string;
+    customerPhone: string;
+    ordersCount: number;
+    totalSpentIQD: number;
+    lastOrderDate: string;
+    favoriteSource: string;
+  }>;
+  rejectionReasons: Array<{
+    reason: string;
+    count: number;
+    lostValueIQD: number;
+  }>;
+  hourlyTrend: Array<{
+    hour: number;
+    orders: number;
+    revenueIQD: number;
+  }>;
+}
+
 export interface ElectronAPI {
   companion: {
     getInfo: (token: string) => Promise<CompanionInfo>;

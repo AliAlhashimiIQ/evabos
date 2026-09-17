@@ -5,7 +5,8 @@ import { utils, writeFile } from 'xlsx';
 import {
   FileDown, Printer, Play, Calendar, History, BarChart, BarChart2,
   CalendarDays, CalendarRange, Loader2, Database,
-  LayoutDashboard, TrendingUp, Package, DollarSign, Users, ClipboardList, UserCog
+  LayoutDashboard, TrendingUp, Package, DollarSign, Users, ClipboardList, UserCog,
+  ShoppingBag
 } from 'lucide-react';
 import './Pages.css';
 import './ReportsPage.css';
@@ -18,8 +19,10 @@ import { CustomersTab } from './reports/CustomersTab';
 import { ActivityTab } from './reports/ActivityTab';
 import { MonthlyTab } from './reports/MonthlyTab';
 import { EmployeesTab } from './reports/EmployeesTab';
+import { OnlineOrdersTab } from './reports/OnlineOrdersTab';
 
 type AdvancedReports = import('../types/electron').AdvancedReports;
+type OnlineOrdersAnalytics = import('../types/electron').OnlineOrdersAnalytics;
 type LeastProfitableItem = import('../types/electron').LeastProfitableItem;
 type LeastProfitableSupplier = import('../types/electron').LeastProfitableSupplier;
 type InventoryAgingItem = import('../types/electron').InventoryAgingItem;
@@ -28,7 +31,7 @@ type PeakDayData = import('../types/electron').PeakDayData;
 type ExpenseByCategoryItem = import('../types/electron').ExpenseByCategoryItem;
 type SeasonSalesItem = import('../types/electron').SeasonSalesItem;
 
-type TabId = 'overview' | 'sales' | 'monthly' | 'inventory' | 'financial' | 'customers' | 'activity' | 'employees';
+type TabId = 'overview' | 'sales' | 'onlineOrders' | 'monthly' | 'inventory' | 'financial' | 'customers' | 'activity' | 'employees';
 
 const defaultStart = new Date();
 defaultStart.setDate(defaultStart.getDate() - 7);
@@ -37,6 +40,7 @@ const formatDateInput = (date: Date): string => date.toISOString().slice(0, 10);
 const TABS: { id: TabId; icon: typeof LayoutDashboard; labelKey: string }[] = [
   { id: 'overview', icon: LayoutDashboard, labelKey: 'overview' },
   { id: 'sales', icon: TrendingUp, labelKey: 'salesAnalysis' },
+  { id: 'onlineOrders', icon: ShoppingBag, labelKey: 'onlineOrdersReport' },
   { id: 'monthly', icon: CalendarDays, labelKey: 'monthlyAnalysis' },
   { id: 'inventory', icon: Package, labelKey: 'inventoryHealth' },
   { id: 'financial', icon: DollarSign, labelKey: 'financial' },
@@ -66,6 +70,7 @@ const ReportsPage = (): JSX.Element => {
   const [seasonSales, setSeasonSales] = useState<SeasonSalesItem[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<string[]>([]);
   const [employeeSales, setEmployeeSales] = useState<any[]>([]);
+  const [onlineOrdersAnalytics, setOnlineOrdersAnalytics] = useState<OnlineOrdersAnalytics | null>(null);
 
   const loadReports = useCallback(async () => {
     if (!window.evaApi || !token) {
@@ -75,7 +80,7 @@ const ReportsPage = (): JSX.Element => {
     try {
       setLoading(true);
       setError(null);
-      const [response, leastItems, leastSuppliers, aging, hours, days, expCat, seasSales, empSales] = await Promise.all([
+      const [response, leastItems, leastSuppliers, aging, hours, days, expCat, seasSales, empSales, onlineAnalytics] = await Promise.all([
         window.evaApi.reports.advanced(token, { ...range, season: range.season || null }),
         window.evaApi.reports.leastProfitableItems(token, { startDate: range.startDate, endDate: range.endDate, season: range.season || null }),
         window.evaApi.reports.leastProfitableSuppliers(token, { startDate: range.startDate, endDate: range.endDate, season: range.season || null }),
@@ -87,6 +92,9 @@ const ReportsPage = (): JSX.Element => {
         window.evaApi.employees?.salesReport
           ? window.evaApi.employees.salesReport(token, { startDate: range.startDate, endDate: range.endDate })
           : Promise.resolve([]),
+        window.evaApi.reports?.onlineOrders
+          ? window.evaApi.reports.onlineOrders(token, { startDate: range.startDate, endDate: range.endDate })
+          : Promise.resolve(null),
       ]);
       setReports(response);
       setLeastProfitableItems(leastItems);
@@ -97,6 +105,7 @@ const ReportsPage = (): JSX.Element => {
       setExpensesByCategory(expCat);
       setSeasonSales(seasSales);
       setEmployeeSales(empSales || []);
+      setOnlineOrdersAnalytics(onlineAnalytics || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadReports'));
     } finally {
@@ -136,6 +145,18 @@ const ReportsPage = (): JSX.Element => {
     if (expensesByCategory.length > 0) {
       utils.book_append_sheet(wb, utils.json_to_sheet(expensesByCategory), 'Expenses by Category');
     }
+    if (onlineOrdersAnalytics && onlineOrdersAnalytics.summary.totalOrders > 0) {
+      utils.book_append_sheet(wb, utils.json_to_sheet([onlineOrdersAnalytics.summary]), 'Online Orders KPIs');
+      if (onlineOrdersAnalytics.bySource.length > 0) {
+        utils.book_append_sheet(wb, utils.json_to_sheet(onlineOrdersAnalytics.bySource), 'Online by Channel');
+      }
+      if (onlineOrdersAnalytics.topProducts.length > 0) {
+        utils.book_append_sheet(wb, utils.json_to_sheet(onlineOrdersAnalytics.topProducts), 'Online Top Products');
+      }
+      if (onlineOrdersAnalytics.topCustomers.length > 0) {
+        utils.book_append_sheet(wb, utils.json_to_sheet(onlineOrdersAnalytics.topCustomers), 'Online Top Customers');
+      }
+    }
     writeFile(wb, `reports_${range.startDate}_${range.endDate}.xlsx`);
   };
 
@@ -170,6 +191,19 @@ ${reports.dailySales.map(e => `<tr><td>${e.date}</td><td>${e.orders}</td><td>${e
 <table><thead><tr><th>Item</th><th>Qty</th><th>Sales (IQD)</th></tr></thead><tbody>
 ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.amountIQD.toLocaleString('en-IQ')}</td></tr>`).join('')}
 </tbody></table>
+${(onlineOrdersAnalytics && onlineOrdersAnalytics.summary.totalOrders > 0) ? `
+<div class="section-title">Online Orders Overview</div>
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-label">Confirmed Online Sales</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalRevenueIQD.toLocaleString('en-IQ')} IQD</div></div>
+  <div class="stat-card"><div class="stat-label">Confirmed Orders</div><div class="stat-value">${onlineOrdersAnalytics.summary.confirmedOrders} (${onlineOrdersAnalytics.summary.confirmationRate}%)</div></div>
+  <div class="stat-card"><div class="stat-label">Average Ticket</div><div class="stat-value">${onlineOrdersAnalytics.summary.avgOrderValueIQD.toLocaleString('en-IQ')} IQD</div></div>
+  <div class="stat-card"><div class="stat-label">Items Sold Online</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalItemsSold}</div></div>
+</div>
+<div class="section-title">Online Sales by Channel</div>
+<table><thead><tr><th>Channel</th><th>Orders</th><th>Confirmed</th><th>Revenue (IQD)</th><th>Success %</th></tr></thead><tbody>
+${onlineOrdersAnalytics.bySource.map(s => `<tr><td>${s.source}</td><td>${s.totalOrders}</td><td>${s.confirmedOrders}</td><td>${s.revenueIQD.toLocaleString('en-IQ')}</td><td>${s.confirmationRate}%</td></tr>`).join('')}
+</tbody></table>
+` : ''}
 </body></html>`;
     try {
       await window.evaApi.printing.print({ html: reportHtml, printerName: null });
@@ -239,6 +273,13 @@ ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td
         <>
           {activeTab === 'overview' && <OverviewTab reports={reports} peakDays={peakDays} t={t} />}
           {activeTab === 'sales' && <SalesTab reports={reports} peakHours={peakHours} seasonSales={seasonSales} t={t} />}
+          {activeTab === 'onlineOrders' && (
+            <OnlineOrdersTab
+              data={onlineOrdersAnalytics}
+              range={range}
+              t={t}
+            />
+          )}
           {activeTab === 'monthly' && <MonthlyTab reports={reports} expensesByCategory={expensesByCategory} t={t} />}
           {activeTab === 'inventory' && <InventoryTab reports={reports} leastProfitableItems={leastProfitableItems} leastProfitableSuppliers={leastProfitableSuppliers} inventoryAging={inventoryAging} t={t} />}
           {activeTab === 'financial' && <FinancialTab reports={reports} expensesByCategory={expensesByCategory} t={t} />}
