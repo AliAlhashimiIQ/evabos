@@ -4,7 +4,7 @@ import log from 'electron-log';
 import { get, all, run, getSetting, setSetting } from './core';
 import { encryptCredential, decryptCredential } from './crypto';
 import { createBackup } from './backup';
-import type { SaleDetail, DateRange } from './types';
+import type { SaleDetail, DateRange, ShiftClosingRecord } from './types';
 
 export interface TelegramSettings {
   botToken: string;
@@ -574,6 +574,72 @@ export async function sendTelegramTest(): Promise<{ success: boolean; error?: st
   return sendTelegramMessage(testMessage, 'HTML');
 }
 
+/**
+ * Send shift closing notification (Z-Report) to Telegram
+ */
+export async function sendTelegramShiftCloseNotification(
+  closing: ShiftClosingRecord
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const settings = await getTelegramSettings();
+    if (!settings.enabled || !settings.notifyOnClose || !settings.botToken || !settings.chatId) {
+      return { success: false, error: 'Telegram close notification disabled or unconfigured' };
+    }
+
+    const dateObj = new Date(closing.closedAt || Date.now());
+    const formattedDate = dateObj.toLocaleString('ar-IQ', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const diff = closing.differenceIQD;
+    let statusText = '✅ <b>الصندوق مطابق تماماً (0 د.ع)</b>';
+    if (diff > 0) {
+      statusText = `📈 <b>فائض في الصندوق: +${diff.toLocaleString('en-IQ')} د.ع</b>`;
+    } else if (diff < 0) {
+      statusText = `⚠️ <b>عجز ونقص في الصندوق: ${diff.toLocaleString('en-IQ')} د.ع</b>`;
+    }
+
+    let msg = `🔒 <b>إغلاق الصندوق والوردية — Z-Report #${closing.id}</b>\n`;
+    msg += `🏢 <b>الفرع:</b> ${closing.branchName || 'EVA Main'}\n`;
+    msg += `👤 <b>الكاشير:</b> ${closing.cashierName || 'المستخدم'}\n`;
+    msg += `🕒 <b>وقت الإغلاق:</b> ${formattedDate}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💵 <b>رصيد الافتتاح:</b> ${closing.openingCashIQD.toLocaleString('en-IQ')} د.ع\n`;
+    msg += `💳 <b>مبيعات الكاش:</b> ${closing.cashSalesIQD.toLocaleString('en-IQ')} د.ع\n`;
+    if (closing.cardSalesIQD > 0) {
+      msg += `💳 <b>مبيعات البطاقة:</b> ${closing.cardSalesIQD.toLocaleString('en-IQ')} د.ع\n`;
+    }
+    if (closing.exchangeCashIQD > 0) {
+      msg += `🔄 <b>مقبوضات نقدية (استبدال):</b> ${closing.exchangeCashIQD.toLocaleString('en-IQ')} د.ع\n`;
+    }
+    if (closing.cashRefundsIQD > 0) {
+      msg += `↩️ <b>مستردات نقدية (إرجاع):</b> ${closing.cashRefundsIQD.toLocaleString('en-IQ')} د.ع\n`;
+    }
+    if (closing.expensesIQD > 0) {
+      msg += `💸 <b>المصاريف النقدية:</b> ${closing.expensesIQD.toLocaleString('en-IQ')} د.ع\n`;
+    }
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🎯 <b>الكاش المتوقع بالدرج:</b> <b>${closing.expectedCashIQD.toLocaleString('en-IQ')} د.ع</b>\n`;
+    msg += `📥 <b>الكاش الفعلي المحسوب:</b> <b>${closing.actualCashIQD.toLocaleString('en-IQ')} د.ع</b>\n`;
+    msg += `📊 <b>النتيجة:</b> ${statusText}\n`;
+
+    if (closing.notes && closing.notes.trim()) {
+      msg += `📝 <b>ملاحظات:</b> ${closing.notes}\n`;
+    }
+
+    return await sendTelegramMessage(msg, 'HTML');
+  } catch (err) {
+    log.error('[telegram] Failed to send shift close notification:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 
 
 // ─── Interactive Telegram Bot Commands (Long-Polling) ─────────────────────────
@@ -1040,8 +1106,12 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       `,
       );
 
-      const refundSummary = await get<{ totalRefund: number }>(
-        `SELECT IFNULL(SUM(refundAmountIQD), 0) as totalRefund FROM returns WHERE date(createdAt) = date('now', 'localtime')`,
+      const refundSummary = await get<{ totalRefund: number; totalCollected: number }>(
+        `SELECT 
+           IFNULL(SUM(CASE WHEN paymentMethod = 'cash' OR paymentMethod IS NULL THEN refundAmountIQD ELSE 0 END), 0) as totalRefund,
+           IFNULL(SUM(CASE WHEN paymentMethod = 'cash' OR paymentMethod IS NULL THEN customerPaidIQD ELSE 0 END), 0) as totalCollected
+         FROM returns 
+         WHERE date(createdAt) = date('now', 'localtime')`,
       );
 
       const expenseSummary = await get<{ totalExp: number }>(
@@ -1052,8 +1122,9 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       const cardSales = paymentSummary?.cardSales || 0;
       const mixedSales = paymentSummary?.mixedSales || 0;
       const totalRefund = refundSummary?.totalRefund || 0;
+      const totalCollected = refundSummary?.totalCollected || 0;
       const totalExp = expenseSummary?.totalExp || 0;
-      const netCashInDrawer = cashSales - totalRefund - totalExp;
+      const netCashInDrawer = cashSales + totalCollected - totalRefund - totalExp;
 
       let msg = `💵 <b>تقرير الصندوق والمقبوضات (اليوم):</b>\n`;
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1061,6 +1132,9 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       msg += `💳 <b>مبيعات بطاقة (كي كارد):</b> ${cardSales.toLocaleString('en-IQ')} د.ع\n`;
       if (mixedSales > 0) {
         msg += `🔀 <b>مبيعات دفع مختلط:</b> ${mixedSales.toLocaleString('en-IQ')} د.ع\n`;
+      }
+      if (totalCollected > 0) {
+        msg += `🛍️ <b>فروقات استبدال مقبوضة كاش:</b> +${totalCollected.toLocaleString('en-IQ')} د.ع\n`;
       }
       if (totalRefund > 0) {
         msg += `🔄 <b>مسترجعات كاش:</b> -${totalRefund.toLocaleString('en-IQ')} د.ع\n`;

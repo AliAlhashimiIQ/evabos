@@ -79,7 +79,11 @@ import {
   OnlineOrdersAnalytics,
   Employee,
   EmployeeInput,
+  CurrentShiftSummary,
+  ShiftCloseInput,
+  ShiftClosingRecord,
 } from './types';
+import { sendTelegramShiftCloseNotification } from './telegram';
 
 // â”€â”€â”€ Session State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -375,6 +379,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     FROM return_items ri
     JOIN returns r ON r.id = ri.returnId
     WHERE date(r.createdAt) BETWEEN date(?) AND date(?)
+      AND (ri.direction IS NULL OR ri.direction != 'exchange_in')
     `,
     [range.startDate, range.endDate]
   );
@@ -2490,7 +2495,7 @@ export async function bulkUpdateProducts(_token: string, payload: { productIds: 
 export async function createReturn(input: ReturnInput): Promise<ReturnResponse> {
   await run('BEGIN TRANSACTION');
   try {
-    // Validate return item quantities against original sale if saleItemId is provided
+    // 1. Validate return item quantities against original sale if saleItemId is provided
     for (const item of input.items) {
       if (item.saleItemId) {
         const saleItem = await get<{ quantity: number; saleId: number }>(
@@ -2513,36 +2518,77 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
           );
         }
       }
+
+      // 2. Stock guard for exchange replacement items (exchange_in)
+      if (item.direction === 'exchange_in') {
+        const stockRow = await get<{ quantity: number }>(
+          'SELECT quantity FROM variant_stock WHERE variantId = ? AND branchId = ?',
+          [item.variantId, input.branchId],
+        );
+        const currentStock = stockRow?.quantity ?? 0;
+        if (currentStock < item.quantity) {
+          const prodInfo = await get<{ name: string; color?: string; size?: string }>(
+            `SELECT p.name, pv.color, pv.size 
+             FROM product_variants pv 
+             JOIN products p ON p.id = pv.productId 
+             WHERE pv.id = ?`,
+            [item.variantId],
+          );
+          const prodTitle = prodInfo 
+            ? `${prodInfo.name} (${[prodInfo.color, prodInfo.size].filter(Boolean).join(' / ')})` 
+            : `#${item.variantId}`;
+          throw new Error(`الكمية المتوفرة في المخزون (${currentStock}) غير كافية لعملية الاستبدال للصنف: ${prodTitle}`);
+        }
+      }
     }
 
-    const refundAmount =
-      input.refundAmountIQD ??
-      input.items
-        .filter((item) => item.direction !== 'exchange_in')
-        .reduce((acc, item) => acc + (item.amountIQD ?? 0), 0);
+    // 3. Accurate Commercial Exchange / Return Calculations
+    const returnedTotal = input.items
+      .filter((item) => item.direction !== 'exchange_in')
+      .reduce((acc, item) => acc + (item.amountIQD ?? 0), 0);
+
+    const takenTotal = input.items
+      .filter((item) => item.direction === 'exchange_in')
+      .reduce((acc, item) => acc + (item.amountIQD ?? 0), 0);
+
+    const netDifference = returnedTotal - takenTotal;
+
+    const refundAmount = input.refundAmountIQD !== undefined 
+      ? input.refundAmountIQD 
+      : (netDifference > 0 ? netDifference : 0);
+
+    const customerPaidAmount = input.customerPaidIQD !== undefined 
+      ? input.customerPaidIQD 
+      : (netDifference < 0 ? Math.abs(netDifference) : 0);
+
+    const paymentMethod = input.paymentMethod || 'cash';
 
     const insert = await runWithResult(
       `
       INSERT INTO returns(
-    saleId,
-    branchId,
-    customerId,
-    refundAmountIQD,
-    reason,
-    processedBy,
-    type,
-    createdAt
-  ) VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-    `,
+        saleId,
+        branchId,
+        customerId,
+        refundAmountIQD,
+        customerPaidIQD,
+        paymentMethod,
+        reason,
+        processedBy,
+        type,
+        createdAt
+      ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       [
         input.saleId ?? null,
         input.branchId,
         input.customerId ?? null,
         refundAmount,
+        customerPaidAmount,
+        paymentMethod,
         input.reason ?? null,
         input.processedBy ?? null,
         input.type,
-        new Date().toISOString(), // Use ISO string for consistency with sales
+        new Date().toISOString(),
       ],
     );
 
@@ -2578,14 +2624,15 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
       await run(
         `
         INSERT INTO return_items(
-      returnId,
-      saleItemId,
-      variantId,
-      quantity,
-      amountIQD
-    ) VALUES(?, ?, ?, ?, ?)
-      `,
-        [returnId, item.saleItemId ?? null, item.variantId, item.quantity, item.amountIQD ?? 0],
+          returnId,
+          saleItemId,
+          variantId,
+          quantity,
+          amountIQD,
+          direction
+        ) VALUES(?, ?, ?, ?, ?, ?)
+        `,
+        [returnId, item.saleItemId ?? null, item.variantId, item.quantity, item.amountIQD ?? 0, direction],
       );
 
       // Stock adjustment logic:
@@ -2606,11 +2653,47 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
     // Update the return with the calculated cost
     await run('UPDATE returns SET totalCostIQD = ? WHERE id = ?', [totalReturnCost, returnId]);
 
-    // Log activity for return/exchange
+    // Update Customer Statistics (totalSpentIQD & loyaltyPoints)
+    if (input.customerId) {
+      if (refundAmount > 0) {
+        await run(
+          `
+          UPDATE customers
+          SET totalSpentIQD = MAX(0, totalSpentIQD - ?),
+              loyaltyPoints = MAX(0, loyaltyPoints - (? / 1000.0))
+          WHERE id = ?
+          `,
+          [refundAmount, refundAmount, input.customerId],
+        );
+      } else if (customerPaidAmount > 0) {
+        await run(
+          `
+          UPDATE customers
+          SET totalSpentIQD = totalSpentIQD + ?,
+              loyaltyPoints = loyaltyPoints + (? / 1000.0)
+          WHERE id = ?
+          `,
+          [customerPaidAmount, customerPaidAmount, input.customerId],
+        );
+      }
+    }
+
+    // Log activity for return/exchange with rich financial detail
     if (input.processedBy) {
+      const actionSummary = input.type === 'exchange'
+        ? (netDifference > 0 
+            ? `استبدال مع استرداد ${refundAmount.toLocaleString('en-IQ')} د.ع للزبون`
+            : netDifference < 0
+            ? `استبدال مع دفع الزبون فرق ${customerPaidAmount.toLocaleString('en-IQ')} د.ع`
+            : 'استبدال متكافئ (0 د.ع)')
+        : `إرجاع واسترداد ${refundAmount.toLocaleString('en-IQ')} د.ع`;
+
       await logActivity(input.processedBy, 'return', 'sale', input.saleId ?? returnId, {
         'نوع العملية': input.type === 'exchange' ? 'استبدال بضاعة' : 'إرجاع واسترداد مالي',
-        'مبلغ الاسترداد': `${refundAmount.toLocaleString()} د.ع`,
+        'النتيجة المالية': actionSummary,
+        'مبلغ الاسترداد': `${refundAmount.toLocaleString('en-IQ')} د.ع`,
+        'المدفوع من الزبون': `${customerPaidAmount.toLocaleString('en-IQ')} د.ع`,
+        'طريقة الدفع': paymentMethod,
         'السبب': input.reason || '—',
       });
     }
@@ -2662,7 +2745,7 @@ export async function getSaleForReturn(saleId: number): Promise<SaleDetail | nul
 export async function fetchReturnById(id: number): Promise<ReturnResponse | null> {
   const row = await get<ReturnRecord>(
     `
-  SELECT *
+    SELECT *
     FROM returns
     WHERE id = ?
     `,
@@ -2673,9 +2756,11 @@ export async function fetchReturnById(id: number): Promise<ReturnResponse | null
 
   const items = await all<ReturnItem>(
     `
-    SELECT *
-    FROM return_items
-    WHERE returnId = ?
+    SELECT ri.*, p.name as productName, pv.color, pv.size, pv.sku
+    FROM return_items ri
+    LEFT JOIN product_variants pv ON pv.id = ri.variantId
+    LEFT JOIN products p ON p.id = pv.productId
+    WHERE ri.returnId = ?
     `,
     [id],
   );
@@ -2698,10 +2783,12 @@ export async function listReturns(branchId?: number): Promise<ReturnResponse[]> 
   for (const row of rows) {
     const items = await all<ReturnItem>(
       `
-      SELECT *
-    FROM return_items
-      WHERE returnId = ?
-    `,
+      SELECT ri.*, p.name as productName, pv.color, pv.size, pv.sku
+      FROM return_items ri
+      LEFT JOIN product_variants pv ON pv.id = ri.variantId
+      LEFT JOIN products p ON p.id = pv.productId
+      WHERE ri.returnId = ?
+      `,
       [row.id],
     );
     returns.push({ ...row, items });
@@ -3908,4 +3995,223 @@ export async function getOnlineOrdersAnalytics(
     hourlyTrend,
   };
 }
+
+// ─── Shift Closing & Cash Reconciliation (Z-Report) ─────────────────────────
+
+export async function getCurrentShiftSummary(branchId: number): Promise<CurrentShiftSummary> {
+  const branch = await get<{ id: number; name: string }>('SELECT id, name FROM branches WHERE id = ?', [branchId]);
+  const branchName = branch?.name || 'EVA Main';
+
+  // Find the most recent shift closing for this branch
+  const lastClosing = await get<{ id: number; closedAt: string; actualCashIQD: number }>(
+    'SELECT id, closedAt, actualCashIQD FROM shift_closings WHERE branchId = ? ORDER BY closedAt DESC, id DESC LIMIT 1',
+    [branchId]
+  );
+
+  let shiftStartTime: string;
+  let openingCashIQD = 0;
+
+  if (lastClosing && lastClosing.closedAt) {
+    shiftStartTime = lastClosing.closedAt;
+    openingCashIQD = Number(lastClosing.actualCashIQD || 0);
+  } else {
+    // Start of current day 00:00:00 local time
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    shiftStartTime = `${todayStr}T00:00:00.000Z`;
+    openingCashIQD = 0;
+  }
+
+  const nowIso = new Date().toISOString();
+
+  // Query sales grouped by paymentMethod since shiftStartTime
+  const salesRows = await all<{ paymentMethod: string; count: number; total: number }>(
+    `SELECT 
+       COALESCE(paymentMethod, 'cash') as paymentMethod,
+       COUNT(*) as count,
+       COALESCE(SUM(totalIQD), 0) as total
+     FROM sales
+     WHERE branchId = ? AND saleDate >= ?
+     GROUP BY paymentMethod`,
+    [branchId, shiftStartTime]
+  );
+
+  let cashSalesIQD = 0;
+  let cardSalesIQD = 0;
+  let mixedSalesIQD = 0;
+  let salesCount = 0;
+
+  for (const row of salesRows) {
+    const c = Number(row.count || 0);
+    const tot = Number(row.total || 0);
+    salesCount += c;
+
+    const pm = (row.paymentMethod || 'cash').toLowerCase();
+    if (pm === 'cash') {
+      cashSalesIQD += tot;
+    } else if (pm === 'card') {
+      cardSalesIQD += tot;
+    } else if (pm === 'mixed') {
+      mixedSalesIQD += tot;
+    } else {
+      cashSalesIQD += tot;
+    }
+  }
+
+  const totalSalesIQD = cashSalesIQD + cardSalesIQD + mixedSalesIQD;
+
+  // Query returns & exchange collections since shiftStartTime
+  const returnsRows = await all<{ paymentMethod: string; count: number; refunds: number; customerPaid: number }>(
+    `SELECT 
+       COALESCE(paymentMethod, 'cash') as paymentMethod,
+       COUNT(*) as count,
+       COALESCE(SUM(refundAmountIQD), 0) as refunds,
+       COALESCE(SUM(customerPaidIQD), 0) as customerPaid
+     FROM returns
+     WHERE branchId = ? AND createdAt >= ?
+     GROUP BY paymentMethod`,
+    [branchId, shiftStartTime]
+  );
+
+  let cashRefundsIQD = 0;
+  let exchangeCashIQD = 0;
+  let returnsCount = 0;
+
+  for (const row of returnsRows) {
+    returnsCount += Number(row.count || 0);
+    const pm = (row.paymentMethod || 'cash').toLowerCase();
+    if (pm === 'cash') {
+      cashRefundsIQD += Number(row.refunds || 0);
+      exchangeCashIQD += Number(row.customerPaid || 0);
+    }
+  }
+
+  // Query expenses taken from cash drawer since shiftStartTime
+  const expensesRows = await all<{ count: number; total: number }>(
+    `SELECT 
+       COUNT(*) as count,
+       COALESCE(SUM(amountIQD), 0) as total
+     FROM expenses
+     WHERE branchId = ? AND (expenseDate >= ? OR expenseDate LIKE ?)`,
+    [branchId, shiftStartTime, `${shiftStartTime.slice(0, 10)}%`]
+  );
+
+  const expensesCount = Number(expensesRows[0]?.count || 0);
+  const expensesIQD = Number(expensesRows[0]?.total || 0);
+
+  // Expected Cash = Opening Cash + Cash Sales + Exchange Cash - Cash Refunds - Expenses
+  const expectedCashIQD = Math.max(0, openingCashIQD + cashSalesIQD + exchangeCashIQD - cashRefundsIQD - expensesIQD);
+
+  return {
+    branchId,
+    branchName,
+    shiftStartTime,
+    currentTime: nowIso,
+    openingCashIQD,
+    salesCount,
+    cashSalesIQD,
+    cardSalesIQD,
+    mixedSalesIQD,
+    totalSalesIQD,
+    returnsCount,
+    cashRefundsIQD,
+    exchangeCashIQD,
+    expensesCount,
+    expensesIQD,
+    expectedCashIQD,
+  };
+}
+
+export async function closeShift(input: ShiftCloseInput): Promise<ShiftClosingRecord> {
+  if (!input.branchId || !input.cashierId) {
+    throw new Error('branchId and cashierId are required to close shift');
+  }
+
+  const result = await runWithResult(
+    `INSERT INTO shift_closings (
+      branchId, cashierId, closedAt, openingCashIQD,
+      cashSalesIQD, cardSalesIQD, mixedSalesCashIQD, mixedSalesCardIQD,
+      exchangeCashIQD, cashRefundsIQD, expensesIQD,
+      expectedCashIQD, actualCashIQD, differenceIQD, notes
+    ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      input.branchId,
+      input.cashierId,
+      input.openingCashIQD || 0,
+      input.cashSalesIQD || 0,
+      input.cardSalesIQD || 0,
+      input.mixedSalesCashIQD || 0,
+      input.mixedSalesCardIQD || 0,
+      input.exchangeCashIQD || 0,
+      input.cashRefundsIQD || 0,
+      input.expensesIQD || 0,
+      input.expectedCashIQD || 0,
+      input.actualCashIQD || 0,
+      input.differenceIQD || 0,
+      input.notes || null,
+    ]
+  );
+
+  const closingId = result.lastID as number;
+
+  const created = await get<ShiftClosingRecord>(
+    `SELECT sc.*, b.name as branchName, u.username as cashierName
+     FROM shift_closings sc
+     LEFT JOIN branches b ON b.id = sc.branchId
+     LEFT JOIN users u ON u.id = sc.cashierId
+     WHERE sc.id = ?`,
+    [closingId]
+  );
+
+  if (!created) {
+    throw new Error('Failed to retrieve created shift closing record');
+  }
+
+  // Log activity
+  try {
+    await logActivity(
+      input.cashierId,
+      'CLOSE_SHIFT',
+      'shift_closings',
+      closingId,
+      {
+        expectedCash: input.expectedCashIQD,
+        actualCash: input.actualCashIQD,
+        difference: input.differenceIQD,
+      }
+    );
+  } catch (err) {
+    log.warn('[shift] Activity log failed for shift closing:', err);
+  }
+
+  // Send Telegram notification
+  try {
+    await sendTelegramShiftCloseNotification(created);
+  } catch (tgErr) {
+    log.error('[shift] Telegram shift notification error:', tgErr);
+  }
+
+  return created;
+}
+
+export async function listShiftClosings(branchId?: number, limit = 50): Promise<ShiftClosingRecord[]> {
+  let query = `
+    SELECT sc.*, b.name as branchName, u.username as cashierName
+    FROM shift_closings sc
+    LEFT JOIN branches b ON b.id = sc.branchId
+    LEFT JOIN users u ON u.id = sc.cashierId
+  `;
+  const params: SqlValue[] = [];
+
+  if (branchId && branchId > 0) {
+    query += ' WHERE sc.branchId = ?';
+    params.push(branchId);
+  }
+
+  query += ' ORDER BY sc.closedAt DESC, sc.id DESC LIMIT ?';
+  params.push(limit);
+
+  return all<ShiftClosingRecord>(query, params);
+}
+
 

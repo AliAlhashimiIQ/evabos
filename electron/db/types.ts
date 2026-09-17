@@ -177,6 +177,8 @@ export interface ReturnRecord {
   customerId?: number | null;
   reason?: string | null;
   refundAmountIQD: number;
+  customerPaidIQD?: number;
+  paymentMethod?: string;
   type: 'with_receipt' | 'without_receipt' | 'exchange';
   createdAt: string;
 }
@@ -188,6 +190,11 @@ export interface ReturnItem {
   variantId: number;
   quantity: number;
   amountIQD: number;
+  direction?: 'return' | 'exchange_out' | 'exchange_in';
+  productName?: string;
+  color?: string | null;
+  size?: string | null;
+  sku?: string | null;
 }
 
 export interface ReturnItemInput extends Omit<ReturnItem, 'id' | 'returnId'> {
@@ -196,6 +203,8 @@ export interface ReturnItemInput extends Omit<ReturnItem, 'id' | 'returnId'> {
 
 export interface ReturnInput extends Omit<ReturnRecord, 'id' | 'createdAt' | 'refundAmountIQD'> {
   refundAmountIQD?: number;
+  customerPaidIQD?: number;
+  paymentMethod?: string;
   items: ReturnItemInput[];
 }
 
@@ -678,5 +687,62 @@ export interface OnlineOrdersAnalytics {
     orders: number;
     revenueIQD: number;
   }>;
+}
+
+export interface CurrentShiftSummary {
+  branchId: number;
+  branchName?: string;
+  shiftStartTime: string;
+  currentTime: string;
+  openingCashIQD: number;
+  salesCount: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesIQD: number;
+  totalSalesIQD: number;
+  returnsCount: number;
+  cashRefundsIQD: number;
+  exchangeCashIQD: number;
+  expensesCount: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+}
+
+export interface ShiftCloseInput {
+  branchId: number;
+  cashierId: number;
+  openingCashIQD: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesCashIQD?: number;
+  mixedSalesCardIQD?: number;
+  exchangeCashIQD: number;
+  cashRefundsIQD: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+  actualCashIQD: number;
+  differenceIQD: number;
+  notes?: string | null;
+}
+
+export interface ShiftClosingRecord {
+  id: number;
+  branchId: number;
+  branchName?: string;
+  cashierId: number;
+  cashierName?: string;
+  closedAt: string;
+  openingCashIQD: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesCashIQD: number;
+  mixedSalesCardIQD: number;
+  exchangeCashIQD: number;
+  cashRefundsIQD: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+  actualCashIQD: number;
+  differenceIQD: number;
+  notes?: string | null;
 }
 

@@ -185,6 +185,15 @@ contextBridge.exposeInMainWorld('evaApi', {
     getPrinters: () => ipcRenderer.invoke('printing:get-printers'),
     print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any; copies?: number }) =>
       ipcRenderer.invoke('printing:print', payload),
+    kickDrawer: (printerName?: string | null) => ipcRenderer.invoke('printing:kick-drawer', printerName),
+  },
+  shifts: {
+    getCurrentSummary: (token: string, branchId?: number) =>
+      ipcRenderer.invoke('shifts:getCurrentSummary', token, branchId),
+    close: (token: string, payload: any) =>
+      ipcRenderer.invoke('shifts:close', token, payload),
+    list: (token: string, branchId?: number) =>
+      ipcRenderer.invoke('shifts:list', token, branchId),
   },
   users: {
     list: (token: string) => ipcRenderer.invoke('users:list', token),

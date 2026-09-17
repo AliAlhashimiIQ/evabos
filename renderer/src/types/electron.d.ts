@@ -267,6 +267,11 @@ export interface ReturnItem {
   variantId: number;
   quantity: number;
   amountIQD: number;
+  direction?: 'return' | 'exchange_out' | 'exchange_in';
+  productName?: string;
+  color?: string | null;
+  size?: string | null;
+  sku?: string | null;
 }
 
 export interface ReturnInput {
@@ -276,6 +281,8 @@ export interface ReturnInput {
   customerId?: number | null;
   reason?: string | null;
   refundAmountIQD?: number;
+  customerPaidIQD?: number;
+  paymentMethod?: string;
   type: 'with_receipt' | 'without_receipt' | 'exchange';
   items: Array<{
     saleItemId?: number | null;
@@ -294,6 +301,8 @@ export interface ReturnResponse {
   customerId?: number | null;
   reason?: string | null;
   refundAmountIQD: number;
+  customerPaidIQD?: number;
+  paymentMethod?: string;
   type: 'with_receipt' | 'without_receipt' | 'exchange';
   createdAt: string;
   items: ReturnItem[];
@@ -520,7 +529,13 @@ export interface EvaApi {
   };
   printing: {
     getPrinters: () => Promise<Array<{ name: string; description: string; status: number; isDefault: boolean }>>;
-    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any }) => Promise<boolean>;
+    print: (payload: { html: string; printerName?: string | null; silent?: boolean; isLabel?: boolean; pageSize?: any; copies?: number }) => Promise<boolean>;
+    kickDrawer: (printerName?: string | null) => Promise<boolean>;
+  };
+  shifts: {
+    getCurrentSummary: (token: string, branchId?: number) => Promise<CurrentShiftSummary>;
+    close: (token: string, payload: ShiftCloseInput) => Promise<ShiftClosingRecord>;
+    list: (token: string, branchId?: number) => Promise<ShiftClosingRecord[]>;
   };
   auth: {
     login: (username: string, password: string) => Promise<LoginResponse | null>;
@@ -901,6 +916,63 @@ export interface OnlineOrdersAnalytics {
     orders: number;
     revenueIQD: number;
   }>;
+}
+
+export interface CurrentShiftSummary {
+  branchId: number;
+  branchName?: string;
+  shiftStartTime: string;
+  currentTime: string;
+  openingCashIQD: number;
+  salesCount: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesIQD: number;
+  totalSalesIQD: number;
+  returnsCount: number;
+  cashRefundsIQD: number;
+  exchangeCashIQD: number;
+  expensesCount: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+}
+
+export interface ShiftCloseInput {
+  branchId: number;
+  cashierId: number;
+  openingCashIQD: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesCashIQD?: number;
+  mixedSalesCardIQD?: number;
+  exchangeCashIQD: number;
+  cashRefundsIQD: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+  actualCashIQD: number;
+  differenceIQD: number;
+  notes?: string | null;
+}
+
+export interface ShiftClosingRecord {
+  id: number;
+  branchId: number;
+  branchName?: string;
+  cashierId: number;
+  cashierName?: string;
+  closedAt: string;
+  openingCashIQD: number;
+  cashSalesIQD: number;
+  cardSalesIQD: number;
+  mixedSalesCashIQD: number;
+  mixedSalesCardIQD: number;
+  exchangeCashIQD: number;
+  cashRefundsIQD: number;
+  expensesIQD: number;
+  expectedCashIQD: number;
+  actualCashIQD: number;
+  differenceIQD: number;
+  notes?: string | null;
 }
 
 export interface ElectronAPI {

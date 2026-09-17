@@ -146,6 +146,8 @@ const SettingsPage = (): JSX.Element => {
   const [systemPrinters, setSystemPrinters] = useState<Array<{ name: string; isDefault: boolean }>>([]);
   const [receiptPrinterName, setReceiptPrinterName] = useState<string>('');
   const [labelPrinterName, setLabelPrinterName] = useState<string>('');
+  const [autoDrawerKick, setAutoDrawerKick] = useState<boolean>(true);
+  const [drawerTesting, setDrawerTesting] = useState(false);
   const [printerSaving, setPrinterSaving] = useState(false);
   const [printerMessage, setPrinterMessage] = useState<string | null>(null);
 
@@ -288,15 +290,20 @@ const SettingsPage = (): JSX.Element => {
     }
   };
 
-  const loadPrinterSettings = async () => {
+    const loadPrinterSettings = async () => {
     if (!window.evaApi || !window.electronAPI) return;
     try {
       const list = await window.evaApi.printing.getPrinters();
       if (list) setSystemPrinters(list);
       const savedReceipt = await window.electronAPI.getSetting('receipt_printer_name');
       const savedLabel = await window.electronAPI.getSetting('label_printer_name');
+      const savedAutoKick = await window.electronAPI.getSetting('auto_drawer_kick');
       if (savedReceipt) setReceiptPrinterName(savedReceipt);
       if (savedLabel) setLabelPrinterName(savedLabel);
+      if (savedAutoKick !== null && savedAutoKick !== undefined) {
+        setAutoDrawerKick(savedAutoKick !== 'false');
+        localStorage.setItem('auto_drawer_kick', savedAutoKick);
+      }
     } catch (err) {
       console.error('Failed to load printer settings:', err);
     }
@@ -309,12 +316,32 @@ const SettingsPage = (): JSX.Element => {
       setPrinterMessage(null);
       await window.electronAPI.setSetting('receipt_printer_name', receiptPrinterName);
       await window.electronAPI.setSetting('label_printer_name', labelPrinterName);
+      await window.electronAPI.setSetting('auto_drawer_kick', autoDrawerKick ? 'true' : 'false');
+      localStorage.setItem('auto_drawer_kick', autoDrawerKick ? 'true' : 'false');
       setPrinterMessage(t('printerSettingsSaved'));
       setTimeout(() => setPrinterMessage(null), 3000);
     } catch (err) {
       setPrinterMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setPrinterSaving(false);
+    }
+  };
+
+  const handleTestDrawerKick = async () => {
+    if (!window.evaApi?.printing?.kickDrawer) return;
+    setDrawerTesting(true);
+    try {
+      const success = await window.evaApi.printing.kickDrawer(receiptPrinterName || null);
+      if (success) {
+        setPrinterMessage('✅ تم إرسال إشارة فتح درج الكاش إلى الطابعة بنجاح!');
+      } else {
+        setPrinterMessage('⚠️ تعذر إرسال نبضة الدرج، تأكد من توصيل الطابعة وسلك RJ11 الخاص بالدرج.');
+      }
+    } catch (err) {
+      setPrinterMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDrawerTesting(false);
+      setTimeout(() => setPrinterMessage(null), 4000);
     }
   };
 
@@ -1428,6 +1455,39 @@ const SettingsPage = (): JSX.Element => {
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="SettingsPage-formRow" style={{ gridColumn: '1 / -1', marginTop: '0.5rem', background: 'rgba(255, 255, 255, 0.02)', padding: '0.85rem 1rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={autoDrawerKick}
+                            onChange={(e) => setAutoDrawerKick(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span>{t('autoDrawerKick') || 'فتح درج الكاش تلقائياً عند الدفع النقدي'}</span>
+                        </label>
+                        <p style={{ margin: '0.2rem 0 0 1.6rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {t('autoDrawerKickDesc') || 'يرسل نبضة ESC/POS لدرج الكاش المتصل بطابعة الإيصالات عند إتمام كل دفعة نقدية'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="SettingsPage-btn"
+                        onClick={handleTestDrawerKick}
+                        disabled={drawerTesting}
+                        style={{
+                          background: 'rgba(16, 185, 129, 0.12)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          color: '#34d399',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          padding: '0.45rem 1rem',
+                        }}
+                      >
+                        {drawerTesting ? <Loader2 size={16} className="spin" /> : <Printer size={15} />}
+                        {drawerTesting ? 'جاري الاختبار...' : (t('testDrawerKick') || 'اختبار فتح الدرج')}
+                      </button>
                     </div>
                   </div>
 

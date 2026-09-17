@@ -48,6 +48,8 @@ export const ShortcutOverlay = (): JSX.Element | null => {
       title: t('pointOfSale'),
       shortcuts: [
         { keys: ['Ctrl', 'Enter'], description: t('completeSale') },
+        { keys: ['F9'], description: t('kickDrawerShortcut') || 'فتح درج الكاش' },
+        { keys: ['F10'], description: t('closeShiftShortcut') || 'إغلاق الصندوق (Z-Report)' },
         { keys: ['Delete'], description: t('removeItem') },
         { keys: ['Tab 1-4'], description: t('posTabs') },
       ],

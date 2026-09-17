@@ -164,14 +164,15 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS purchase_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, purchaseOrderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, costUSD REAL NOT NULL, costIQD REAL NOT NULL, FOREIGN KEY (purchaseOrderId) REFERENCES purchase_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
   await run(`CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, employeeId INTEGER, saleDate TEXT NOT NULL, subtotalIQD REAL NOT NULL, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL, paymentMethod TEXT, profitIQD REAL DEFAULT 0, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE SET NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS sale_items (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, unitCostIQDAtSale REAL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
-  await run(`CREATE TABLE IF NOT EXISTS returns (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER, branchId INTEGER NOT NULL, processedBy INTEGER NOT NULL, customerId INTEGER, reason TEXT, refundAmountIQD REAL NOT NULL, totalCostIQD REAL DEFAULT 0, type TEXT NOT NULL, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (saleId) REFERENCES sales(id), FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (processedBy) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id))`);
-  await run(`CREATE TABLE IF NOT EXISTS return_items (id INTEGER PRIMARY KEY AUTOINCREMENT, returnId INTEGER NOT NULL, saleItemId INTEGER, variantId INTEGER NOT NULL, quantity REAL NOT NULL, amountIQD REAL NOT NULL, FOREIGN KEY (returnId) REFERENCES returns(id) ON DELETE CASCADE, FOREIGN KEY (saleItemId) REFERENCES sale_items(id), FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
+  await run(`CREATE TABLE IF NOT EXISTS returns (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER, branchId INTEGER NOT NULL, processedBy INTEGER NOT NULL, customerId INTEGER, reason TEXT, refundAmountIQD REAL NOT NULL, customerPaidIQD REAL DEFAULT 0, paymentMethod TEXT DEFAULT 'cash', totalCostIQD REAL DEFAULT 0, type TEXT NOT NULL, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (saleId) REFERENCES sales(id), FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (processedBy) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id))`);
+  await run(`CREATE TABLE IF NOT EXISTS return_items (id INTEGER PRIMARY KEY AUTOINCREMENT, returnId INTEGER NOT NULL, saleItemId INTEGER, variantId INTEGER NOT NULL, quantity REAL NOT NULL, amountIQD REAL NOT NULL, direction TEXT DEFAULT 'return', FOREIGN KEY (returnId) REFERENCES returns(id) ON DELETE CASCADE, FOREIGN KEY (saleItemId) REFERENCES sale_items(id), FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
   await run(`CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, expenseDate TEXT NOT NULL, amountIQD REAL NOT NULL, category TEXT NOT NULL, note TEXT, enteredBy INTEGER, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (enteredBy) REFERENCES users(id))`);
   await run(`CREATE TABLE IF NOT EXISTS activity_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, action TEXT NOT NULL, entity TEXT, entityId INTEGER, metadata TEXT, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (userId) REFERENCES users(id))`);
   await run(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS online_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, customerName TEXT, customerPhone TEXT, source TEXT NOT NULL DEFAULT 'other', note TEXT, status TEXT NOT NULL DEFAULT 'pending', subtotalIQD REAL NOT NULL DEFAULT 0, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL DEFAULT 0, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, confirmedAt TEXT, rejectedAt TEXT, rejectionReason TEXT, saleId INTEGER, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (saleId) REFERENCES sales(id))`);
   await run(`CREATE TABLE IF NOT EXISTS online_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, orderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (orderId) REFERENCES online_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
-  
+  await run(`CREATE TABLE IF NOT EXISTS shift_closings (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, closedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, openingCashIQD REAL NOT NULL DEFAULT 0, cashSalesIQD REAL NOT NULL DEFAULT 0, cardSalesIQD REAL NOT NULL DEFAULT 0, mixedSalesCashIQD REAL NOT NULL DEFAULT 0, mixedSalesCardIQD REAL NOT NULL DEFAULT 0, exchangeCashIQD REAL NOT NULL DEFAULT 0, cashRefundsIQD REAL NOT NULL DEFAULT 0, expensesIQD REAL NOT NULL DEFAULT 0, expectedCashIQD REAL NOT NULL DEFAULT 0, actualCashIQD REAL NOT NULL DEFAULT 0, differenceIQD REAL NOT NULL DEFAULT 0, notes TEXT, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id))`);
+
   // Performance Indexes
   await run(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(saleDate)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(saleId)`);
@@ -183,6 +184,8 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE INDEX IF NOT EXISTS idx_online_orders_status ON online_orders(status)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_order ON online_order_items(orderId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_variant ON online_order_items(variantId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_shift_closings_date ON shift_closings(closedAt)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_shift_closings_branch ON shift_closings(branchId)`);
 };
 
 const seedInitialData = async (): Promise<void> => {
@@ -197,7 +200,7 @@ const seedInitialData = async (): Promise<void> => {
     const ph = await hashPassword('admin123');
     await run('INSERT INTO users (username, passwordHash, role, branchId, requiresPasswordChange) VALUES (?, ?, ?, ?, ?)', ['admin', ph, 'admin', branchId, 1]);
   }
-  const hasRate = await get<{ count: number }>('SELECT COUNT(*) as count FROM exchange_rates');
+  const hasRate = await get<{ count: number }>('SELECT count(*) as count FROM exchange_rates');
   if (!hasRate || !hasRate.count) {
     await run('INSERT INTO exchange_rates (rate, effectiveDate, note) VALUES (?, ?, ?)', [1500, new Date().toISOString(), 'Initial rate']);
   }
@@ -216,6 +219,12 @@ export async function initDatabase(): Promise<void> {
   try {
     const cols = await all<{ name: string }>('PRAGMA table_info(returns)');
     if (!cols.some(c => c.name === 'totalCostIQD')) { await run('ALTER TABLE returns ADD COLUMN totalCostIQD REAL DEFAULT 0'); log.info('[db] Added totalCostIQD'); }
+    if (!cols.some(c => c.name === 'customerPaidIQD')) { await run('ALTER TABLE returns ADD COLUMN customerPaidIQD REAL DEFAULT 0'); log.info('[db] Added customerPaidIQD'); }
+    if (!cols.some(c => c.name === 'paymentMethod')) { await run('ALTER TABLE returns ADD COLUMN paymentMethod TEXT DEFAULT \'cash\''); log.info('[db] Added paymentMethod'); }
+
+    const riCols = await all<{ name: string }>('PRAGMA table_info(return_items)');
+    if (!riCols.some(c => c.name === 'direction')) { await run('ALTER TABLE return_items ADD COLUMN direction TEXT DEFAULT \'return\''); log.info('[db] Added direction to return_items'); }
+
     const pCols = await all<{ name: string }>('PRAGMA table_info(products)');
     if (!pCols.some(c => c.name === 'season')) { await run('ALTER TABLE products ADD COLUMN season TEXT'); log.info('[db] Added season'); }
   } catch (err) { log.error('[db] Migration failed:', err); }

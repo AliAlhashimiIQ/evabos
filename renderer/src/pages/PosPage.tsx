@@ -33,6 +33,8 @@ type Customer = import('../types/electron').Customer;
 type Sale = import('../types/electron').Sale;
 type SaleInput = import('../types/electron').SaleInput;
 type Employee = import('../types/electron').Employee;
+type ShiftClosingRecord = import('../types/electron').ShiftClosingRecord;
+import { ShiftCloseModal } from '../components/ShiftCloseModal';
 
 interface CartItem {
   product: Product;
@@ -130,12 +132,26 @@ const PosPage = (): JSX.Element => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [printSale, setPrintSale] = useState<Sale | null>(null);
   const [preferredPrinter, setPreferredPrinter] = useState<string | null>(null);
+  const [showShiftCloseModal, setShowShiftCloseModal] = useState(false);
+  const [printZReport, setPrintZReport] = useState<ShiftClosingRecord | null>(null);
   const [, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [scannerMessage, setScannerMessage] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  const handleKickDrawer = useCallback(async () => {
+    if (window.evaApi?.printing?.kickDrawer) {
+      try {
+        await window.evaApi.printing.kickDrawer(preferredPrinter);
+        setScannerMessage(t('drawerOpened') || 'تم إرسال نبضة فتح درج الكاش (F9)');
+        setTimeout(() => setScannerMessage(null), 2500);
+      } catch (err) {
+        console.error('Failed to kick drawer:', err);
+      }
+    }
+  }, [preferredPrinter, t]);
 
   const updateProfileAtIndex = useCallback(
     (index: number, updater: (profile: PosProfile) => PosProfile) => {
@@ -659,6 +675,14 @@ const PosPage = (): JSX.Element => {
         const created = await window.evaApi.sales.create(token, sale);
         setPrintSale(created);
 
+        // Auto kick cash drawer for cash or mixed transactions if enabled
+        const autoKick = localStorage.getItem('auto_drawer_kick') !== 'false';
+        if (autoKick && (targetPaymentMethod === 'cash' || targetPaymentMethod === 'mixed')) {
+          window.evaApi?.printing?.kickDrawer?.(preferredPrinter).catch((err: any) => {
+            console.warn('Auto drawer kick warning:', err);
+          });
+        }
+
         // Reset products to a fresh first page (correct stock after sale)
         await loadProducts(true);
 
@@ -845,6 +869,8 @@ const PosPage = (): JSX.Element => {
       F2: () => navigate('/products'),
       F3: () => navigate('/customers'),
       F4: () => navigate('/reports'),
+      F9: handleKickDrawer,
+      F10: () => setShowShiftCloseModal(true),
       'Control+Enter': () => {
         if (!isSubmitting && cart.length > 0) {
           handleCompleteSale();
@@ -856,7 +882,7 @@ const PosPage = (): JSX.Element => {
       'Alt+3': () => setActiveProfileIndex(2),
       'Alt+4': () => setActiveProfileIndex(3),
     }),
-    [navigate, handleCompleteSale, isSubmitting, removeLastItem, cart.length],
+    [navigate, handleCompleteSale, handleKickDrawer, setShowShiftCloseModal, isSubmitting, removeLastItem, cart.length],
   );
 
   useShortcutKeys(shortcutMap);
@@ -1372,6 +1398,24 @@ const PosPage = (): JSX.Element => {
         onPrinterChange={setPreferredPrinter}
         onClose={() => setPrintSale(null)}
         autoPrint={true}
+      />
+
+      <PrintingModal
+        visible={!!printZReport}
+        zReportData={printZReport}
+        printerName={preferredPrinter}
+        onPrinterChange={setPreferredPrinter}
+        onClose={() => setPrintZReport(null)}
+        autoPrint={false}
+      />
+
+      <ShiftCloseModal
+        visible={showShiftCloseModal}
+        onClose={() => setShowShiftCloseModal(false)}
+        branchId={user?.branchId || undefined}
+        onShiftClosed={(closingRecord) => {
+          setPrintZReport(closingRecord);
+        }}
       />
 
       <CompanionQrModal

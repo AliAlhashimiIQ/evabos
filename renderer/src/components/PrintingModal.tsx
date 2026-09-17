@@ -5,6 +5,7 @@ import './PrintingModal.css';
 
 type Sale = import('../types/electron').Sale;
 type SaleDetail = import('../types/electron').SaleDetail;
+type ShiftClosingRecord = import('../types/electron').ShiftClosingRecord;
 
 
 interface ReturnPrintItem {
@@ -12,12 +13,19 @@ interface ReturnPrintItem {
   variant?: string;
   quantity: number;
   amountIQD: number;
+  direction?: 'return' | 'exchange_out' | 'exchange_in';
 }
 
 export interface ReturnPrintData {
   id: number;
-  totalIQD: number;
+  type?: string;
+  totalIQD?: number;
+  refundAmountIQD?: number;
+  customerPaidIQD?: number;
+  paymentMethod?: string;
   customerName?: string;
+  totalReturnedIQD?: number;
+  totalTakenIQD?: number;
   items: ReturnPrintItem[];
 }
 
@@ -39,6 +47,7 @@ interface PrintingModalProps {
   sale?: Sale;
   returnData?: ReturnPrintData;
   salesSummary?: SalesSummaryData;
+  zReportData?: ShiftClosingRecord | null;
   printerName?: string | null;
   onPrinterChange?: (printer: string | null) => void;
   autoPrint?: boolean;
@@ -49,6 +58,7 @@ interface LineItem {
   variant?: string;
   quantity: number;
   priceIQD: number;
+  directionTag?: string;
 }
 
 interface ReceiptPayload {
@@ -206,6 +216,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
     </div>
+    ${payload.items && payload.items.length > 0 ? `
     <table>
       <thead>
         <tr>
@@ -229,6 +240,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         `).join('')}
       </tbody>
     </table>
+    ` : ''}
     <table class="totals">
       <tbody>
         ${payload.totals.map(total => `
@@ -239,6 +251,12 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         `).join('')}
       </tbody>
     </table>
+    ${payload.title && payload.title.includes('Z-Report') ? `
+      <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #000; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
+        <div>توقيع الكاشير: ...............</div>
+        <div>توقيع المشرف: ...............</div>
+      </div>
+    ` : ''}
     <div class="footer">${payload.footer}</div>
     <div style="height: 30mm;"></div>
     <div style="text-align: center; font-size: 10px;">.</div>
@@ -447,7 +465,10 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       <tbody>
         ${payload.items.map(item => `
           <tr>
-            <td><strong>${item.name}</strong></td>
+            <td>
+              <strong>${item.name}</strong>
+              ${item.directionTag ? `<div style="font-size: 11px; color: #555; margin-top: 2px;">${item.directionTag}</div>` : ''}
+            </td>
             <td style="color: #666;">${item.variant ?? 'N/A'}</td>
             <td style="text-align: center;">${item.quantity}</td>
             <td style="text-align: right;">${item.priceIQD.toLocaleString('en-IQ')} IQD</td>
@@ -588,7 +609,7 @@ const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
 </html>
 `;
 
-const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, printerName: propsPrinter, onPrinterChange, autoPrint = false }: PrintingModalProps): JSX.Element | null => {
+const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zReportData, printerName: propsPrinter, onPrinterChange, autoPrint = false }: PrintingModalProps): JSX.Element | null => {
   const { token, user } = useAuth();
   const [template, setTemplate] = useState<'receipt' | 'invoice'>('receipt');
   const [printers, setPrinters] = useState<Array<{ name: string; description: string; isDefault: boolean }>>([]);
@@ -761,19 +782,66 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       };
     }
     if (returnData) {
+      const isExchange = returnData.type === 'exchange' || returnData.items.some((i) => i.direction === 'exchange_in');
+      const refundAmt = returnData.refundAmountIQD ?? returnData.totalIQD ?? 0;
+      const paidAmt = returnData.customerPaidIQD ?? 0;
+
+      const totalsList: Array<{ label: string; value: number }> = [];
+
+      if (isExchange) {
+        const returnedTotal = returnData.totalReturnedIQD ?? returnData.items
+          .filter((i) => i.direction !== 'exchange_in')
+          .reduce((acc, i) => acc + i.amountIQD, 0);
+        const takenTotal = returnData.totalTakenIQD ?? returnData.items
+          .filter((i) => i.direction === 'exchange_in')
+          .reduce((acc, i) => acc + i.amountIQD, 0);
+
+        totalsList.push({ label: 'إجمالي البضاعة المسترجعة', value: returnedTotal });
+        totalsList.push({ label: 'إجمالي البضاعة البديلة', value: takenTotal });
+
+        if (refundAmt > 0) {
+          totalsList.push({ label: 'المبلغ المسترد للزبون', value: refundAmt });
+        } else if (paidAmt > 0) {
+          totalsList.push({ label: 'المبلغ المدفوع من الزبون', value: paidAmt });
+        } else {
+          totalsList.push({ label: 'استبدال متكافئ (صافي)', value: 0 });
+        }
+      } else {
+        totalsList.push({ label: 'إجمالي المبلغ المسترد', value: refundAmt });
+      }
+
+      const methodLabel = returnData.paymentMethod === 'card' 
+        ? 'بطاقة (كي كارد)' 
+        : returnData.paymentMethod === 'balance' 
+        ? 'رصيد عميل' 
+        : 'نقدي (كاش)';
+
       return {
-        title: 'Return / Exchange',
-        subtitle: `Return #${returnData.id} `,
-        items: returnData.items.map((item) => ({
-          name: item.name,
-          variant: item.variant,
-          quantity: item.quantity,
-          priceIQD: item.amountIQD / Math.max(item.quantity, 1),
-        })),
-        totals: [{ label: 'Refund', value: returnData.totalIQD }],
+        title: isExchange ? 'إيصال استبدال بضاعة' : 'إيصال إرجاع بضاعة',
+        subtitle: `${isExchange ? 'Exchange' : 'Return'} #${returnData.id}`,
+        items: returnData.items.map((item) => {
+          let dirTag = '';
+          if (item.direction === 'exchange_in') {
+            dirTag = '[بديل جديد]';
+          } else if (item.direction === 'exchange_out') {
+            dirTag = '[صنف مسترجع]';
+          } else if (item.direction === 'return') {
+            dirTag = '[إرجاع للمخزن]';
+          }
+
+          return {
+            name: item.name,
+            variant: item.variant,
+            quantity: item.quantity,
+            priceIQD: Math.round(item.amountIQD / Math.max(item.quantity, 1)),
+            directionTag: dirTag || undefined,
+          };
+        }),
+        totals: totalsList,
         footer: customSettings.footerText,
-        barcodeValue: `RETURN${returnData.id} `,
+        barcodeValue: `RETURN${returnData.id}`,
         customer: returnData.customerName,
+        paymentMethod: methodLabel,
         branchName: branchInfo?.name,
         branchAddress: branchInfo?.address || undefined,
         branchPhone: branchInfo?.phone || undefined,
@@ -788,8 +856,55 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
         showCustomer: customSettings.showCustomer,
       };
     }
+
+    if (zReportData) {
+      const diff = zReportData.differenceIQD;
+      let statusStr = 'مطابق تماماً (0 د.ع)';
+      if (diff > 0) statusStr = `فائض في الصندوق (+${diff.toLocaleString('en-IQ')} د.ع)`;
+      if (diff < 0) statusStr = `عجز في الصندوق (${diff.toLocaleString('en-IQ')} د.ع)`;
+
+      const totalsList: Array<{ label: string; value: number }> = [
+        { label: 'رصيد الافتتاح', value: zReportData.openingCashIQD },
+        { label: 'مبيعات الكاش', value: zReportData.cashSalesIQD },
+      ];
+      if (zReportData.cardSalesIQD > 0) {
+        totalsList.push({ label: 'مبيعات البطاقة (كي كارد)', value: zReportData.cardSalesIQD });
+      }
+      if (zReportData.exchangeCashIQD > 0) {
+        totalsList.push({ label: 'مقبوضات نقدية (استبدال)', value: zReportData.exchangeCashIQD });
+      }
+      if (zReportData.cashRefundsIQD > 0) {
+        totalsList.push({ label: 'مستردات نقدية (إرجاع)', value: zReportData.cashRefundsIQD });
+      }
+      if (zReportData.expensesIQD > 0) {
+        totalsList.push({ label: 'المصاريف النقدية', value: zReportData.expensesIQD });
+      }
+      totalsList.push({ label: 'الكاش المتوقع بالدرج', value: zReportData.expectedCashIQD });
+      totalsList.push({ label: 'الكاش الفعلي المحسوب', value: zReportData.actualCashIQD });
+      totalsList.push({ label: 'فرق الصندوق (عجز/زيادة)', value: diff });
+
+      return {
+        title: 'تقرير نهاية اليوم — Z-Report',
+        subtitle: `إغلاق الصندوق #${zReportData.id}`,
+        items: [],
+        totals: totalsList,
+        footer: `EVA POS • نتيجة الجرد: ${statusStr}`,
+        barcodeValue: `ZREP${zReportData.id}`,
+        branchName: zReportData.branchName || branchInfo?.name,
+        branchAddress: branchInfo?.address || undefined,
+        branchPhone: branchInfo?.phone || undefined,
+        cashierName: zReportData.cashierName || user?.username,
+        saleDate: zReportData.closedAt,
+        storeName: customSettings.storeName,
+        logoBase64: customSettings.logoBase64,
+        showLogo: customSettings.showLogo,
+        showBarcode: false,
+        showCashier: true,
+        showCustomer: false,
+      };
+    }
     return null;
-  }, [sale, returnData, saleDetail, branchInfo, cashierInfo, user]);
+  }, [sale, returnData, zReportData, saleDetail, branchInfo, cashierInfo, user]);
 
   // Prevent body scroll when modal is open (simplified to avoid focus issues)
   useEffect(() => {
@@ -971,7 +1086,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, print
       ) : (
         <div className="PrintingModal-card">
           <header>
-            <h3>Print {salesSummary ? 'Report' : (sale ? 'Receipt' : 'Return')}</h3>
+            <h3>Print {salesSummary ? 'Report' : (zReportData ? 'Z-Report' : (sale ? 'Receipt' : 'Return'))}</h3>
             <button onClick={onClose}>✕</button>
           </header>
           <div className="PrintingModal-controls">

@@ -1,0 +1,394 @@
+/* ═══════════════════════════════════════════════════════════════════
+   EVA POS – Shift Close & Z-Report Modal
+   Minimalist, theme-adaptive, enterprise financial ledger
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ShiftCloseModal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.25rem;
+}
+
+.ShiftCloseModal-container {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.85rem;
+  width: min(580px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 45px var(--shadow, rgba(0, 0, 0, 0.25));
+  overflow: hidden;
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-header {
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.ShiftCloseModal-headerTitles h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-headerTitles p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ShiftCloseModal-closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.ShiftCloseModal-closeBtn:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-body {
+  padding: 1.25rem 1.4rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Ledger List */
+.ShiftCloseModal-ledger {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.65rem;
+  background: var(--bg-secondary, #f8fafc);
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+
+.ShiftCloseModal-ledgerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.ShiftCloseModal-ledgerRow:last-child {
+  border-bottom: none;
+}
+
+.ShiftCloseModal-ledgerLabel {
+  color: var(--text-secondary, #475569);
+  font-weight: 500;
+}
+
+.ShiftCloseModal-ledgerValue {
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  font-feature-settings: "tnum";
+}
+
+.ShiftCloseModal-floatInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ShiftCloseModal-floatInput {
+  width: 110px;
+  height: 30px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.35rem;
+  padding: 0 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-floatInput:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+}
+
+/* Expected Total Row */
+.ShiftCloseModal-expectedRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.65rem;
+}
+
+.ShiftCloseModal-expectedLabel {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-expectedAmount {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  font-feature-settings: "tnum";
+}
+
+/* Count Section */
+.ShiftCloseModal-countBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ShiftCloseModal-countBlockTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ShiftCloseModal-countBlockTop label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-shortcutHint {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.ShiftCloseModal-countInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ShiftCloseModal-countInput {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.55rem;
+  padding: 0 1rem 0 3rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-primary, #0f172a);
+  font-feature-settings: "tnum";
+  transition: border-color 0.15s ease;
+}
+
+.ShiftCloseModal-countInput:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+}
+
+.ShiftCloseModal-currencySuffix {
+  position: absolute;
+  left: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  pointer-events: none;
+}
+
+.ShiftCloseModal-denomToggle {
+  background: transparent;
+  border: none;
+  color: var(--primary, #2563eb);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: right;
+  padding: 0;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.ShiftCloseModal-denomToggle:hover {
+  text-decoration: underline;
+}
+
+.ShiftCloseModal-denomGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+  background: var(--bg-secondary, #f8fafc);
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+@media (max-width: 520px) {
+  .ShiftCloseModal-denomGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ShiftCloseModal-denomItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.ShiftCloseModal-denomItem label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+}
+
+.ShiftCloseModal-denomItem input {
+  width: 48px;
+  height: 28px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.3rem;
+  color: var(--text-primary, #0f172a);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.ShiftCloseModal-denomItem input:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+}
+
+/* Variance Status */
+.ShiftCloseModal-varianceStatus {
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.ShiftCloseModal-varianceStatus.balanced {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #059669;
+}
+
+.ShiftCloseModal-varianceStatus.surplus {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.25);
+  color: #2563eb;
+}
+
+.ShiftCloseModal-varianceStatus.shortage {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #dc2626;
+}
+
+/* Notes */
+.ShiftCloseModal-notesField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ShiftCloseModal-notesField label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.ShiftCloseModal-textarea {
+  width: 100%;
+  min-height: 55px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary, #0f172a);
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.ShiftCloseModal-textarea:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+}
+
+/* Footer */
+.ShiftCloseModal-footer {
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.ShiftCloseModal-btnCancel {
+  background: transparent;
+  border: 1px solid var(--border-color, #cbd5e1);
+  color: var(--text-secondary, #475569);
+  padding: 0.55rem 1.15rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ShiftCloseModal-btnCancel:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary, #0f172a);
+}
+
+.ShiftCloseModal-btnSubmit {
+  background: var(--primary, #2563eb);
+  border: none;
+  color: #ffffff;
+  padding: 0.55rem 1.35rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: opacity 0.15s ease;
+}
+
+.ShiftCloseModal-btnSubmit:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.ShiftCloseModal-btnSubmit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

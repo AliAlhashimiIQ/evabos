@@ -1,4 +1,8 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
+import { execFile } from 'child_process';
+import { getSetting } from '../db/core';
 
 let handlersRegistered = false;
 
@@ -9,6 +13,149 @@ const log = (...args: any[]) => {
 };
 const logError = (...args: any[]) => {
   console.error(...args); // Always log errors
+};
+
+const KICK_DRAWER_PS1_CONTENT = `param(
+    [string]$PrinterName = ""
+)
+
+if ([string]::IsNullOrWhiteSpace($PrinterName)) {
+    $defaultPrinter = Get-CimInstance Win32_Printer | Where-Object { $_.Default -eq $true } | Select-Object -First 1
+    if ($defaultPrinter) {
+        $PrinterName = $defaultPrinter.Name
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($PrinterName)) {
+    Write-Error "No printer specified and no default printer found."
+    exit 1
+}
+
+$typeDefinition = @"
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
+public class RawPrinterHelper
+{
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public class DOCINFOA
+    {
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pDocName;
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pDataType;
+    }
+
+    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
+
+    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool ClosePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
+
+    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool EndDocPrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool StartPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool EndPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+
+    public static bool SendBytesToPrinter(string szPrinterName, byte[] pBytes)
+    {
+        IntPtr hPrinter = IntPtr.Zero;
+        DOCINFOA di = new DOCINFOA();
+        bool bSuccess = false;
+
+        di.pDocName = "CashDrawerPulse";
+        di.pDataType = "RAW";
+
+        if (OpenPrinter(szPrinterName.Normalize(), out hPrinter, IntPtr.Zero))
+        {
+            if (StartDocPrinter(hPrinter, 1, di))
+            {
+                if (StartPagePrinter(hPrinter))
+                {
+                    IntPtr pUnmanagedBytes = Marshal.AllocCoTaskMem(pBytes.Length);
+                    Marshal.Copy(pBytes, 0, pUnmanagedBytes, pBytes.Length);
+
+                    int dwWritten = 0;
+                    bSuccess = WritePrinter(hPrinter, pUnmanagedBytes, pBytes.Length, out dwWritten);
+                    Marshal.FreeCoTaskMem(pUnmanagedBytes);
+                    EndPagePrinter(hPrinter);
+                }
+                EndDocPrinter(hPrinter);
+            }
+            ClosePrinter(hPrinter);
+        }
+        return bSuccess;
+    }
+}
+"@
+
+try {
+    if (-not ([System.Management.Automation.PSTypeName]'RawPrinterHelper').Type) {
+        Add-Type -TypeDefinition $typeDefinition
+    }
+} catch {
+}
+
+# Standard ESC/POS pulse: ESC p 0 25 250 (pin 2) and ESC p 1 25 250 (pin 5)
+$pulseBytes = [byte[]]@(0x1B, 0x70, 0x00, 0x19, 0xFA, 0x1B, 0x70, 0x01, 0x19, 0xFA)
+
+$result = [RawPrinterHelper]::SendBytesToPrinter($PrinterName, $pulseBytes)
+if ($result) {
+    Write-Output "SUCCESS: Drawer kick pulse sent to '$PrinterName'"
+    exit 0
+} else {
+    Write-Error "FAILED: Could not send raw pulse to '$PrinterName'"
+    exit 1
+}
+`;
+
+const kickCashDrawer = async (targetPrinterName?: string | null): Promise<boolean> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let printer = targetPrinterName?.trim();
+      if (!printer) {
+        const savedPrinter = await getSetting('receipt_printer_name');
+        if (savedPrinter && savedPrinter.trim()) {
+          printer = savedPrinter.trim();
+        }
+      }
+
+      const tempScriptPath = path.join(app.getPath('temp'), 'eva-kick-drawer.ps1');
+      await fs.promises.writeFile(tempScriptPath, KICK_DRAWER_PS1_CONTENT, 'utf8');
+
+      const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', tempScriptPath];
+      if (printer) {
+        args.push('-PrinterName', printer);
+      }
+
+      log('[Drawer] Executing drawer kick script for printer:', printer || 'System Default');
+
+      execFile('powershell.exe', args, { timeout: 10000 }, (error, stdout, stderr) => {
+        if (error) {
+          logError('[Drawer] Kick failed:', error, stderr);
+          return resolve(false); // Resolve false rather than throwing so sales aren't aborted
+        }
+        log('[Drawer] Kick success:', stdout.trim());
+        resolve(true);
+      });
+    } catch (err) {
+      logError('[Drawer] Unexpected error in kickCashDrawer:', err);
+      resolve(false);
+    }
+  });
 };
 
 const createPrintWindow = async (
@@ -165,6 +312,12 @@ export function registerPrintingIpc(): void {
     },
   );
 
+  ipcMain.handle('printing:kick-drawer', async (_event, printerName?: string | null) => {
+    log('[Print] IPC kick drawer requested for printer:', printerName || 'Default');
+    return kickCashDrawer(printerName);
+  });
+
   handlersRegistered = true;
   log('[Print] IPC handlers registered');
 }
+

@@ -5,8 +5,11 @@ import {
   getSaleDetail,
   deleteSale,
   attachSaleToCustomer,
+  getCurrentShiftSummary,
+  closeShift,
+  listShiftClosings,
 } from '../db/database';
-import type { SaleInput, DateRange } from '../db/types';
+import type { SaleInput, DateRange, ShiftCloseInput } from '../db/types';
 import { requireRole } from './auth';
 
 let handlersRegistered = false;
@@ -68,6 +71,38 @@ export function registerSalesIpc(): void {
       const saleId = args[0] as number;
       await deleteSale(saleId, session.userId);
       return true;
+    }),
+  );
+
+  ipcMain.handle(
+    'shifts:getCurrentSummary',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const branchId = (args[0] as number) || session.branchId || 1;
+      return getCurrentShiftSummary(branchId);
+    }),
+  );
+
+  ipcMain.handle(
+    'shifts:close',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const payload = args[0] as ShiftCloseInput;
+      const branchId = payload.branchId || session.branchId || 1;
+      return closeShift({
+        ...payload,
+        branchId,
+        cashierId: session.userId,
+      });
+    }),
+  );
+
+  ipcMain.handle(
+    'shifts:list',
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
+      const branchId = args[0] as number | undefined;
+      return listShiftClosings(branchId);
     }),
   );
 
