@@ -105,19 +105,41 @@ const CustomersPage = (): JSX.Element => {
         const expiryFormatted = expiryDate.toLocaleDateString('ar-IQ', { year: 'numeric', month: 'long', day: 'numeric' });
 
         return `<!DOCTYPE html>
-<html>
+<html dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <style>
+@page { size: 72mm auto; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } @page { margin: 0; size: auto; } }
-body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 72mm; margin: 0; padding: 10px; font-size: 14px; line-height: 1.4; background: #fff; color: #000; text-align: center; direction: rtl; }
-.store-name { font-size: 24px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; border-bottom: 3px solid #000; padding-bottom: 10px; }
-.voucher-title { font-size: 18px; font-weight: bold; margin: 15px 0; }
-.customer-name { font-size: 16px; margin: 10px 0; }
-.discount { font-size: 36px; font-weight: 900; margin: 20px 0; padding: 15px; border: 3px dashed #000; }
-.validity { font-size: 14px; font-weight: bold; margin: 15px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
-.footer { font-size: 12px; margin-top: 20px; padding-top: 10px; border-top: 2px solid #000; padding-bottom: 50px; }
+@media print { 
+  body { 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact; 
+    margin: 0;
+    padding: 0 4mm;
+  } 
+  @page { margin: 0; size: 72mm auto; } 
+}
+body { 
+  font-family: 'Courier New', Courier, monospace; 
+  width: 100%; 
+  max-width: 68mm; 
+  margin: 0 auto; 
+  padding: 10px 4mm 0 4mm; 
+  font-size: 14px; 
+  line-height: 1.4; 
+  background: #fff; 
+  color: #000; 
+  text-align: center; 
+  direction: rtl; 
+  font-weight: bold;
+}
+.store-name { font-size: 22px; font-weight: 900; margin-bottom: 8px; text-transform: uppercase; border-bottom: 3px solid #000; padding-bottom: 8px; }
+.voucher-title { font-size: 18px; font-weight: 900; margin: 12px 0; }
+.customer-name { font-size: 15px; margin: 8px 0; }
+.discount { font-size: 34px; font-weight: 900; margin: 15px 0; padding: 12px; border: 3px dashed #000; }
+.validity { font-size: 13px; font-weight: bold; margin: 12px 0; padding: 8px; background: #f0f0f0; border-radius: 4px; }
+.footer { font-size: 12px; margin-top: 15px; padding-top: 10px; border-top: 2px solid #000; }
 </style>
 </head>
 <body>
@@ -127,6 +149,11 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
 <div class="discount">${discount}% خصم</div>
 <div class="validity">صالحة لمدة ${validityDays} يوم<br />تنتهي في: ${expiryFormatted}</div>
 <div class="footer">قدّم هذه القسيمة عند الدفع<br /><br />الشروط والأحكام سارية</div>
+
+<!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+<div style="height: 60mm; width: 100%; clear: both;"></div>
+<div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+<div style="height: 15mm; width: 100%; clear: both;"></div>
 </body>
 </html>`;
     };
@@ -232,7 +259,14 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                             transition: 'all 0.15s ease'
                                         }}
                                         onClick={async () => {
-                                            if (await confirmDialog({ message: t('confirmDeleteCustomer'), variant: 'danger', confirmText: t('delete') })) {
+                                            const warningNote = document.documentElement.dir === 'rtl'
+                                                ? 'ملاحظة: سيتم حذف بيانات الزبون مع فك ارتباط سجلات المبيعات السابقة لحفظ البيانات المالية.'
+                                                : 'Note: Customer details will be deleted and past sales will be unlinked to preserve financial records.';
+                                            if (await confirmDialog({
+                                                message: `${t('confirmDeleteCustomer')}\n\n${warningNote}`,
+                                                variant: 'danger',
+                                                confirmText: t('delete')
+                                            })) {
                                                 try {
                                                     await window.evaApi.customers.delete(token!, selectedCustomer.id);
                                                     setSelectedCustomer(null);
@@ -452,7 +486,14 @@ body { font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 7
                                         const html = generateVoucherHtml(voucherDiscount, voucherValidityDays, c?.name);
                                         if (window.evaApi && window.evaApi.printing) {
                                             try {
-                                                await window.evaApi.printing.print({ html });
+                                                const savedPrinter = window.electronAPI?.getSetting
+                                                    ? await window.electronAPI.getSetting('receipt_printer_name')
+                                                    : null;
+                                                await window.evaApi.printing.print({
+                                                    html,
+                                                    printerName: savedPrinter || null,
+                                                    silent: !!savedPrinter,
+                                                });
                                                 setVoucherModalOpen(false);
                                             } catch (err) {
                                                 console.error('Failed to print voucher', err);

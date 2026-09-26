@@ -4,13 +4,15 @@ interface Options {
   onScan: (value: string) => void;
   threshold?: number;
   minLength?: number;
+  enabled?: boolean;
 }
 
-export function useBarcodeScanner({ onScan, threshold = 150, minLength = 3 }: Options): void {
+export function useBarcodeScanner({ onScan, threshold = 150, minLength = 3, enabled = true }: Options): void {
   const bufferRef = useRef('');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const handleKeydown = (event: KeyboardEvent) => {
       // Ignore modifier keys
       if (event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt') {
@@ -64,6 +66,6 @@ export function useBarcodeScanner({ onScan, threshold = 150, minLength = 3 }: Op
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [onScan, threshold, minLength]);
+  }, [onScan, threshold, minLength, enabled]);
 }
 

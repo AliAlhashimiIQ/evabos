@@ -204,6 +204,10 @@ ${(onlineOrdersAnalytics && onlineOrdersAnalytics.summary.totalOrders > 0) ? `
 ${onlineOrdersAnalytics.bySource.map(s => `<tr><td>${s.source}</td><td>${s.totalOrders}</td><td>${s.confirmedOrders}</td><td>${s.revenueIQD.toLocaleString('en-IQ')}</td><td>${s.confirmationRate}%</td></tr>`).join('')}
 </tbody></table>
 ` : ''}
+<!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+<div style="height: 70mm; width: 100%; clear: both;"></div>
+<div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+<div style="height: 15mm; width: 100%; clear: both;"></div>
 </body></html>`;
     try {
       await window.evaApi.printing.print({ html: reportHtml, printerName: null });

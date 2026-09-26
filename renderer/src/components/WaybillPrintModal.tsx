@@ -386,10 +386,10 @@ export const generateWaybillHtml = (
     <div style="margin-top: 3px; font-weight: 700;">طُبع بواسطة نظام كاشير EVA POS</div>
   </div>
 
-  <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar) -->
-  <div style="height: 38mm;"></div>
-  <div style="text-align: center; font-size: 9px; color: #555; line-height: 1;">.</div>
-  <div style="height: 6mm;"></div>
+  <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+  <div style="height: 60mm; width: 100%; clear: both;"></div>
+  <div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+  <div style="height: 15mm; width: 100%; clear: both;"></div>
 
 </body>
 </html>`;

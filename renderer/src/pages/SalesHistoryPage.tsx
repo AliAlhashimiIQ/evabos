@@ -21,6 +21,7 @@ import {
 import { confirmDialog } from '../utils/confirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import PrintingModal from '../components/PrintingModal';
+import { formatEnglishDateTime } from '../utils/dateTime';
 import './Pages.css';
 import './SalesHistoryPage.css';
 
@@ -28,24 +29,6 @@ type SaleDetail = import('../types/electron').SaleDetail;
 type DateRange = import('../types/electron').DateRange;
 
 type PresetRange = 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'allTime' | 'custom';
-
-const formatEnglishDateTime = (dateVal: string | Date | number): string => {
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return '—';
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-
-  let hours = d.getHours();
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hh = String(hours).padStart(2, '0');
-
-  return `${yyyy}/${mm}/${dd} • ${hh}:${minutes} ${ampm}`;
-};
 
 const SalesHistoryPage = (): JSX.Element => {
   const { token } = useAuth();
@@ -92,7 +75,7 @@ const SalesHistoryPage = (): JSX.Element => {
       };
       const [salesResponse, returnsResponse] = await Promise.all([
         window.evaApi.sales.listByDateRange(token, range),
-        window.evaApi.returns.list(token),
+        window.evaApi.returns.list(token, { range: { startDate, endDate: new Date().toISOString().split('T')[0] } }),
       ]);
       setSales(salesResponse.sales || []);
 
@@ -179,6 +162,7 @@ const SalesHistoryPage = (): JSX.Element => {
     try {
       await window.evaApi.sales.delete(token, id);
       if (selectedSale?.id === id) {
+        setSelectedSale(null);
         navigate('/sales');
       } else {
         loadSales();
@@ -192,7 +176,9 @@ const SalesHistoryPage = (): JSX.Element => {
     if (sales.length === 0 || !window.evaApi || !token) return;
 
     try {
-      const returnsResponse = await window.evaApi.returns.list(token);
+      const returnsResponse = await window.evaApi.returns.list(token, {
+        range: { startDate, endDate: new Date().toISOString().split('T')[0] },
+      });
       const returns = returnsResponse || [];
 
       const refundsBySaleId = new Map<number, number>();

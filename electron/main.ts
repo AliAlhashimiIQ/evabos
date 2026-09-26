@@ -12,6 +12,7 @@ import {
   getAllSettings,
   closeDatabase,
   flushWalCheckpoint,
+  restoreActiveSessions,
 } from './db/database';
 import { registerInventoryIpc } from './ipc/inventory';
 import { registerPurchasingIpc } from './ipc/purchasing';
@@ -537,6 +538,7 @@ app.whenReady().then(async () => {
     });
   }
   await initDatabase();
+  await restoreActiveSessions();
   registerIpcHandlers();
   registerAuthIpc();
   registerInventoryIpc();

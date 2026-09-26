@@ -4,6 +4,7 @@ import {
   createExpense,
   deleteExpense,
   getExpenseSummary,
+  logActivity,
 } from '../db/database';
 import type { ExpenseInput, DateRange } from '../db/types';
 import { requireRole } from './auth';
@@ -27,15 +28,24 @@ export function registerExpensesIpc(): void {
     requireRole(['admin', 'manager'])(async (_event, session, ...args) => {
       if (!session) throw new Error('Unauthorized');
       const payload = args[0] as ExpenseInput;
-      return createExpense({ ...payload, enteredBy: session.userId });
+      const result = await createExpense({ ...payload, enteredBy: session.userId });
+      await logActivity(session.userId, 'create', 'expense', result.id, {
+        amountIQD: payload.amountIQD,
+        category: payload.category,
+        branchId: payload.branchId,
+        expenseDate: payload.expenseDate,
+      });
+      return result;
     }),
   );
 
   ipcMain.handle(
     'expenses:delete',
-    requireRole(['admin'])(async (_event, _session, ...args) => {
+    requireRole(['admin'])(async (_event, session, ...args) => {
+      if (!session) throw new Error('Unauthorized');
       const expenseId = args[0] as number;
       await deleteExpense(expenseId);
+      await logActivity(session.userId, 'delete', 'expense', expenseId);
       return true;
     }),
   );

@@ -52,6 +52,8 @@ interface PosProfile {
   discountValue: number;
   isManualDiscount: boolean; // New flag to track manual entry
   paymentMethod: 'cash' | 'card' | 'mixed';
+  mixedCashIQD?: number;
+  mixedCardIQD?: number;
   tenderedIQD: number; // Cash tendered by customer for change calculation
   success: string | null;
   error: string | null;
@@ -66,6 +68,8 @@ const createProfile = (): PosProfile => ({
   discountValue: 0,
   isManualDiscount: false, // Initialize as false
   paymentMethod: 'cash',
+  mixedCashIQD: 0,
+  mixedCardIQD: 0,
   tenderedIQD: 0,
   success: null,
   error: null,
@@ -181,6 +185,8 @@ const PosPage = (): JSX.Element => {
     discountValue,
     isManualDiscount: _isManualDiscount,
     paymentMethod,
+    mixedCashIQD = 0,
+    mixedCardIQD = 0,
     success: profileSuccess,
     error: profileError,
     isSubmitting,
@@ -314,7 +320,7 @@ const PosPage = (): JSX.Element => {
 
     const interval = setInterval(pollInventory, 30000); // 30s
     return () => clearInterval(interval);
-  }, [token, products.length]);
+  }, [token]); // products.length intentionally omitted — including it resets the timer on every scan
 
 
 
@@ -361,20 +367,44 @@ const PosPage = (): JSX.Element => {
 
   const totalIQD = useMemo(() => Math.max(subtotalIQD - discountIQD, 0), [subtotalIQD, discountIQD]);
 
+  // Auto-sync mixed payment splits when totalIQD changes or method is set to mixed
+  useEffect(() => {
+    if (paymentMethod === 'mixed') {
+      updateCurrentProfile((profile) => {
+        const cash = profile.mixedCashIQD;
+        const card = profile.mixedCardIQD;
+        if (cash === undefined || card === undefined || Math.abs((cash + card) - totalIQD) > 0.01) {
+          const clampedCash = Math.min(Math.max(0, cash ?? Math.round(totalIQD / 2)), totalIQD);
+          const clampedCard = Math.max(0, totalIQD - clampedCash);
+          return {
+            ...profile,
+            mixedCashIQD: clampedCash,
+            mixedCardIQD: clampedCard,
+          };
+        }
+        return profile;
+      });
+    }
+  }, [totalIQD, paymentMethod, updateCurrentProfile]);
+
   const totalCostIQD = useMemo(() => {
+    // Use avgCostUSD (weighted average) to match what createSale records as unitCostIQDAtSale
     return cart.reduce(
-      (acc, item) => acc + item.product.purchaseCostUSD * exchangeRate * item.quantity,
+      (acc, item) => acc + item.product.avgCostUSD * exchangeRate * item.quantity,
       0,
     );
   }, [cart, exchangeRate]);
 
   const profitIQD = useMemo(() => {
-    return Math.max(totalIQD - totalCostIQD, 0);
+    return totalIQD - totalCostIQD;
   }, [totalCostIQD, totalIQD]);
 
   const profitPercent = useMemo(() => {
-    return totalIQD > 0 ? ((profitIQD / totalIQD) * 100).toFixed(1) : '0.0';
-  }, [profitIQD, totalIQD]);
+    if (totalIQD > 0) {
+      return ((profitIQD / totalIQD) * 100).toFixed(1);
+    }
+    return totalCostIQD > 0 ? '-100.0' : '0.0';
+  }, [profitIQD, totalIQD, totalCostIQD]);
 
   const profitMultiplier = useMemo(() => {
     return totalCostIQD > 0 ? (totalIQD / totalCostIQD).toFixed(2) : '0.00';
@@ -499,6 +529,8 @@ const PosPage = (): JSX.Element => {
       updateProfileAtIndex(profileIndex, (profile) => ({
         ...profile,
         isSubmitting: true,
+        error: null,
+        success: null,
       }));
 
       const {
@@ -515,7 +547,7 @@ const PosPage = (): JSX.Element => {
         return;
       }
       if (!token) {
-        setGlobalError('Authentication token missing.');
+        setGlobalError(t('authTokenMissing') || 'جلسة العمل منتهية أو غير صالحة. يرجى تسجيل الدخول مجدداً.');
         updateProfileAtIndex(profileIndex, (profile) => ({ ...profile, isSubmitting: false }));
         return;
       }
@@ -641,7 +673,7 @@ const PosPage = (): JSX.Element => {
       if (!isFinite(subtotal) || !isFinite(discount) || !isFinite(total) || total < 0) {
         updateProfileAtIndex(profileIndex, (profile) => ({
           ...profile,
-          error: 'Invalid calculation detected. Please check prices and discount.',
+          error: t('invalidCalculation') || 'خطأ في الحسابات: يرجى التحقق من الأسعار ونسبة الخصم.',
           success: null,
           isSubmitting: false,
         }));
@@ -649,12 +681,15 @@ const PosPage = (): JSX.Element => {
       }
 
       try {
-        updateProfileAtIndex(profileIndex, (profile) => ({
-          ...profile,
-          isSubmitting: true,
-          error: null,
-          success: null,
-        }));
+        const isMixed = targetPaymentMethod === 'mixed';
+        let mixedCash: number | undefined;
+        let mixedCard: number | undefined;
+        if (isMixed) {
+          const rawCash = targetProfile.mixedCashIQD ?? total;
+          mixedCash = Math.min(Math.max(0, rawCash), total);
+          mixedCard = Math.max(0, total - mixedCash);
+        }
+
         const sale: SaleInput = {
           branchId: user?.branchId ?? 1,
           cashierId: user?.userId ?? 1,
@@ -665,13 +700,15 @@ const PosPage = (): JSX.Element => {
           discountIQD: discount,
           totalIQD: total,
           paymentMethod: targetPaymentMethod,
+          mixedCashIQD: mixedCash,
+          mixedCardIQD: mixedCard,
           items: targetCart.map((item) => {
             const unitPrice = item.overridePrice ?? item.product.salePriceIQD;
             return {
               variantId: item.product.id,
               quantity: item.quantity,
               unitPriceIQD: unitPrice,
-              unitCostIQDAtSale: item.product.purchaseCostUSD * exchangeRate,
+              unitCostIQDAtSale: (item.product.avgCostUSD || item.product.purchaseCostUSD || 0) * exchangeRate,
               lineTotalIQD: unitPrice * item.quantity,
             };
           }),
@@ -693,20 +730,17 @@ const PosPage = (): JSX.Element => {
 
         // Re-add products from OTHER profiles' carts that may not be in the fresh top-100
         // (e.g. older products loaded via barcode scan)
-        setProfiles((currentProfiles) => {
-          const otherCartProducts = currentProfiles
-            .filter((_, idx) => idx !== profileIndex)
-            .flatMap((profile) => profile.cart.map((item) => item.product));
+        const otherCartProducts = profiles
+          .filter((_, idx) => idx !== profileIndex)
+          .flatMap((p) => p.cart.map((item) => item.product));
 
-          if (otherCartProducts.length > 0) {
-            setProducts((freshList) => {
-              const freshIds = new Set(freshList.map((p) => p.id));
-              const missing = otherCartProducts.filter((p) => !freshIds.has(p.id));
-              return missing.length > 0 ? [...freshList, ...missing] : freshList;
-            });
-          }
-          return currentProfiles; // profiles unchanged here
-        });
+        if (otherCartProducts.length > 0) {
+          setProducts((freshList) => {
+            const freshIds = new Set(freshList.map((p) => p.id));
+            const missing = otherCartProducts.filter((p) => !freshIds.has(p.id));
+            return missing.length > 0 ? [...freshList, ...missing] : freshList;
+          });
+        }
 
         updateProfileAtIndex(profileIndex, (profile) => ({
           ...profile,
@@ -714,6 +748,8 @@ const PosPage = (): JSX.Element => {
           discountValue: 0,
           isManualDiscount: false, // Reset manual flag
           paymentMethod: 'cash',
+          mixedCashIQD: 0,
+          mixedCardIQD: 0,
           selectedCustomerId: '',
           selectedEmployeeId: '',
           success: t('saleCompleted'),
@@ -850,23 +886,25 @@ const PosPage = (): JSX.Element => {
         isScanningRef.current = false;
       }, clearDelay);
     },
-    [products, addToCart, isSubmitting, setSearchTerm, token, t],
+    [products, addToCart, setSearchTerm, token, t],
   );
 
-  useBarcodeScanner({ onScan: handleScan });
+  const isModalOpen = Boolean(showShiftCloseModal || printSale || printZReport || isCompanionModalOpen);
+
+  useBarcodeScanner({ onScan: handleScan, enabled: !isModalOpen });
 
   // ─── Listen for Real-Time Scans from Mobile Companion Scanner ─────────────
   useEffect(() => {
     if (!window.electronAPI?.companion?.onBarcodeScanned) return;
     const unsubscribe = window.electronAPI.companion.onBarcodeScanned(({ barcode, overridePrice }) => {
-      if (barcode) {
+      if (barcode && !isModalOpen) {
         handleScan(barcode, overridePrice);
       }
     });
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [handleScan]);
+  }, [handleScan, isModalOpen]);
 
   const shortcutMap = useMemo(
     () => ({
@@ -890,10 +928,10 @@ const PosPage = (): JSX.Element => {
     [navigate, handleCompleteSale, handleKickDrawer, setShowShiftCloseModal, isSubmitting, removeLastItem, cart.length],
   );
 
-  useShortcutKeys(shortcutMap);
+  useShortcutKeys(shortcutMap, !isModalOpen);
 
-  // Read once per render (avoids 4× repeated localStorage reads inside JSX)
-  const requireEmployeeCheckout = localStorage.getItem('requireEmployeeCheckout') === 'true';
+  // Read once on mount (avoids repeated localStorage reads on every render)
+  const [requireEmployeeCheckout] = useState(() => localStorage.getItem('requireEmployeeCheckout') === 'true');
 
   return (
     <div className="Pos">
@@ -1076,7 +1114,7 @@ const PosPage = (): JSX.Element => {
                       <td>
                         <div className="Pos-qtyControls">
                           <button onClick={() => updateQuantity(item.product.id, -1)}><Minus size={12} /></button>
-                          <span>{item.quantity}</span>
+                          <span>{Number.isInteger(item.quantity) ? item.quantity : Number(item.quantity.toFixed(2))}</span>
                           <button onClick={() => updateQuantity(item.product.id, 1)}><Plus size={12} /></button>
                         </div>
                       </td>
@@ -1172,9 +1210,15 @@ const PosPage = (): JSX.Element => {
                         key={customer.id}
                         className={`Pos-customerOption ${selectedCustomerId === customer.id ? 'selected' : ''}`}
                         onMouseDown={() => {
+                          const custDiscount = customer.discountPercent && customer.discountPercent > 0 ? customer.discountPercent : 0;
                           updateCurrentProfile((profile) => ({
                             ...profile,
                             selectedCustomerId: customer.id,
+                            ...(custDiscount > 0 && !profile.isManualDiscount ? {
+                              discountMode: 'percent',
+                              discountValue: custDiscount,
+                              isManualDiscount: false, // Keep false so discount dynamically tracks running cart total
+                            } : {}),
                           }));
                           setCustomerSearchTerm(customer.name);
                           setShowCustomerDropdown(false);
@@ -1215,12 +1259,17 @@ const PosPage = (): JSX.Element => {
               <label className="Pos-fieldLabel">{t('paymentMethod')}</label>
               <select
                 value={paymentMethod}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const newMethod = event.target.value as 'cash' | 'card' | 'mixed';
                   updateCurrentProfile((profile) => ({
                     ...profile,
-                    paymentMethod: event.target.value as 'cash' | 'card' | 'mixed',
-                  }))
-                }
+                    paymentMethod: newMethod,
+                    ...(newMethod === 'mixed' && (!profile.mixedCashIQD && !profile.mixedCardIQD) ? {
+                      mixedCashIQD: Math.round(totalIQD / 2),
+                      mixedCardIQD: totalIQD - Math.round(totalIQD / 2),
+                    } : {}),
+                  }));
+                }}
               >
                 <option value="cash">{t('cash')}</option>
                 <option value="card">{t('card')}</option>
@@ -1228,6 +1277,56 @@ const PosPage = (): JSX.Element => {
               </select>
             </div>
           </div>
+
+          {/* Mixed Payment Split Fields */}
+          {paymentMethod === 'mixed' && (
+            <div className="Pos-fieldRow" style={{ background: 'rgba(59, 130, 246, 0.06)', padding: '0.6rem 0.75rem', borderRadius: '0.6rem', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '0.75rem' }}>
+              <div className="Pos-field">
+                <label className="Pos-fieldLabel" style={{ fontSize: '0.8rem', color: '#1d4ed8' }}>
+                  {document.documentElement.dir === 'rtl' ? 'المبلغ نقداً (كاش)' : 'Cash Amount'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={totalIQD}
+                  value={mixedCashIQD || ''}
+                  placeholder={String(Math.round(totalIQD / 2))}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    const clampedCash = Math.min(Math.max(0, val), totalIQD);
+                    updateCurrentProfile((p) => ({
+                      ...p,
+                      mixedCashIQD: clampedCash,
+                      mixedCardIQD: Math.max(0, totalIQD - clampedCash),
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.88rem' }}
+                />
+              </div>
+              <div className="Pos-field">
+                <label className="Pos-fieldLabel" style={{ fontSize: '0.8rem', color: '#1d4ed8' }}>
+                  {document.documentElement.dir === 'rtl' ? 'المبلغ بالبطاقة (كي كارد)' : 'Card Amount'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={totalIQD}
+                  value={mixedCardIQD || ''}
+                  placeholder={String(totalIQD - Math.round(totalIQD / 2))}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    const clampedCard = Math.min(Math.max(0, val), totalIQD);
+                    updateCurrentProfile((p) => ({
+                      ...p,
+                      mixedCardIQD: clampedCard,
+                      mixedCashIQD: Math.max(0, totalIQD - clampedCard),
+                    }));
+                  }}
+                  style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.88rem' }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Discount */}
           <div className="Pos-field">
@@ -1355,13 +1454,22 @@ const PosPage = (): JSX.Element => {
             </div>
             {user?.role === 'admin' && (
               <>
-                <div className="Pos-summaryRow Pos-profitRow">
-                  <span><DollarSign size={13} /> {t('estimatedProfit')}</span>
-                  <span>{profitIQD.toLocaleString('en-IQ')} IQD</span>
+                <div
+                  className="Pos-summaryRow Pos-profitRow"
+                  style={{ color: profitIQD < 0 ? '#ef4444' : '#10b981' }}
+                >
+                  <span>
+                    <DollarSign size={13} /> {profitIQD < 0 ? (t('estimatedLoss') || 'الخسارة المقدرة') : t('estimatedProfit')}
+                  </span>
+                  <span style={{ fontWeight: 700 }}>
+                    {profitIQD < 0 ? `-${Math.abs(profitIQD).toLocaleString('en-IQ')} IQD` : `${profitIQD.toLocaleString('en-IQ')} IQD`}
+                  </span>
                 </div>
                 <div className="Pos-summaryRow" style={{ fontSize: '0.8rem', marginTop: '0.1rem' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>{t('profitStats') || 'Margin / Multiplier'}</span>
-                  <strong style={{ color: '#10b981', fontWeight: '700' }}>{profitPercent}% ({profitMultiplier}x)</strong>
+                  <strong style={{ color: profitIQD < 0 ? '#ef4444' : '#10b981', fontWeight: '700' }}>
+                    {profitPercent}% ({profitMultiplier}x)
+                  </strong>
                 </div>
               </>
             )}

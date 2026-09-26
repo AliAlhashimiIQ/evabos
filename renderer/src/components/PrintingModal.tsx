@@ -76,6 +76,7 @@ interface ReceiptPayload {
   cashierName?: string;
   paymentMethod?: string;
   saleDate: string;
+  notes?: string;
   // Customization fields
   storeName?: string;
   logoBase64?: string;
@@ -85,6 +86,24 @@ interface ReceiptPayload {
   showCustomer?: boolean;
 }
 const DEFAULT_STORE_FOOTER = 'لا يوجد تبديل ولا يوجد استرجاع';
+
+const formatReceiptDateTime = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  let normalized = dateStr.trim();
+  if (normalized.includes(' ') && !normalized.includes('T')) {
+    normalized = normalized.replace(' ', 'T') + (normalized.endsWith('Z') ? '' : 'Z');
+  }
+  const d = new Date(normalized);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
 
 const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): string => `
 <!DOCTYPE html>
@@ -206,13 +225,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       <div class="sale-header">
         <h2>${payload.title}</h2>
         <p><strong>${payload.subtitle}</strong></p>
-        <p>Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}</p>
+        <p>Date: ${formatReceiptDateTime(payload.saleDate)}</p>
         ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
@@ -252,6 +265,11 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         `).join('')}
       </tbody>
     </table>
+    ${payload.notes ? `
+      <div style="margin-top: 14px; padding: 6px 8px; border: 1px dashed #000; font-size: 13px; text-align: right; line-height: 1.4; word-break: break-word;">
+        <span style="font-weight: 900;">الملاحظات:</span> ${payload.notes}
+      </div>
+    ` : ''}
     ${payload.title && payload.title.includes('Z-Report') ? `
       <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #000; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
         <div>توقيع الكاشير: ...............</div>
@@ -259,8 +277,10 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       </div>
     ` : ''}
     <div class="footer">${payload.footer}</div>
-    <div style="height: 30mm;"></div>
-    <div style="text-align: center; font-size: 10px;">.</div>
+    <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+    <div style="height: 70mm; width: 100%; clear: both;"></div>
+    <div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+    <div style="height: 15mm; width: 100%; clear: both;"></div>
   </body>
 </html>
 `;
@@ -441,13 +461,7 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         <div class="sale-header">
           <h2>${payload.title}</h2>
           <p><strong>${payload.subtitle}</strong></p>
-          <p>Date: ${new Date(payload.saleDate).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}</p>
+          <p>Date: ${formatReceiptDateTime(payload.saleDate)}</p>
           ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
         </div>
       </div>
@@ -488,6 +502,11 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         `).join('')}
       </tbody>
     </table>
+    ${payload.notes ? `
+      <div style="margin-top: 20px; padding: 12px 16px; border: 1px solid #d1d5db; background: #f9fafb; font-size: 13px; text-align: right; border-radius: 4px; line-height: 1.5; word-break: break-word;">
+        <span style="font-weight: 700; color: #1f2937;">الملاحظات:</span> ${payload.notes}
+      </div>
+    ` : ''}
     ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
       <div class="payment-section">
         ${payload.paymentMethod ? `<p><strong>Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
@@ -495,27 +514,37 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
       </div>
     ` : ''}
     <div class="footer">${payload.footer}</div>
+    <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+    <div style="height: 60mm; width: 100%; clear: both;"></div>
+    <div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+    <div style="height: 15mm; width: 100%; clear: both;"></div>
   </body>
 </html>
 `;
 
 const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
 <!DOCTYPE html>
-<html>
+<html dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <style>
+      @page { size: 72mm auto; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        @page { margin: 0; size: auto; }
+        body { 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact; 
+          margin: 0;
+          padding: 0 4mm;
+        }
+        @page { margin: 0; size: 72mm auto; }
       }
       body { 
         font-family: 'Courier New', Courier, monospace;
         width: 100%;
-        max-width: 72mm;
-        margin: 0; 
-        padding: 0; 
+        max-width: 68mm;
+        margin: 0 auto; 
+        padding: 0 4mm; 
         font-size: 14px;
         line-height: 1.2;
         background: #ffffff;
@@ -545,7 +574,7 @@ const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
         margin-bottom: 10px; 
       }
       th { 
-        text-align: left; 
+        text-align: right; 
         border-bottom: 2px solid #000; 
         padding: 5px 0; 
         font-weight: 900;
@@ -571,17 +600,16 @@ const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
   </head>
   <body>
     <div class="header">
-      <div class="title">الكل</div>
+      <div class="title">تقرير المبيعات اليومي</div>
       <div class="date-range">
         ${data.startDate} - ${data.endDate}
       </div>
-      <div style="text-align: right; font-size: 12px;">تاريخ</div>
     </div>
     <table>
       <thead>
         <tr>
-          <th>التاريخ</th>
-          <th style="text-align: right;">المجموع</th>
+          <th style="text-align: right;">التاريخ والوقت</th>
+          <th style="text-align: left;">المجموع</th>
         </tr>
       </thead>
       <tbody>
@@ -589,16 +617,16 @@ const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
           <tr>
             <td>
               <div>${new Date(sale.date).toLocaleDateString('en-CA')}</div>
-              <div style="font-size: 12px;">${new Date(sale.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
+              <div style="font-size: 12px; font-weight: normal;">${new Date(sale.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
             </td>
-            <td style="text-align: right;">${sale.total.toLocaleString('en-IQ')} د.ع</td>
+            <td style="text-align: left;">${sale.total.toLocaleString('en-IQ')} د.ع</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
     <div class="footer">
       <div class="summary-row">
-        <span>العدد الكلي:</span>
+        <span>العدد الكلي للعمليات:</span>
         <span>${data.totalCount}</span>
       </div>
       <div class="summary-row">
@@ -606,6 +634,11 @@ const generateSalesSummaryHtml = (data: SalesSummaryData): string => `
         <span>${data.totalAmount.toLocaleString('en-IQ')} د.ع</span>
       </div>
     </div>
+
+    <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
+    <div style="height: 60mm; width: 100%; clear: both;"></div>
+    <div style="text-align: center; font-size: 10px; color: #000000; font-weight: bold; line-height: 1; clear: both;">.</div>
+    <div style="height: 15mm; width: 100%; clear: both;"></div>
   </body>
 </html>
 `;
@@ -868,6 +901,9 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
         { label: 'رصيد الافتتاح', value: zReportData.openingCashIQD },
         { label: 'مبيعات الكاش', value: zReportData.cashSalesIQD },
       ];
+      if (zReportData.mixedSalesCashIQD > 0) {
+        totalsList.push({ label: 'مبيعات دفع مختلط (كاش)', value: zReportData.mixedSalesCashIQD });
+      }
       if (zReportData.cardSalesIQD > 0) {
         totalsList.push({ label: 'مبيعات البطاقة (كي كارد)', value: zReportData.cardSalesIQD });
       }
@@ -896,6 +932,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
         branchPhone: branchInfo?.phone || undefined,
         cashierName: zReportData.cashierName || user?.username,
         saleDate: zReportData.closedAt,
+        notes: zReportData.notes || undefined,
         storeName: customSettings.storeName,
         logoBase64: customSettings.logoBase64,
         showLogo: customSettings.showLogo,

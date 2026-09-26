@@ -35,7 +35,7 @@ type ProductInput = import('../types/electron').ProductInput;
 type Supplier = import('../types/electron').Supplier;
 
 const ProductsPage = (): JSX.Element => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [, setNextCursor] = useState<number | null>(null);
@@ -172,7 +172,7 @@ const ProductsPage = (): JSX.Element => {
       if (payload.initialStock && payload.initialStock !== 0) {
         await window.evaApi.products.adjustStock(token, {
           variantId: newProduct.id,
-          branchId: 1,
+          branchId: user?.branchId || 1,
           deltaQuantity: payload.initialStock,
           reason: 'initial_stock',
           note: 'Initial stock set during product creation',
@@ -534,7 +534,7 @@ const ProductsPage = (): JSX.Element => {
             try {
               await window.evaApi.products.adjustStock(token, {
                 variantId,
-                branchId: 1,
+                branchId: user?.branchId || 1,
                 deltaQuantity,
                 reason,
                 note,

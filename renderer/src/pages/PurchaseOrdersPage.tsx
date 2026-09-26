@@ -20,7 +20,7 @@ interface DraftItem {
 }
 
 const PurchaseOrdersPage = (): JSX.Element => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,7 +30,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
   const [form, setForm] = useState<PurchaseOrderInput>({
     supplierId: 0,
-    branchId: 1,
+    branchId: user?.branchId || 1,
     status: 'ordered',
     reference: '',
     subtotalUSD: 0,
@@ -109,6 +109,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
       setSubmitting(true);
       await window.evaApi.purchaseOrders.create(token, {
         ...form,
+        branchId: user?.branchId || form.branchId || 1,
         subtotalUSD: totals.subtotalUSD,
         items: draftItems.map((item) => ({
           variantId: item.variantId,
@@ -117,7 +118,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
           costIQD: item.costIQD,
         })),
       });
-      setForm((prev) => ({ ...prev, supplierId: 0, reference: '', notes: '' }));
+      setForm((prev) => ({ ...prev, supplierId: 0, reference: '', notes: '', branchId: user?.branchId || 1 }));
       setDraftItems([]);
       await loadData();
     } catch (err) {
@@ -131,7 +132,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
   const handleReceive = async (purchaseOrderId: number) => {
     if (!window.evaApi || !token) return;
     try {
-      await window.evaApi.purchaseOrders.receive(token, { purchaseOrderId, receivedBy: 1 });
+      await window.evaApi.purchaseOrders.receive(token, { purchaseOrderId, receivedBy: user?.userId || 1 });
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to receive purchase order.');

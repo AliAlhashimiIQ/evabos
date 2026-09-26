@@ -586,7 +586,11 @@ export async function sendTelegramShiftCloseNotification(
       return { success: false, error: 'Telegram close notification disabled or unconfigured' };
     }
 
-    const dateObj = new Date(closing.closedAt || Date.now());
+    let closedAtStr = closing.closedAt;
+    if (closedAtStr && closedAtStr.includes(' ') && !closedAtStr.includes('T')) {
+      closedAtStr = closedAtStr.replace(' ', 'T') + (closedAtStr.endsWith('Z') ? '' : 'Z');
+    }
+    const dateObj = new Date(closedAtStr || Date.now());
     const formattedDate = dateObj.toLocaleString('ar-IQ', {
       weekday: 'long',
       year: 'numeric',
@@ -1048,7 +1052,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
         JOIN product_variants pv ON pv.id = si.variantId
         JOIN products p ON p.id = pv.productId
         JOIN sales s ON s.id = si.saleId
-        WHERE date(s.saleDate) >= date('now', 'start of month')
+        WHERE date(s.saleDate, 'localtime') >= date('now', 'start of month', 'localtime')
         GROUP BY si.variantId
         ORDER BY totalQty DESC
         LIMIT 10
@@ -1601,25 +1605,25 @@ export async function formatEmployeeSalesTelegramMessage(
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    let whereClause = `date(s.saleDate) = ?`;
+    let whereClause = `date(s.saleDate, 'localtime') = ?`;
     let params: any[] = [todayStr];
     let titleStr = `مبيعات الكادر والموظفين — اليوم (${todayStr})`;
 
     if (filter === 'yesterday') {
       const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
-      whereClause = `date(s.saleDate) = ?`;
+      whereClause = `date(s.saleDate, 'localtime') = ?`;
       params = [yestStr];
       titleStr = `مبيعات الكادر والموظفين — يوم أمس (${yestStr})`;
     } else if (filter === 'week') {
       const weekAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
       const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
-      whereClause = `date(s.saleDate) BETWEEN ? AND ?`;
+      whereClause = `date(s.saleDate, 'localtime') BETWEEN ? AND ?`;
       params = [weekStr, todayStr];
       titleStr = `مبيعات الكادر والموظفين — آخر 7 أيام (${weekStr} ⬅️ ${todayStr})`;
     } else if (filter === 'month') {
       const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      whereClause = `date(s.saleDate) BETWEEN ? AND ?`;
+      whereClause = `date(s.saleDate, 'localtime') BETWEEN ? AND ?`;
       params = [monthStart, todayStr];
       titleStr = `مبيعات الكادر والموظفين — شهر (${now.getMonth() + 1}/${now.getFullYear()})`;
     } else if (filter === 'all') {

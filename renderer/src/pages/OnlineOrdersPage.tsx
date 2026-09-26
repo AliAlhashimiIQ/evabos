@@ -10,6 +10,7 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { confirmDialog } from '../utils/confirmDialog';
 import WaybillPrintModal from '../components/WaybillPrintModal';
 import OnlineOrderWhatsAppModal from '../components/OnlineOrderWhatsAppModal';
+import { formatEnglishDateTime } from '../utils/dateTime';
 import './OnlineOrdersPage.css';
 
 type OnlineOrder = import('../types/electron').OnlineOrder;
@@ -35,21 +36,6 @@ const STATUS_CFG: Record<OnlineOrderStatus, { label: string; cls: string; icon: 
   pending:   { label: 'قيد الانتظار',   cls: 'OO-badge--pending',   icon: <Clock size={12} /> },
   confirmed: { label: 'مؤكد', cls: 'OO-badge--confirmed', icon: <CheckCircle2 size={12} /> },
   rejected:  { label: 'مرفوض',  cls: 'OO-badge--rejected',  icon: <XCircle size={12} /> },
-};
-
-const formatEnglishDateTime = (dateVal: string | Date | number): string => {
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return '—';
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  let hours = d.getHours();
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hh = String(hours).padStart(2, '0');
-  return `${yyyy}/${mm}/${dd} • ${hh}:${minutes} ${ampm}`;
 };
 
 interface CartItem { product: Product; quantity: number; unitPrice: number; }
@@ -217,11 +203,31 @@ const OnlineOrdersPage = (): JSX.Element => {
   // --- Products ---
   const loadProducts = useCallback(async () => {
     if (!window.evaApi || !token) return;
-    const resp = await window.evaApi.products.list(token, { limit: 500, cursor: 0 });
+    const resp = await window.evaApi.products.list(token, { limit: 5000, cursor: 0 });
     setProducts(resp.products || resp.items || []);
   }, [token]);
 
-  useEffect(() => { if (showForm) loadProducts(); }, [showForm, loadProducts]);
+  useEffect(() => { loadProducts(); }, [loadProducts]);
+
+  // Keep cart items in sync when products list loads or updates
+  useEffect(() => {
+    if (products.length === 0) return;
+    setCart((prevCart) => {
+      let changed = false;
+      const updated = prevCart.map((item) => {
+        const found = products.find((p) => p.id === item.product.id);
+        if (found && (item.product.avgCostUSD !== found.avgCostUSD || item.product.stockOnHand !== found.stockOnHand || item.product.productName !== found.productName)) {
+          changed = true;
+          return {
+            ...item,
+            product: found,
+          };
+        }
+        return item;
+      });
+      return changed ? updated : prevCart;
+    });
+  }, [products]);
 
   // --- Barcode Scanner ---
   const processProductSearch = useCallback((value: string) => {
@@ -343,9 +349,17 @@ const OnlineOrdersPage = (): JSX.Element => {
   const cartSubtotal = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const cartTotal = Math.max(cartSubtotal - formDiscount, 0);
   
-  // Calculate Profit
+  // Calculate Profit, Margin & Multiplier
+  const hasValidCost = cart.length > 0 && cart.every((i) => (i.product.avgCostUSD ?? 0) > 0);
   const cartCost = cart.reduce((s, i) => s + (i.product.avgCostUSD || 0) * exchangeRate * i.quantity, 0);
   const cartProfit = cartTotal - cartCost;
+  const cartProfitPercent = hasValidCost && cartTotal > 0
+    ? ((cartProfit / cartTotal) * 100).toFixed(1)
+    : null;
+  const cartMultiplier = hasValidCost && cartCost > 0
+    ? (cartTotal / cartCost).toFixed(2)
+    : null;
+
 
   // --- Submit ---
   const handleSubmit = async () => {
@@ -392,7 +406,7 @@ const OnlineOrdersPage = (): JSX.Element => {
     setFormSource(order.source);
     setFormDiscount(order.discountIQD || 0);
 
-    // Map order.items to cart
+    // Map order.items to cart using found product or item's own stock/cost data
     setCart(order.items.map(item => {
       const found = products.find(p => p.id === item.variantId);
       return {
@@ -405,8 +419,8 @@ const OnlineOrdersPage = (): JSX.Element => {
           size: item.size || null,
           barcode: null,
           salePriceIQD: item.unitPriceIQD,
-          stockOnHand: 9999,
-          avgCostUSD: 0
+          stockOnHand: item.stockOnHand ?? 0,
+          avgCostUSD: item.avgCostUSD ?? 0
         } as Product,
         quantity: item.quantity,
         unitPrice: item.unitPriceIQD
@@ -724,7 +738,12 @@ const OnlineOrdersPage = (): JSX.Element => {
                       <div className="OO-cartSummary">
                         <div className="OO-cartSummary-left">
                           <div className="OO-profitRow">
-                            الربح المتوقع: <span className={cartProfit >= 0 ? 'OO-profit-positive' : 'OO-profit-negative'}>{cartProfit.toLocaleString('en-IQ')} د.ع</span>
+                            {cartProfit < 0 ? 'الخسارة المقدرة:' : 'الربح المتوقع:'}{' '}
+                            <span className={cartProfit >= 0 ? 'OO-profit-positive' : 'OO-profit-negative'}>
+                              {hasValidCost
+                                ? `${cartProfit < 0 ? `-${Math.abs(cartProfit).toLocaleString('en-IQ')}` : cartProfit.toLocaleString('en-IQ')} د.ع (${cartProfitPercent}% | ${cartMultiplier}x)`
+                                : `${cartProfit < 0 ? `-${Math.abs(cartProfit).toLocaleString('en-IQ')}` : cartProfit.toLocaleString('en-IQ')} د.ع (—)`}
+                            </span>
                           </div>
                         </div>
                         <div className="OO-cartSummary-right">

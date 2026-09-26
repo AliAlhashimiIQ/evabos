@@ -4,8 +4,9 @@ interface ShortcutMap {
   [key: string]: () => void;
 }
 
-export function useShortcutKeys(map: ShortcutMap): void {
+export function useShortcutKeys(map: ShortcutMap, enabled: boolean = true): void {
   useEffect(() => {
+    if (!enabled) return;
     const handler = (event: KeyboardEvent) => {
       // Ignore typematic key repeats (e.g. holding down F9 or another shortcut key)
       if (event.repeat) {
@@ -59,6 +60,6 @@ export function useShortcutKeys(map: ShortcutMap): void {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [map]);
+  }, [map, enabled]);
 }
 

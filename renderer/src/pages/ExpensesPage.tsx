@@ -22,10 +22,13 @@ const defaultForm: ExpenseInput = {
 };
 
 const ExpensesPage = (): JSX.Element => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [form, setForm] = useState<ExpenseInput>(defaultForm);
+  const [form, setForm] = useState<ExpenseInput>({
+    ...defaultForm,
+    branchId: user?.branchId || 1,
+  });
   
   // Dynamic currency symbol based on layout direction
   const currencySymbol = useMemo(() => {
@@ -100,9 +103,13 @@ const ExpensesPage = (): JSX.Element => {
       setSubmitting(true);
       await window.evaApi.expenses.create(token, {
         ...form,
+        branchId: user?.branchId || form.branchId || 1,
         expenseDate: new Date(form.expenseDate ?? new Date().toISOString()).toISOString(),
       });
-      setForm(defaultForm);
+      setForm({
+        ...defaultForm,
+        branchId: user?.branchId || 1,
+      });
       setShowAddForm(false);
       await loadExpenses();
     } catch (err) {

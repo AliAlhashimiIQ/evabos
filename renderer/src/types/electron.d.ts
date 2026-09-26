@@ -137,6 +137,8 @@ export interface Sale {
   discountIQD: number;
   totalIQD: number;
   paymentMethod?: string | null;
+  mixedCashIQD?: number | null;
+  mixedCardIQD?: number | null;
   profitIQD?: number | null;
   isReturned?: boolean;
   items: SaleItem[];
@@ -499,7 +501,7 @@ export interface EvaApi {
     attachSale: (token: string, payload: { saleId: number; customerId: number }) => Promise<boolean>;
   };
   returns: {
-    list: (token: string) => Promise<ReturnResponse[]>;
+    list: (token: string, options?: { branchId?: number; range?: DateRange; limit?: number }) => Promise<ReturnResponse[]>;
     create: (token: string, data: ReturnInput) => Promise<ReturnResponse>;
     saleInfo: (token: string, saleId: number) => Promise<SaleDetail | null>;
   };
@@ -758,6 +760,8 @@ export interface OnlineOrderItem {
   quantity: number;
   unitPriceIQD: number;
   lineTotalIQD: number;
+  avgCostUSD?: number;
+  stockOnHand?: number;
 }
 
 export interface OnlineOrder {
@@ -928,6 +932,8 @@ export interface CurrentShiftSummary {
   cashSalesIQD: number;
   cardSalesIQD: number;
   mixedSalesIQD: number;
+  mixedSalesCashIQD?: number;
+  mixedSalesCardIQD?: number;
   totalSalesIQD: number;
   returnsCount: number;
   cashRefundsIQD: number;

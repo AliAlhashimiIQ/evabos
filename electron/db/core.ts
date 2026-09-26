@@ -162,7 +162,7 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, notes TEXT, totalVisits INTEGER NOT NULL DEFAULT 0, totalSpentIQD REAL NOT NULL DEFAULT 0, lastVisitAt TEXT, loyaltyPoints REAL NOT NULL DEFAULT 0, discountPercent REAL DEFAULT NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS purchase_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, supplierId INTEGER NOT NULL, branchId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft', reference TEXT, orderedAt TEXT, receivedAt TEXT, subtotalUSD REAL NOT NULL DEFAULT 0, shippingUSD REAL NOT NULL DEFAULT 0, taxesUSD REAL NOT NULL DEFAULT 0, notes TEXT, FOREIGN KEY (supplierId) REFERENCES suppliers(id), FOREIGN KEY (branchId) REFERENCES branches(id))`);
   await run(`CREATE TABLE IF NOT EXISTS purchase_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, purchaseOrderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, costUSD REAL NOT NULL, costIQD REAL NOT NULL, FOREIGN KEY (purchaseOrderId) REFERENCES purchase_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
-  await run(`CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, employeeId INTEGER, saleDate TEXT NOT NULL, subtotalIQD REAL NOT NULL, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL, paymentMethod TEXT, profitIQD REAL DEFAULT 0, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE SET NULL)`);
+  await run(`CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, employeeId INTEGER, saleDate TEXT NOT NULL, subtotalIQD REAL NOT NULL, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL, paymentMethod TEXT, profitIQD REAL DEFAULT 0, mixedCashIQD REAL DEFAULT 0, mixedCardIQD REAL DEFAULT 0, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE SET NULL)`);
   await run(`CREATE TABLE IF NOT EXISTS sale_items (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, unitCostIQDAtSale REAL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
   await run(`CREATE TABLE IF NOT EXISTS returns (id INTEGER PRIMARY KEY AUTOINCREMENT, saleId INTEGER, branchId INTEGER NOT NULL, processedBy INTEGER NOT NULL, customerId INTEGER, reason TEXT, refundAmountIQD REAL NOT NULL, customerPaidIQD REAL DEFAULT 0, paymentMethod TEXT DEFAULT 'cash', totalCostIQD REAL DEFAULT 0, type TEXT NOT NULL, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (saleId) REFERENCES sales(id), FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (processedBy) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id))`);
   await run(`CREATE TABLE IF NOT EXISTS return_items (id INTEGER PRIMARY KEY AUTOINCREMENT, returnId INTEGER NOT NULL, saleItemId INTEGER, variantId INTEGER NOT NULL, quantity REAL NOT NULL, amountIQD REAL NOT NULL, direction TEXT DEFAULT 'return', FOREIGN KEY (returnId) REFERENCES returns(id) ON DELETE CASCADE, FOREIGN KEY (saleItemId) REFERENCES sale_items(id), FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
@@ -172,20 +172,33 @@ const createTables = async (): Promise<void> => {
   await run(`CREATE TABLE IF NOT EXISTS online_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, customerId INTEGER, customerName TEXT, customerPhone TEXT, source TEXT NOT NULL DEFAULT 'other', note TEXT, status TEXT NOT NULL DEFAULT 'pending', subtotalIQD REAL NOT NULL DEFAULT 0, discountIQD REAL NOT NULL DEFAULT 0, totalIQD REAL NOT NULL DEFAULT 0, createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, confirmedAt TEXT, rejectedAt TEXT, rejectionReason TEXT, saleId INTEGER, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id), FOREIGN KEY (customerId) REFERENCES customers(id), FOREIGN KEY (saleId) REFERENCES sales(id))`);
   await run(`CREATE TABLE IF NOT EXISTS online_order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, orderId INTEGER NOT NULL, variantId INTEGER NOT NULL, quantity REAL NOT NULL, unitPriceIQD REAL NOT NULL, lineTotalIQD REAL NOT NULL, FOREIGN KEY (orderId) REFERENCES online_orders(id) ON DELETE CASCADE, FOREIGN KEY (variantId) REFERENCES product_variants(id))`);
   await run(`CREATE TABLE IF NOT EXISTS shift_closings (id INTEGER PRIMARY KEY AUTOINCREMENT, branchId INTEGER NOT NULL, cashierId INTEGER NOT NULL, closedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, openingCashIQD REAL NOT NULL DEFAULT 0, cashSalesIQD REAL NOT NULL DEFAULT 0, cardSalesIQD REAL NOT NULL DEFAULT 0, mixedSalesCashIQD REAL NOT NULL DEFAULT 0, mixedSalesCardIQD REAL NOT NULL DEFAULT 0, exchangeCashIQD REAL NOT NULL DEFAULT 0, cashRefundsIQD REAL NOT NULL DEFAULT 0, expensesIQD REAL NOT NULL DEFAULT 0, expectedCashIQD REAL NOT NULL DEFAULT 0, actualCashIQD REAL NOT NULL DEFAULT 0, differenceIQD REAL NOT NULL DEFAULT 0, notes TEXT, FOREIGN KEY (branchId) REFERENCES branches(id), FOREIGN KEY (cashierId) REFERENCES users(id))`);
+  await run(`CREATE TABLE IF NOT EXISTS user_sessions (token TEXT PRIMARY KEY, userId INTEGER NOT NULL, username TEXT NOT NULL, role TEXT NOT NULL, branchId INTEGER, createdAt TEXT NOT NULL, expiresAt TEXT NOT NULL, FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE)`);
 
   // Performance Indexes
   await run(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(saleDate)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_sales_branch_date ON sales(branchId, saleDate)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(saleId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_sale_items_variant ON sale_items(variantId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_variant_stock_lookup ON variant_stock(variantId, branchId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_variants_product ON product_variants(productId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_returns_date ON returns(createdAt)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_returns_branch_date ON returns(branchId, createdAt)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_returns_sale ON returns(saleId)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_expenses_branch_date ON expenses(branchId, expenseDate)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_inventory_adjustments_lookup ON inventory_adjustments(variantId, branchId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_orders_date ON online_orders(createdAt)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_orders_status ON online_orders(status)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_order ON online_order_items(orderId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_online_order_items_variant ON online_order_items(variantId)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_shift_closings_date ON shift_closings(closedAt)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_shift_closings_branch ON shift_closings(branchId)`);
+
+  // Normalize legacy shift_closings timestamps from 'YYYY-MM-DD HH:MM:SS' to ISO 'YYYY-MM-DDTHH:MM:SSZ'
+  try {
+    await run(`UPDATE shift_closings SET closedAt = replace(closedAt, ' ', 'T') || 'Z' WHERE closedAt LIKE '% %' AND closedAt NOT LIKE '%T%'`);
+  } catch (e) {
+    // Non-fatal if table empty or locked
+  }
 };
 
 const seedInitialData = async (): Promise<void> => {
@@ -214,6 +227,14 @@ export async function initDatabase(): Promise<void> {
     if (!sCols.some(c => c.name === 'employeeId')) {
       await run('ALTER TABLE sales ADD COLUMN employeeId INTEGER REFERENCES employees(id) ON DELETE SET NULL');
       log.info('[db] Added employeeId to sales');
+    }
+    if (!sCols.some(c => c.name === 'mixedCashIQD')) {
+      await run('ALTER TABLE sales ADD COLUMN mixedCashIQD REAL DEFAULT 0');
+      log.info('[db] Added mixedCashIQD to sales');
+    }
+    if (!sCols.some(c => c.name === 'mixedCardIQD')) {
+      await run('ALTER TABLE sales ADD COLUMN mixedCardIQD REAL DEFAULT 0');
+      log.info('[db] Added mixedCardIQD to sales');
     }
   } catch (err) { log.error('[db] Sales migration failed:', err); }
   try {
@@ -332,6 +353,7 @@ export const mapSaleRow = (row: any): Sale => ({
   employeeName: row.employeeName ?? null, saleDate: row.saleDate,
   subtotalIQD: row.subtotalIQD ?? 0, discountIQD: row.discountIQD ?? 0,
   totalIQD: row.totalIQD ?? 0, paymentMethod: row.paymentMethod ?? null,
+  mixedCashIQD: row.mixedCashIQD ?? null, mixedCardIQD: row.mixedCardIQD ?? null,
   profitIQD: row.profitIQD ?? null, items: [],
 });
 

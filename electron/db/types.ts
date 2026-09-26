@@ -93,6 +93,8 @@ export interface Sale {
   discountIQD: number;
   totalIQD: number;
   paymentMethod?: string | null;
+  mixedCashIQD?: number | null;
+  mixedCardIQD?: number | null;
   items: SaleItem[];
   profitIQD?: number | null;
   isReturned?: boolean;
@@ -560,6 +562,8 @@ export interface OnlineOrderItem {
   quantity: number;
   unitPriceIQD: number;
   lineTotalIQD: number;
+  avgCostUSD?: number;
+  stockOnHand?: number;
 }
 
 export interface OnlineOrder {
@@ -699,6 +703,8 @@ export interface CurrentShiftSummary {
   cashSalesIQD: number;
   cardSalesIQD: number;
   mixedSalesIQD: number;
+  mixedSalesCashIQD?: number;
+  mixedSalesCardIQD?: number;
   totalSalesIQD: number;
   returnsCount: number;
   cashRefundsIQD: number;

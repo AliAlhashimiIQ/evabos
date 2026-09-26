@@ -86,7 +86,7 @@ export function LegalAcceptanceModal(): JSX.Element | null {
 
                 <div className="LegalModal-footer">
                     {!scrolledToBottom && (
-                        <div className="LegalModal-hint">⬇️ يرجى التمرير للأسفل للموافقة</div>
+                        <div className="LegalModal-hint">يرجى التمرير للأسفل للموافقة</div>
                     )}
                     <button
                         className="LegalModal-button"

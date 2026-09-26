@@ -18,6 +18,7 @@ import {
   run, runWithResult, get, all,
   hashPassword, verifyPassword,
   generateSku, generateBarcode,
+  setSetting,
   ensureVariantStockRow, adjustVariantStockInternal,
   mapVariantRow, mapSaleRow, mapSaleItemRow, mapExchangeRateRow,
 } from './core';
@@ -90,6 +91,49 @@ import { sendTelegramShiftCloseNotification } from './telegram';
 const activeSessions = new Map<string, UserSession>();
 let posLocked = false;
 let posLockedBy: number | null = null;
+
+// ─── Session Persistence Helpers ─────────────────────────────────────────────
+
+async function persistSessionToDb(session: UserSession): Promise<void> {
+  const ttlMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  await run(
+    `INSERT OR REPLACE INTO user_sessions(token, userId, username, role, branchId, createdAt, expiresAt)
+     VALUES(?, ?, ?, ?, ?, ?, ?)`,
+    [session.token, session.userId, session.username, session.role,
+     session.branchId ?? null, session.createdAt, expiresAt],
+  );
+}
+
+async function deleteSessionFromDb(token: string): Promise<void> {
+  await run('DELETE FROM user_sessions WHERE token = ?', [token]);
+}
+
+/** Called once at startup to restore sessions from the DB into the in-memory map. */
+export async function restoreActiveSessions(): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    // Clean up expired sessions first
+    await run('DELETE FROM user_sessions WHERE expiresAt < ?', [now]);
+    const rows = await all<{ token: string; userId: number; username: string;
+      role: string; branchId: number | null; createdAt: string }>(
+      'SELECT token, userId, username, role, branchId, createdAt FROM user_sessions',
+    );
+    for (const row of rows) {
+      activeSessions.set(row.token, {
+        token: row.token,
+        userId: row.userId,
+        username: row.username,
+        role: row.role as 'admin' | 'manager' | 'cashier',
+        branchId: row.branchId ?? undefined,
+        createdAt: row.createdAt,
+      });
+    }
+    log.info(`[sessions] Restored ${rows.length} active session(s) from DB.`);
+  } catch (err) {
+    log.warn('[sessions] Could not restore sessions (table may not exist yet):', err);
+  }
+}
 
 // â”€â”€â”€ Internal Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -164,6 +208,10 @@ export async function adjustVariantStock(args: {
 
 // Product count cache
 let productCountCache: { count: number; timestamp: number } | null = null;
+
+export function invalidateProductCountCache(): void {
+  productCountCache = null;
+}
 
 export async function getProductCount(): Promise<number> {
   const now = Date.now();
@@ -359,6 +407,7 @@ export async function updateCustomer(input: CustomerUpdateInput): Promise<Custom
 
 export async function getAdvancedReports(range: DateRange): Promise<AdvancedReports> {
   const seasonFilter = range.season ? ' AND p.season = ? ' : '';
+  const seasonFilterP2 = range.season ? ' AND p2.season = ? ' : '';
   const seasonParam = range.season ? [range.season] : [];
 
   const returnsSummaryRow = await get<{ count: number; totalRefund: number; totalReturnCost: number }>(
@@ -368,7 +417,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       IFNULL(SUM(refundAmountIQD), 0) as totalRefund,
       IFNULL(SUM(totalCostIQD), 0) as totalReturnCost
     FROM returns
-    WHERE date(createdAt) BETWEEN date(?) AND date(?)
+    WHERE date(createdAt, 'localtime') BETWEEN date(?) AND date(?)
   `,
     [range.startDate, range.endDate],
   );
@@ -378,7 +427,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     SELECT IFNULL(SUM(ri.quantity), 0) as count
     FROM return_items ri
     JOIN returns r ON r.id = ri.returnId
-    WHERE date(r.createdAt) BETWEEN date(?) AND date(?)
+    WHERE date(r.createdAt, 'localtime') BETWEEN date(?) AND date(?)
       AND (ri.direction IS NULL OR ri.direction != 'exchange_in')
     `,
     [range.startDate, range.endDate]
@@ -392,37 +441,37 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     WITH daily_sales AS (
       SELECT
-        date(s.saleDate) as date,
+        date(s.saleDate, 'localtime') as date,
         IFNULL(SUM(s.totalIQD), 0) as grossIQD,
         COUNT(*) as orders
       FROM sales s
-      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
-      GROUP BY date(s.saleDate)
+      WHERE date(s.saleDate, 'localtime') BETWEEN date(?1) AND date(?2)
+      GROUP BY date(s.saleDate, 'localtime')
     ),
     daily_cost AS (
       SELECT
-        date(s.saleDate) as date,
+        date(s.saleDate, 'localtime') as date,
         IFNULL(SUM(s.totalIQD - IFNULL(s.profitIQD, 0)), 0) as costIQD
       FROM sales s
-      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
-      GROUP BY date(s.saleDate)
+      WHERE date(s.saleDate, 'localtime') BETWEEN date(?1) AND date(?2)
+      GROUP BY date(s.saleDate, 'localtime')
     ),
     daily_items AS (
       SELECT
-        date(s.saleDate) as date,
+        date(s.saleDate, 'localtime') as date,
         IFNULL(SUM(si.quantity), 0) as itemsSold
       FROM sale_items si
       JOIN sales s ON s.id = si.saleId
-      WHERE date(s.saleDate) BETWEEN date(?1) AND date(?2)
-      GROUP BY date(s.saleDate)
+      WHERE date(s.saleDate, 'localtime') BETWEEN date(?1) AND date(?2)
+      GROUP BY date(s.saleDate, 'localtime')
     ),
     daily_returns AS (
       SELECT
-        date(createdAt) as date,
+        date(createdAt, 'localtime') as date,
         IFNULL(SUM(refundAmountIQD), 0) as returnedIQD
       FROM returns
-      WHERE date(createdAt) BETWEEN date(?1) AND date(?2)
-      GROUP BY date(createdAt)
+      WHERE date(createdAt, 'localtime') BETWEEN date(?1) AND date(?2)
+      GROUP BY date(createdAt, 'localtime')
     ),
     all_dates AS (
       SELECT date FROM daily_sales
@@ -456,7 +505,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     GROUP BY p.name
     ORDER BY quantity DESC
@@ -475,7 +524,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     GROUP BY pv.size
   `,
@@ -492,7 +541,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
     JOIN sales s ON s.id = si.saleId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     GROUP BY pv.color
   `,
@@ -507,7 +556,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
       IFNULL(SUM(s.totalIQD), 0) as amountIQD
     FROM sales s
     LEFT JOIN customers c ON c.id = s.customerId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     GROUP BY c.id
     ORDER BY amountIQD DESC
     LIMIT 10
@@ -519,7 +568,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     SELECT IFNULL(SUM(s.totalIQD), 0) as revenue
     FROM sales s
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
   `,
     [range.startDate, range.endDate],
   );
@@ -528,7 +577,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     SELECT IFNULL(SUM(s.totalIQD - IFNULL(s.profitIQD, 0)), 0) as cost
     FROM sales s
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
   `,
     [range.startDate, range.endDate],
   );
@@ -540,7 +589,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     `,
     [range.startDate, range.endDate, ...seasonParam]
@@ -550,7 +599,7 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     SELECT IFNULL(SUM(amountIQD), 0) as total
     FROM expenses
-    WHERE date(expenseDate) BETWEEN date(?) AND date(?)
+    WHERE date(expenseDate, 'localtime') BETWEEN date(?) AND date(?)
   `,
     [range.startDate, range.endDate],
   );
@@ -619,10 +668,10 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
   const expensesVsSales = await all<ExpensesVsSalesEntry>(
     `
     WITH sales_data AS (
-      SELECT date(saleDate) AS date, IFNULL(SUM(totalIQD), 0) AS salesIQD
+      SELECT date(saleDate, 'localtime') AS date, IFNULL(SUM(totalIQD), 0) AS salesIQD
       FROM sales
-      WHERE date(saleDate) BETWEEN date(?) AND date(?)
-      GROUP BY date(saleDate)
+      WHERE date(saleDate, 'localtime') BETWEEN date(?) AND date(?)
+      GROUP BY date(saleDate, 'localtime')
     ),
     expense_data AS (
       SELECT date(expenseDate) AS date, IFNULL(SUM(amountIQD), 0) AS expensesIQD
@@ -651,9 +700,11 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
     `
     SELECT id, userId, action, entity, entityId, createdAt
     FROM activity_logs
+    WHERE date(createdAt, 'localtime') BETWEEN date(?) AND date(?)
     ORDER BY datetime(createdAt) DESC
     LIMIT 50
   `,
+    [range.startDate, range.endDate],
   );
 
   const inventoryBySupplier = await all<{ supplierName: string; totalQuantity: number; totalValueUSD: number; soldQuantity: number; totalSoldValueUSD: number }>(
@@ -667,14 +718,14 @@ export async function getAdvancedReports(range: DateRange): Promise<AdvancedRepo
         FROM sale_items si
         JOIN product_variants pv2 ON pv2.id = si.variantId
         JOIN products p2 ON p2.id = pv2.productId
-        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilter.replace(/p\./g, 'p2.')}
+        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilterP2}
       ) as soldQuantity,
       (
         SELECT IFNULL(SUM(si.quantity * pv2.avgCostUSD), 0)
         FROM sale_items si
         JOIN product_variants pv2 ON pv2.id = si.variantId
         JOIN products p2 ON p2.id = pv2.productId
-        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilter.replace(/p\./g, 'p2.')}
+        WHERE p2.defaultSupplierId = p.defaultSupplierId ${seasonFilterP2}
       ) as totalSoldValueUSD
     FROM variant_stock vs
     JOIN product_variants pv ON pv.id = vs.variantId
@@ -760,7 +811,7 @@ export async function getSalesBySeason(
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     GROUP BY p.season
     ORDER BY revenueIQD DESC
     `,
@@ -791,7 +842,7 @@ export async function getPeakHoursData(
       COUNT(*) as saleCount,
       IFNULL(SUM(totalIQD), 0) as totalSalesIQD
     FROM sales
-    WHERE date(saleDate) BETWEEN date(?) AND date(?) ${branchFilter}
+    WHERE date(saleDate, 'localtime') BETWEEN date(?) AND date(?) ${branchFilter}
     GROUP BY hour
     ORDER BY hour
     `,
@@ -828,7 +879,7 @@ export async function getPeakDaysData(
       COUNT(*) as saleCount,
       IFNULL(SUM(totalIQD), 0) as totalSalesIQD
     FROM sales
-    WHERE date(saleDate) BETWEEN date(?) AND date(?) ${branchFilter}
+    WHERE date(saleDate, 'localtime') BETWEEN date(?) AND date(?) ${branchFilter}
     GROUP BY dayOfWeek
     ORDER BY dayOfWeek
     `,
@@ -857,7 +908,7 @@ export async function getPeakDaysData(
 export async function getLeastProfitableItems(
   startDate: string,
   endDate: string,
-  exchangeRate: number = 1500,
+  exchangeRate?: number,
   limit: number = 20,
   season?: string | null
 ): Promise<Array<{
@@ -871,6 +922,12 @@ export async function getLeastProfitableItems(
   profitIQD: number;
   marginPercent: number;
 }>> {
+  let activeRate = exchangeRate;
+  if (!activeRate || activeRate <= 0) {
+    const rateObj = await getCurrentExchangeRate();
+    activeRate = rateObj.currentRate?.rate ?? 1500;
+  }
+
   const seasonFilter = season ? ' AND p.season = ? ' : '';
   const seasonParam = season ? [season] : [];
 
@@ -900,14 +957,14 @@ export async function getLeastProfitableItems(
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     GROUP BY pv.id
     HAVING totalSold > 0
     ORDER BY marginPercent ASC
     LIMIT ?
     `,
-    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, ...seasonParam, limit]
+    [activeRate, activeRate, activeRate, startDate, endDate, ...seasonParam, limit]
   );
   return rows;
 }
@@ -915,7 +972,7 @@ export async function getLeastProfitableItems(
 export async function getLeastProfitableSuppliers(
   startDate: string,
   endDate: string,
-  exchangeRate: number = 1500,
+  exchangeRate?: number,
   season?: string | null
 ): Promise<Array<{
   supplierName: string;
@@ -925,6 +982,12 @@ export async function getLeastProfitableSuppliers(
   profitIQD: number;
   marginPercent: number;
 }>> {
+  let activeRate = exchangeRate;
+  if (!activeRate || activeRate <= 0) {
+    const rateObj = await getCurrentExchangeRate();
+    activeRate = rateObj.currentRate?.rate ?? 1500;
+  }
+
   const seasonFilter = season ? ' AND p.season = ? ' : '';
   const seasonParam = season ? [season] : [];
 
@@ -949,13 +1012,13 @@ export async function getLeastProfitableSuppliers(
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
     LEFT JOIN suppliers sup ON sup.id = p.defaultSupplierId
-    WHERE date(s.saleDate) BETWEEN date(?) AND date(?)
+    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
     ${seasonFilter}
     GROUP BY p.defaultSupplierId
     HAVING totalSold > 0
     ORDER BY marginPercent ASC
     `,
-    [exchangeRate, exchangeRate, exchangeRate, startDate, endDate, ...seasonParam]
+    [activeRate, activeRate, activeRate, startDate, endDate, ...seasonParam]
   );
   return rows;
 }
@@ -1030,7 +1093,7 @@ export async function listSaleItems(dateStr: string): Promise<Array<{ name: stri
     JOIN sales s ON s.id = si.saleId
     JOIN product_variants pv ON pv.id = si.variantId
     JOIN products p ON p.id = pv.productId
-    WHERE date(s.saleDate) = date(?)
+    WHERE date(s.saleDate, 'localtime') = date(?)
     GROUP BY pv.id
     ORDER BY quantity DESC
     `,
@@ -1094,6 +1157,9 @@ interface CustomerSaleItemRow {
 
 export async function deleteCustomer(customerId: number): Promise<boolean> {
   try {
+    // Nullify FK references first to preserve historical sale/return records
+    await run('UPDATE sales SET customerId = NULL WHERE customerId = ?', [customerId]);
+    await run('UPDATE returns SET customerId = NULL WHERE customerId = ?', [customerId]);
     await run('DELETE FROM customers WHERE id = ?', [customerId]);
     return true;
   } catch (err) {
@@ -1556,6 +1622,8 @@ export async function createProduct(product: ProductInput): Promise<Product> {
 
     await run('COMMIT');
 
+    productCountCache = null;
+
     return mapVariantRow({
       variantId,
       productId,
@@ -1587,13 +1655,18 @@ export async function createSale(input: SaleInput): Promise<SaleDetail> {
   await run('BEGIN TRANSACTION');
 
   try {
+    const isMixed = input.paymentMethod === 'mixed';
+    const mixedCash = isMixed ? (input.mixedCashIQD ?? input.totalIQD) : 0;
+    const mixedCard = isMixed ? (input.mixedCardIQD ?? 0) : 0;
+
     const saleResult = await runWithResult(
       `
       INSERT INTO sales(
         branchId, cashierId, customerId, employeeId, saleDate,
-        subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD
+        subtotalIQD, discountIQD, totalIQD, paymentMethod, profitIQD,
+        mixedCashIQD, mixedCardIQD
       )
-  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.branchId,
@@ -1610,6 +1683,8 @@ export async function createSale(input: SaleInput): Promise<SaleDetail> {
           (acc, item) => acc + (item.unitCostIQDAtSale ?? 0) * item.quantity,
           0,
         ),
+        mixedCash,
+        mixedCard,
       ],
     );
 
@@ -1795,6 +1870,9 @@ export async function updateExchangeRate(
     [input.rate, effectiveDate, input.note ?? null],
   );
 
+  // Sync to settings table as well for services querying settings directly
+  await setSetting('exchangeRate', String(input.rate));
+
   // IMPORTANT: Invalidate cache immediately
   exchangeRateCache = null;
 
@@ -1883,6 +1961,9 @@ export async function login(username: string, password: string): Promise<LoginRe
   };
   activeSessions.set(token, session);
 
+  // Persist session to DB so it survives app restarts
+  await persistSessionToDb(session);
+
   await logActivity(user.id, 'login', 'user', user.id);
 
   return {
@@ -1900,6 +1981,8 @@ export async function logout(token: string): Promise<void> {
   if (session) {
     await logActivity(session.userId, 'logout', 'user', session.userId);
     activeSessions.delete(token);
+    // Remove from persistent store
+    await deleteSessionFromDb(token);
   }
 }
 
@@ -2408,16 +2491,33 @@ export async function updateProduct(input: ProductUpdateInput): Promise<Product>
     updates.push('updatedAt = CURRENT_TIMESTAMP');
     params.push(input.id);
     await run(`UPDATE products SET ${updates.join(', ')} WHERE id = ? `, params);
+    productCountCache = null;
   }
 
-  // Return updated product
-  const productsResponse = await listProductsLegacy();
-  const updated = productsResponse.products.find((p: Product) => p.id === input.id);
-  if (!updated) {
+  // Query only the updated product's first variant directly — avoids loading the full catalog
+  const variant = await get<ProductVariantRow>(
+    `SELECT
+       pv.id AS variantId, pv.productId,
+       p.name AS productName, p.category, p.season, p.baseCode,
+       s.name AS supplierName, pv.size, pv.color,
+       pv.sku, pv.barcode, pv.defaultPriceIQD,
+       pv.purchaseCostUSD, pv.avgCostUSD, pv.lastPurchaseCostUSD,
+       pv.isActive as variantActive,
+       IFNULL(SUM(vs.quantity), 0) AS stockOnHand
+     FROM product_variants pv
+     JOIN products p ON p.id = pv.productId
+     LEFT JOIN suppliers s ON s.id = p.defaultSupplierId
+     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+     WHERE p.id = ?
+     GROUP BY pv.id
+     ORDER BY pv.id ASC
+     LIMIT 1`,
+    [input.id],
+  );
+  if (!variant) {
     throw new Error('Failed to update product');
   }
-
-  return updated;
+  return mapVariantRow(variant);
 }
 
 export async function updateVariant(input: VariantUpdateInput): Promise<void> {
@@ -2460,6 +2560,7 @@ export async function updateVariant(input: VariantUpdateInput): Promise<void> {
 
   params.push(input.id);
   await run(`UPDATE product_variants SET ${updates.join(', ')} WHERE id = ? `, params);
+  productCountCache = null;
 }
 
 export async function deleteVariant(variantId: number): Promise<void> {
@@ -2479,6 +2580,7 @@ export async function deleteVariant(variantId: number): Promise<void> {
 
   // Delete variant (cascade will handle stock and adjustments)
   await run('DELETE FROM product_variants WHERE id = ?', [variantId]);
+  productCountCache = null;
 }
 
 export async function bulkUpdateProducts(_token: string, payload: { productIds: number[]; season?: string | null }): Promise<void> {
@@ -2488,6 +2590,7 @@ export async function bulkUpdateProducts(_token: string, payload: { productIds: 
   const placeholders = productIds.map(() => '?').join(',');
   const sql = `UPDATE products SET season = ? WHERE id IN (${placeholders})`;
   await run(sql, [season ?? null, ...productIds]);
+  productCountCache = null;
 }
 
 // ==================== RETURN MANAGEMENT ====================
@@ -2563,6 +2666,24 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
 
     const paymentMethod = input.paymentMethod || 'cash';
 
+    // Guard: Prevent cumulative refunds from exceeding the original sale total
+    if (input.saleId && refundAmount > 0) {
+      const origSale = await get<{ totalIQD: number }>('SELECT totalIQD FROM sales WHERE id = ?', [input.saleId]);
+      if (origSale) {
+        const pastRefundsRow = await get<{ totalRefunded: number }>(
+          'SELECT IFNULL(SUM(refundAmountIQD), 0) AS totalRefunded FROM returns WHERE saleId = ?',
+          [input.saleId],
+        );
+        const alreadyRefunded = pastRefundsRow?.totalRefunded ?? 0;
+        const maxRefundable = Math.max(0, origSale.totalIQD - alreadyRefunded);
+        if (refundAmount > maxRefundable) {
+          throw new Error(
+            `مبلغ الاسترجاع (${refundAmount.toLocaleString('en-IQ')} د.ع) يتجاوز الحد الأقصى المتبقي للفاتورة (${maxRefundable.toLocaleString('en-IQ')} د.ع).`,
+          );
+        }
+      }
+    }
+
     const insert = await runWithResult(
       `
       INSERT INTO returns(
@@ -2596,13 +2717,17 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
 
     let totalReturnCost = 0;
 
+    // Fetch exchange rate ONCE before the loop — avoids one DB call per return item
+    const exchangeRateRow = await get<{ rate: number }>('SELECT rate FROM exchange_rates ORDER BY id DESC LIMIT 1');
+    const currentExchangeRate = exchangeRateRow?.rate ?? 1500;
+
     for (const item of input.items) {
       const direction = item.direction ?? 'return';
 
       // Calculate cost for this item
       let itemCost = 0;
       if (item.saleItemId) {
-        // Try to get original cost from sale
+        // Preferred: use the exact cost recorded at time of sale
         const saleItem = await get<{ unitCostIQDAtSale?: number }>('SELECT unitCostIQDAtSale FROM sale_items WHERE id = ?', [item.saleItemId]);
         if (saleItem && saleItem.unitCostIQDAtSale) {
           itemCost = saleItem.unitCostIQDAtSale * item.quantity;
@@ -2610,11 +2735,9 @@ export async function createReturn(input: ReturnInput): Promise<ReturnResponse> 
       }
 
       if (itemCost === 0) {
-        // Fallback to current average cost
+        // Fallback: use current weighted-average cost × pre-fetched exchange rate
         const variant = await get<{ avgCostUSD: number }>('SELECT avgCostUSD FROM product_variants WHERE id = ?', [item.variantId]);
-        const exchangeRate = await get<{ rate: number }>('SELECT rate FROM exchange_rates ORDER BY id DESC LIMIT 1');
-        const rate = exchangeRate?.rate ?? 1500; // Default fallback
-        itemCost = (variant?.avgCostUSD ?? 0) * rate * item.quantity;
+        itemCost = (variant?.avgCostUSD ?? 0) * currentExchangeRate * item.quantity;
       }
 
       if (direction !== 'exchange_in') {
@@ -2716,30 +2839,34 @@ export async function getSaleForReturn(saleId: number): Promise<SaleDetail | nul
   const sale = await getSaleDetail(saleId);
   if (!sale) return null;
 
-  const items = await Promise.all(
-    sale.items.map(async (item) => {
-      const returnedRow = await get<{ totalReturned: number }>(
-        'SELECT IFNULL(SUM(quantity), 0) AS totalReturned FROM return_items WHERE saleItemId = ?',
-        [item.id],
-      );
-      const totalReturned = returnedRow?.totalReturned ?? 0;
-      const remainingQty = Math.max(0, item.quantity - totalReturned);
-      const unitPrice = item.quantity > 0 ? item.lineTotalIQD / item.quantity : 0;
+  if (!sale.items.length) return { ...sale, items: [] };
 
-      return {
-        ...item,
-        originalQuantity: item.quantity,
-        alreadyReturnedQuantity: totalReturned,
-        quantity: remainingQty,
-        lineTotalIQD: remainingQty * unitPrice,
-      };
-    }),
+  // Single batch query instead of one query per item (N+1 fix)
+  const saleItemIds = sale.items.map((item) => item.id).filter((id): id is number => id != null);
+  const placeholders = saleItemIds.map(() => '?').join(', ');
+  const returnedRows = await all<{ saleItemId: number; totalReturned: number }>(
+    `SELECT saleItemId, IFNULL(SUM(quantity), 0) AS totalReturned
+     FROM return_items
+     WHERE saleItemId IN (${placeholders})
+     GROUP BY saleItemId`,
+    saleItemIds,
   );
+  const returnedMap = new Map<number, number>(returnedRows.map((r) => [r.saleItemId, r.totalReturned]));
 
-  return {
-    ...sale,
-    items,
-  };
+  const items = sale.items.map((item) => {
+    const totalReturned = returnedMap.get(item.id!) ?? 0;
+    const remainingQty = Math.max(0, item.quantity - totalReturned);
+    const unitPrice = item.quantity > 0 ? item.lineTotalIQD / item.quantity : 0;
+    return {
+      ...item,
+      originalQuantity: item.quantity,
+      alreadyReturnedQuantity: totalReturned,
+      quantity: remainingQty,
+      lineTotalIQD: remainingQty * unitPrice,
+    };
+  });
+
+  return { ...sale, items };
 }
 
 export async function fetchReturnById(id: number): Promise<ReturnResponse | null> {
@@ -2771,30 +2898,72 @@ export async function fetchReturnById(id: number): Promise<ReturnResponse | null
   };
 }
 
-export async function listReturns(branchId?: number): Promise<ReturnResponse[]> {
-  const query = branchId
-    ? 'SELECT * FROM returns WHERE branchId = ? ORDER BY createdAt DESC'
-    : 'SELECT * FROM returns ORDER BY createdAt DESC';
-  const params = branchId ? [branchId] : [];
+export interface ListReturnsOptions {
+  branchId?: number;
+  range?: DateRange;
+  limit?: number;
+}
 
-  const rows = await all<ReturnRecord>(query, params);
+export async function listReturns(optionsOrBranchId?: number | ListReturnsOptions): Promise<ReturnResponse[]> {
+  let branchId: number | undefined;
+  let range: DateRange | undefined;
+  let limit: number | undefined;
 
-  const returns: ReturnResponse[] = [];
-  for (const row of rows) {
-    const items = await all<ReturnItem>(
-      `
-      SELECT ri.*, p.name as productName, pv.color, pv.size, pv.sku
-      FROM return_items ri
-      LEFT JOIN product_variants pv ON pv.id = ri.variantId
-      LEFT JOIN products p ON p.id = pv.productId
-      WHERE ri.returnId = ?
-      `,
-      [row.id],
-    );
-    returns.push({ ...row, items });
+  if (typeof optionsOrBranchId === 'number') {
+    branchId = optionsOrBranchId;
+  } else if (optionsOrBranchId) {
+    branchId = optionsOrBranchId.branchId;
+    range = optionsOrBranchId.range;
+    limit = optionsOrBranchId.limit;
   }
 
-  return returns;
+  const conditions: string[] = [];
+  const params: SqlValue[] = [];
+
+  if (branchId) {
+    conditions.push('branchId = ?');
+    params.push(branchId);
+  }
+
+  if (range?.startDate && range?.endDate) {
+    conditions.push("date(createdAt, 'localtime') >= date(?) AND date(createdAt, 'localtime') <= date(?)");
+    params.push(range.startDate, range.endDate);
+  } else if (range?.startDate) {
+    conditions.push("date(createdAt, 'localtime') >= date(?)");
+    params.push(range.startDate);
+  } else if (range?.endDate) {
+    conditions.push("date(createdAt, 'localtime') <= date(?)");
+    params.push(range.endDate);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limitClause = limit ? `LIMIT ?` : '';
+  if (limit) params.push(limit);
+
+  const query = `SELECT * FROM returns ${whereClause} ORDER BY createdAt DESC ${limitClause}`;
+  const rows = await all<ReturnRecord>(query, params);
+  if (!rows.length) return [];
+
+  // Single batch query for all items — avoids N+1 (one query per return)
+  const returnIds = rows.map((r) => r.id);
+  const placeholders = returnIds.map(() => '?').join(', ');
+  const allItems = await all<ReturnItem & { returnId: number }>(
+    `SELECT ri.*, p.name as productName, pv.color, pv.size, pv.sku
+     FROM return_items ri
+     LEFT JOIN product_variants pv ON pv.id = ri.variantId
+     LEFT JOIN products p ON p.id = pv.productId
+     WHERE ri.returnId IN (${placeholders})`,
+    returnIds,
+  );
+
+  const itemsByReturn = new Map<number, ReturnItem[]>();
+  for (const item of allItems) {
+    const list = itemsByReturn.get(item.returnId) ?? [];
+    list.push(item);
+    itemsByReturn.set(item.returnId, list);
+  }
+
+  return rows.map((row) => ({ ...row, items: itemsByReturn.get(row.id) ?? [] }));
 }
 
 // --- Expenses ---
@@ -2868,7 +3037,7 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
     IFNULL(SUM(totalIQD), 0) as totalIQD,
     IFNULL(SUM(profitIQD), 0) as profitIQD
       FROM sales
-      WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?) AND branchId = ?
+      WHERE date(saleDate, 'localtime') >= date(?) AND date(saleDate, 'localtime') <= date(?) AND branchId = ?
     `
     : `
       SELECT
@@ -2876,7 +3045,7 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
     IFNULL(SUM(totalIQD), 0) as totalIQD,
     IFNULL(SUM(profitIQD), 0) as profitIQD
       FROM sales
-      WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?)
+      WHERE date(saleDate, 'localtime') >= date(?) AND date(saleDate, 'localtime') <= date(?)
     `;
 
   const todaySalesParams = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
@@ -2892,14 +3061,14 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
   IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
     IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
-      WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?) AND branchId = ?
+      WHERE date(createdAt, 'localtime') >= date(?) AND date(createdAt, 'localtime') <= date(?) AND branchId = ?
     `
     : `
       SELECT
   IFNULL(SUM(refundAmountIQD), 0) as totalReturnsIQD,
     IFNULL(SUM(totalCostIQD), 0) as totalReturnsCostIQD
       FROM returns
-      WHERE date(createdAt) >= date(?) AND date(createdAt) <= date(?)
+      WHERE date(createdAt, 'localtime') >= date(?) AND date(createdAt, 'localtime') <= date(?)
     `;
 
   const todayReturnsParams = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
@@ -2923,13 +3092,13 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
       SELECT IFNULL(SUM(si.quantity), 0) as totalItems
       FROM sale_items si
       JOIN sales s ON s.id = si.saleId
-      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?) AND s.branchId = ?
+      WHERE date(s.saleDate, 'localtime') >= date(?) AND date(s.saleDate, 'localtime') <= date(?) AND s.branchId = ?
     `
     : `
       SELECT IFNULL(SUM(si.quantity), 0) as totalItems
       FROM sale_items si
       JOIN sales s ON s.id = si.saleId
-      WHERE date(s.saleDate) >= date(?) AND date(s.saleDate) <= date(?)
+      WHERE date(s.saleDate, 'localtime') >= date(?) AND date(s.saleDate, 'localtime') <= date(?)
     `;
   const totalItemsParams = branchId ? [startDate, endDate, branchId] : [startDate, endDate];
   const totalItemsRow = await get<{ totalItems: number }>(totalItemsQuery, totalItemsParams);
@@ -2985,14 +3154,14 @@ export async function getDashboardKPIs(branchId?: number, dateRange?: { startDat
     ? `
   SELECT *
     FROM sales
-      WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?) AND branchId = ?
+      WHERE date(saleDate, 'localtime') >= date(?) AND date(saleDate, 'localtime') <= date(?) AND branchId = ?
     ORDER BY saleDate DESC, id DESC
       LIMIT 10
     `
     : `
   SELECT *
     FROM sales
-      WHERE date(saleDate) >= date(?) AND date(saleDate) <= date(?)
+      WHERE date(saleDate, 'localtime') >= date(?) AND date(saleDate, 'localtime') <= date(?)
       ORDER BY saleDate DESC, id DESC
       LIMIT 10
     `;
@@ -3265,6 +3434,8 @@ function mapOnlineOrderRow(row: any, itemRows: any[]): OnlineOrder {
       quantity: r.quantity,
       unitPriceIQD: r.unitPriceIQD,
       lineTotalIQD: r.lineTotalIQD,
+      avgCostUSD: r.avgCostUSD ?? 0,
+      stockOnHand: r.stockOnHand ?? 0,
     })),
   };
 }
@@ -3275,11 +3446,16 @@ async function fetchOnlineOrderItems(orderId: number): Promise<any[]> {
             p.name AS productName,
             pv.color,
             pv.size,
-            pv.sku
+            pv.sku,
+            pv.avgCostUSD,
+            pv.purchaseCostUSD,
+            IFNULL(SUM(vs.quantity), 0) AS stockOnHand
      FROM online_order_items oi
      JOIN product_variants pv ON pv.id = oi.variantId
      JOIN products p ON p.id = pv.productId
-     WHERE oi.orderId = ?`,
+     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+     WHERE oi.orderId = ?
+     GROUP BY oi.id`,
     [orderId],
   );
 }
@@ -3317,11 +3493,16 @@ export async function listOnlineOrders(status?: string): Promise<OnlineOrder[]> 
             p.name AS productName,
             pv.color,
             pv.size,
-            pv.sku
+            pv.sku,
+            pv.avgCostUSD,
+            pv.purchaseCostUSD,
+            IFNULL(SUM(vs.quantity), 0) AS stockOnHand
      FROM online_order_items oi
      JOIN product_variants pv ON pv.id = oi.variantId
      JOIN products p ON p.id = pv.productId
-     WHERE oi.orderId IN (${placeholders})`,
+     LEFT JOIN variant_stock vs ON vs.variantId = pv.id
+     WHERE oi.orderId IN (${placeholders})
+     GROUP BY oi.id`,
     orderIds,
   );
 
@@ -3433,11 +3614,14 @@ export async function confirmOnlineOrder(
          VALUES (?, ?, ?, ?, ?, ?)`,
         [saleId, item.variantId, item.quantity, item.unitPriceIQD, unitCostIQDAtSale, item.lineTotalIQD],
       );
-      // Deduct stock
-      await run(
-        `UPDATE variant_stock SET quantity = quantity - ?
-         WHERE variantId = ? AND branchId = ?`,
-        [item.quantity, item.variantId, order.branchId],
+      // Deduct stock with full audit logging and ensureVariantStockRow guarantee
+      await adjustVariantStockInternal(
+        item.variantId,
+        order.branchId,
+        -item.quantity,
+        'online_sale',
+        `Online Order #${orderId}`,
+        userId,
       );
     }
 
@@ -4008,37 +4192,54 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
     [branchId]
   );
 
-  let shiftStartTime: string;
-  let openingCashIQD = 0;
-
+  let shiftBoundary = '';
   if (lastClosing && lastClosing.closedAt) {
-    shiftStartTime = lastClosing.closedAt;
-    openingCashIQD = Number(lastClosing.actualCashIQD || 0);
-  } else {
-    // Start of current day 00:00:00 local time
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    shiftStartTime = `${todayStr}T00:00:00.000Z`;
-    openingCashIQD = 0;
+    let raw = lastClosing.closedAt.trim();
+    if (raw.includes(' ') && !raw.includes('T')) {
+      raw = raw.replace(' ', 'T') + (raw.endsWith('Z') ? '' : 'Z');
+    }
+    shiftBoundary = raw;
   }
 
   const nowIso = new Date().toISOString();
 
-  // Query sales grouped by paymentMethod since shiftStartTime
-  const salesRows = await all<{ paymentMethod: string; count: number; total: number }>(
-    `SELECT 
-       COALESCE(paymentMethod, 'cash') as paymentMethod,
-       COUNT(*) as count,
-       COALESCE(SUM(totalIQD), 0) as total
-     FROM sales
-     WHERE branchId = ? AND saleDate >= ?
-     GROUP BY paymentMethod`,
-    [branchId, shiftStartTime]
+  // Find the first sale in this shift to know when business activity actually started
+  const firstSale = await get<{ saleDate: string }>(
+    shiftBoundary
+      ? 'SELECT saleDate FROM sales WHERE branchId = ? AND saleDate > ? ORDER BY saleDate ASC LIMIT 1'
+      : 'SELECT saleDate FROM sales WHERE branchId = ? ORDER BY saleDate ASC LIMIT 1',
+    shiftBoundary ? [branchId, shiftBoundary] : [branchId]
   );
+
+  // Query sales strictly since the last shift closing (supports late-night trading past midnight to 2 AM/3 AM)
+  const salesQuery = shiftBoundary
+    ? `SELECT 
+         COALESCE(paymentMethod, 'cash') as paymentMethod,
+         COUNT(*) as count,
+         COALESCE(SUM(totalIQD), 0) as total,
+         COALESCE(SUM(mixedCashIQD), 0) as mixedCash,
+         COALESCE(SUM(mixedCardIQD), 0) as mixedCard
+       FROM sales
+       WHERE branchId = ? AND saleDate > ?
+       GROUP BY paymentMethod`
+    : `SELECT 
+         COALESCE(paymentMethod, 'cash') as paymentMethod,
+         COUNT(*) as count,
+         COALESCE(SUM(totalIQD), 0) as total,
+         COALESCE(SUM(mixedCashIQD), 0) as mixedCash,
+         COALESCE(SUM(mixedCardIQD), 0) as mixedCard
+       FROM sales
+       WHERE branchId = ?
+       GROUP BY paymentMethod`;
+
+  const salesParams = shiftBoundary ? [branchId, shiftBoundary] : [branchId];
+  const salesRows = await all<{ paymentMethod: string; count: number; total: number; mixedCash: number; mixedCard: number }>(salesQuery, salesParams);
 
   let cashSalesIQD = 0;
   let cardSalesIQD = 0;
   let mixedSalesIQD = 0;
+  let mixedSalesCashIQD = 0;
+  let mixedSalesCardIQD = 0;
   let salesCount = 0;
 
   for (const row of salesRows) {
@@ -4053,6 +4254,13 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
       cardSalesIQD += tot;
     } else if (pm === 'mixed') {
       mixedSalesIQD += tot;
+      // If mixedCash or mixedCard was explicitly recorded, use them;
+      // otherwise for legacy sales fallback to 100% cash
+      const hasSplit = Number(row.mixedCash || 0) > 0 || Number(row.mixedCard || 0) > 0;
+      const cashPart = hasSplit ? Number(row.mixedCash || 0) : tot;
+      const cardPart = hasSplit ? Number(row.mixedCard || 0) : 0;
+      mixedSalesCashIQD += cashPart;
+      mixedSalesCardIQD += cardPart;
     } else {
       cashSalesIQD += tot;
     }
@@ -4060,17 +4268,28 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
 
   const totalSalesIQD = cashSalesIQD + cardSalesIQD + mixedSalesIQD;
 
-  // Query returns & exchange collections since shiftStartTime
+  // Query returns & exchange collections strictly since shiftBoundary
+  const returnsQuery = shiftBoundary
+    ? `SELECT 
+         COALESCE(paymentMethod, 'cash') as paymentMethod,
+         COUNT(*) as count,
+         COALESCE(SUM(refundAmountIQD), 0) as refunds,
+         COALESCE(SUM(customerPaidIQD), 0) as customerPaid
+       FROM returns
+       WHERE branchId = ? AND createdAt > ?
+       GROUP BY paymentMethod`
+    : `SELECT 
+         COALESCE(paymentMethod, 'cash') as paymentMethod,
+         COUNT(*) as count,
+         COALESCE(SUM(refundAmountIQD), 0) as refunds,
+         COALESCE(SUM(customerPaidIQD), 0) as customerPaid
+       FROM returns
+       WHERE branchId = ?
+       GROUP BY paymentMethod`;
+
   const returnsRows = await all<{ paymentMethod: string; count: number; refunds: number; customerPaid: number }>(
-    `SELECT 
-       COALESCE(paymentMethod, 'cash') as paymentMethod,
-       COUNT(*) as count,
-       COALESCE(SUM(refundAmountIQD), 0) as refunds,
-       COALESCE(SUM(customerPaidIQD), 0) as customerPaid
-     FROM returns
-     WHERE branchId = ? AND createdAt >= ?
-     GROUP BY paymentMethod`,
-    [branchId, shiftStartTime]
+    returnsQuery,
+    salesParams
   );
 
   let cashRefundsIQD = 0;
@@ -4086,21 +4305,49 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
     }
   }
 
-  // Query expenses taken from cash drawer since shiftStartTime
-  const expensesRows = await all<{ count: number; total: number }>(
-    `SELECT 
-       COUNT(*) as count,
-       COALESCE(SUM(amountIQD), 0) as total
-     FROM expenses
-     WHERE branchId = ? AND (expenseDate >= ? OR expenseDate LIKE ?)`,
-    [branchId, shiftStartTime, `${shiftStartTime.slice(0, 10)}%`]
-  );
+  // Query expenses taken from cash drawer strictly since shiftBoundary
+  const expensesQuery = shiftBoundary
+    ? `SELECT 
+         COUNT(*) as count,
+         COALESCE(SUM(amountIQD), 0) as total
+       FROM expenses
+       WHERE branchId = ? AND expenseDate > ?`
+    : `SELECT 
+         COUNT(*) as count,
+         COALESCE(SUM(amountIQD), 0) as total
+       FROM expenses
+       WHERE branchId = ?`;
 
+  const expensesRows = await all<{ count: number; total: number }>(expensesQuery, salesParams);
   const expensesCount = Number(expensesRows[0]?.count || 0);
   const expensesIQD = Number(expensesRows[0]?.total || 0);
 
+  // Shift Timing & Opening Cash:
+  // If no transactions have occurred yet since the last closing, it's a fresh clean shift with 0 cash
+  let shiftStartTime: string;
+  let openingCashIQD = 0;
+
+  const hasActivity = (salesCount > 0 || returnsCount > 0 || expensesCount > 0);
+
+  if (hasActivity) {
+    shiftStartTime = firstSale?.saleDate || shiftBoundary || nowIso;
+    // If previous closing happened recently (within the last 20 hours), carry over float
+    const hoursSinceLastClose = lastClosing && shiftBoundary
+      ? (new Date(nowIso).getTime() - new Date(shiftBoundary).getTime()) / (1000 * 60 * 60)
+      : 999;
+    if (hoursSinceLastClose <= 20) {
+      openingCashIQD = Number(lastClosing?.actualCashIQD || 0);
+    } else {
+      openingCashIQD = 0;
+    }
+  } else {
+    // Zero activity: clean slate for the new day
+    shiftStartTime = nowIso;
+    openingCashIQD = 0;
+  }
+
   // Expected Cash = Opening Cash + Cash Sales + Mixed Cash Sales + Exchange Cash - Cash Refunds - Expenses
-  const expectedCashIQD = Math.max(0, openingCashIQD + cashSalesIQD + (mixedSalesIQD || 0) + exchangeCashIQD - cashRefundsIQD - expensesIQD);
+  const expectedCashIQD = Math.max(0, openingCashIQD + cashSalesIQD + mixedSalesCashIQD + exchangeCashIQD - cashRefundsIQD - expensesIQD);
 
   return {
     branchId,
@@ -4112,6 +4359,8 @@ export async function getCurrentShiftSummary(branchId: number): Promise<CurrentS
     cashSalesIQD,
     cardSalesIQD,
     mixedSalesIQD,
+    mixedSalesCashIQD,
+    mixedSalesCardIQD,
     totalSalesIQD,
     returnsCount,
     cashRefundsIQD,
@@ -4127,16 +4376,19 @@ export async function closeShift(input: ShiftCloseInput): Promise<ShiftClosingRe
     throw new Error('branchId and cashierId are required to close shift');
   }
 
+  const closedAtIso = new Date().toISOString();
+
   const result = await runWithResult(
     `INSERT INTO shift_closings (
       branchId, cashierId, closedAt, openingCashIQD,
       cashSalesIQD, cardSalesIQD, mixedSalesCashIQD, mixedSalesCardIQD,
       exchangeCashIQD, cashRefundsIQD, expensesIQD,
       expectedCashIQD, actualCashIQD, differenceIQD, notes
-    ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.branchId,
       input.cashierId,
+      closedAtIso,
       input.openingCashIQD || 0,
       input.cashSalesIQD || 0,
       input.cardSalesIQD || 0,

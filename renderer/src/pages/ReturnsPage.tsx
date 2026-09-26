@@ -29,7 +29,7 @@ interface DraftReturnItem {
 }
 
 const ReturnsPage = (): JSX.Element => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const [returns, setReturns] = useState<ReturnResponse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -39,8 +39,8 @@ const ReturnsPage = (): JSX.Element => {
   const [saleLookupId, setSaleLookupId] = useState<string>('');
   const [saleInfo, setSaleInfo] = useState<SaleDetail | null>(null);
   const [form, setForm] = useState<Omit<ReturnInput, 'items'>>({
-    branchId: 1,
-    processedBy: 1,
+    branchId: user?.branchId || 1,
+    processedBy: user?.userId || 1,
     type: 'with_receipt',
     paymentMethod: 'cash',
   });
@@ -100,7 +100,7 @@ const ReturnsPage = (): JSX.Element => {
     try {
       setLoading(true);
       const [returnsResponse, productsResponse, customersResponse] = await Promise.all([
-        window.evaApi.returns.list(token),
+        window.evaApi.returns.list(token, { limit: 200 }),
         window.evaApi.products.list(token),
         window.evaApi.customers.list(token),
       ]);
@@ -220,20 +220,30 @@ const ReturnsPage = (): JSX.Element => {
   const handleAddAllSaleItems = () => {
     if (!saleInfo?.items?.length) return;
     const direction = form.type === 'exchange' ? 'exchange_out' : 'return';
+    const discountRatio = (saleInfo.subtotalIQD > 0 && saleInfo.totalIQD >= 0)
+      ? Math.max(0, Math.min(1, saleInfo.totalIQD / saleInfo.subtotalIQD))
+      : 1;
+
     const newItems: DraftReturnItem[] = saleInfo.items
       .filter((entry) => (entry.quantity ?? 0) > 0)
-      .map((entry) => ({
-        variantId: entry.variantId,
-        saleItemId: entry.id,
-        quantity: entry.quantity,
-        amountIQD: entry.lineTotalIQD,
-        direction,
-        productName: entry.productName,
-        color: entry.color ?? null,
-        size: entry.size ?? null,
-        maxQuantity: entry.quantity,
-        unitPriceIQD: entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0,
-      }));
+      .map((entry) => {
+        const rawUnitPrice = entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0;
+        const effectiveUnitPrice = Math.round(rawUnitPrice * discountRatio);
+        const effectiveLineTotal = Math.round(entry.lineTotalIQD * discountRatio);
+
+        return {
+          variantId: entry.variantId,
+          saleItemId: entry.id,
+          quantity: entry.quantity,
+          amountIQD: effectiveLineTotal,
+          direction,
+          productName: entry.productName,
+          color: entry.color ?? null,
+          size: entry.size ?? null,
+          maxQuantity: entry.quantity,
+          unitPriceIQD: effectiveUnitPrice,
+        };
+      });
     setItems(newItems);
   };
 
@@ -319,7 +329,12 @@ const ReturnsPage = (): JSX.Element => {
     }
   };
 
-  useBarcodeScanner({ onScan: handleBarcodeScan, threshold: 50, minLength: 5 });
+  useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    threshold: 50,
+    minLength: 5,
+    enabled: !showVariantPicker && !printData && !selectedReturnDetail,
+  });
 
   const handleAddSaleItem = (entry: SaleDetail['items'][number]) => {
     if ((entry.quantity ?? 0) <= 0) {
@@ -333,19 +348,26 @@ const ReturnsPage = (): JSX.Element => {
     }
 
     const direction = form.type === 'exchange' ? 'exchange_out' : 'return';
+    const discountRatio = (saleInfo && saleInfo.subtotalIQD > 0 && saleInfo.totalIQD >= 0)
+      ? Math.max(0, Math.min(1, saleInfo.totalIQD / saleInfo.subtotalIQD))
+      : 1;
+    const rawUnitPrice = entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0;
+    const effectiveUnitPrice = Math.round(rawUnitPrice * discountRatio);
+    const effectiveLineTotal = Math.round(entry.lineTotalIQD * discountRatio);
+
     setItems((prev) => [
       ...prev,
       {
         variantId: entry.variantId,
         saleItemId: entry.id,
         quantity: entry.quantity,
-        amountIQD: entry.lineTotalIQD,
+        amountIQD: effectiveLineTotal,
         direction,
         productName: entry.productName,
         color: entry.color ?? null,
         size: entry.size ?? null,
         maxQuantity: entry.quantity,
-        unitPriceIQD: entry.quantity > 0 ? entry.lineTotalIQD / entry.quantity : 0,
+        unitPriceIQD: effectiveUnitPrice,
       },
     ]);
   };
@@ -402,6 +424,8 @@ const ReturnsPage = (): JSX.Element => {
       setError(null);
       const payload: ReturnInput = {
         ...form,
+        branchId: user?.branchId || form.branchId || 1,
+        processedBy: user?.userId || form.processedBy || 1,
         customerId: form.customerId ? Number(form.customerId) : undefined,
         saleId: form.saleId ? Number(form.saleId) : undefined,
         refundAmountIQD: refundAmount,
@@ -653,7 +677,12 @@ const ReturnsPage = (): JSX.Element => {
                     })}
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {saleInfo.discountIQD > 0 && (
+                    <span style={{ fontSize: '0.78rem', color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '0.375rem', fontWeight: 600 }}>
+                      خصم الفاتورة: -{saleInfo.discountIQD.toLocaleString('en-IQ')} د.ع (استرجاع بالسعر الصافي)
+                    </span>
+                  )}
                   <span style={{ fontWeight: 700, color: '#10b981' }}>
                     {t('total') || 'Total'}: <b dir="ltr">{saleInfo.totalIQD.toLocaleString('en-IQ')} IQD</b>
                   </span>

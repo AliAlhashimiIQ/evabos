@@ -12,8 +12,9 @@ export function registerReturnsIpc(): void {
 
   ipcMain.handle(
     'returns:list',
-    requireRole(['admin', 'manager', 'cashier'])(async () => {
-      return listReturns();
+    requireRole(['admin', 'manager', 'cashier'])(async (_event, _session, ...args) => {
+      const options = args[0] as any;
+      return listReturns(options);
     }),
   );
 
