@@ -420,6 +420,7 @@ export interface DateRange {
   startDate: string;
   endDate: string;
   season?: string | null;
+  branchId?: number | null;
 }
 
 // Pagination types

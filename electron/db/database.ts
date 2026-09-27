@@ -1756,6 +1756,14 @@ interface SaleRow {
 }
 
 export async function listSalesByDateRange(range: DateRange): Promise<SalesListResponse> {
+  const conditions = ["date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)"];
+  const params: any[] = [range.startDate, range.endDate];
+
+  if (range.branchId) {
+    conditions.push('s.branchId = ?');
+    params.push(range.branchId);
+  }
+
   const salesRows = await all<any>(
     `
     SELECT
@@ -1764,10 +1772,10 @@ export async function listSalesByDateRange(range: DateRange): Promise<SalesListR
       (SELECT COUNT(*) FROM returns r WHERE r.saleId = s.id) > 0 as isReturned
     FROM sales s
     LEFT JOIN employees e ON e.id = s.employeeId
-    WHERE date(s.saleDate, 'localtime') BETWEEN date(?) AND date(?)
+    WHERE ${conditions.join(' AND ')}
     ORDER BY s.id DESC
     `,
-    [range.startDate, range.endDate],
+    params,
   );
 
   if (!salesRows.length) {

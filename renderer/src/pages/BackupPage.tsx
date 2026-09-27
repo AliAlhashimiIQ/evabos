@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, RotateCcw, Trash2, Database, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
@@ -172,18 +172,15 @@ const BackupPage = (): JSX.Element => {
             <button
               onClick={handleSelectAndRestore}
               disabled={!!restoring || loading}
-              className="BackupPage-createButton"
-              style={{ backgroundColor: '#27ae60' }}
+              className="BackupPage-createButton BackupPage-createButton--restore"
             >
-              {restoring ? t('restoring') : (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <FolderOpen size={16} /> {t('selectBackupFile')}
-                </span>
-              )}
+              <FolderOpen size={16} />
+              <span>{restoring ? t('restoring') : t('selectBackupFile')}</span>
             </button>
           )}
           <button onClick={handleCreateBackup} disabled={creating || loading} className="BackupPage-createButton">
-            {creating ? t('processing') : t('createBackupNow')}
+            <Plus size={16} />
+            <span>{creating ? t('processing') : t('createBackupNow')}</span>
           </button>
         </div>
       </div>
@@ -220,10 +217,13 @@ const BackupPage = (): JSX.Element => {
               {backups.map((backup) => (
                 <tr key={backup.filepath}>
                   <td>
-                    <code className="BackupPage-filename">{backup.filename}</code>
+                    <code className="BackupPage-filename">
+                      <Database size={14} className="BackupPage-filenameIcon" />
+                      <span>{backup.filename}</span>
+                    </code>
                   </td>
-                  <td>{formatFileSize(backup.size)}</td>
-                  <td>{new Date(backup.createdAt).toLocaleString()}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatFileSize(backup.size)}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{new Date(backup.createdAt).toLocaleString()}</td>
                   <td>
                     <div className="BackupPage-actions">
                       {hasRole(['admin']) && (
@@ -231,16 +231,20 @@ const BackupPage = (): JSX.Element => {
                           onClick={() => handleRestore(backup.filepath, backup.filename)}
                           disabled={restoring === backup.filepath || deleting === backup.filepath}
                           className="BackupPage-actionButton BackupPage-actionButton--restore"
+                          title={t('restore')}
                         >
-                          {restoring === backup.filepath ? t('restoring') : t('restore')}
+                          <RotateCcw size={13} />
+                          <span>{restoring === backup.filepath ? t('restoring') : t('restore')}</span>
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(backup.filepath, backup.filename)}
                         disabled={restoring === backup.filepath || deleting === backup.filepath}
                         className="BackupPage-actionButton BackupPage-actionButton--delete"
+                        title={t('delete')}
                       >
-                        {deleting === backup.filepath ? t('deleting') : t('delete')}
+                        <Trash2 size={13} />
+                        <span>{deleting === backup.filepath ? t('deleting') : t('delete')}</span>
                       </button>
                     </div>
                   </td>

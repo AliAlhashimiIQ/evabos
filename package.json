@@ -1,6 +1,6 @@
 {
   "name": "madar-pos",
-  "version": "6.1.2",
+  "version": "6.1.3",
   "productName": "Madar POS",
   "description": "Madar POS Desktop Application - نظام مدار لإدارة المتاجر ونقاط البيع",
   "main": "dist-electron/main.js",

@@ -31,20 +31,23 @@ type DateRange = import('../types/electron').DateRange;
 type PresetRange = 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'allTime' | 'custom';
 
 const SalesHistoryPage = (): JSX.Element => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { saleId } = useParams<{ saleId: string }>();
 
   const [sales, setSales] = useState<SaleDetail[]>([]);
+  const [returnsList, setReturnsList] = useState<import('../types/electron').ReturnResponse[]>([]);
   const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [startDate, setStartDate] = useState(
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  );
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [activePreset, setActivePreset] = useState<PresetRange>('last7');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -72,12 +75,17 @@ const SalesHistoryPage = (): JSX.Element => {
       const range: DateRange = {
         startDate,
         endDate,
+        branchId: user?.branchId ?? undefined,
       };
       const [salesResponse, returnsResponse] = await Promise.all([
         window.evaApi.sales.listByDateRange(token, range),
-        window.evaApi.returns.list(token, { range: { startDate, endDate: new Date().toISOString().split('T')[0] } }),
+        window.evaApi.returns.list(token, {
+          branchId: user?.branchId ?? undefined,
+          range: { startDate, endDate: new Date().toISOString().split('T')[0] },
+        }),
       ]);
       setSales(salesResponse.sales || []);
+      setReturnsList(returnsResponse || []);
 
       const returnedMap = new Map<number, Map<number, number>>();
       for (const ret of returnsResponse || []) {
@@ -172,23 +180,38 @@ const SalesHistoryPage = (): JSX.Element => {
     }
   };
 
+  // Map refunds and refund costs by saleId
+  const { refundsBySaleId, refundCostBySaleId } = useMemo(() => {
+    const refunds = new Map<number, number>();
+    const costs = new Map<number, number>();
+    for (const ret of returnsList) {
+      if (ret.saleId) {
+        refunds.set(ret.saleId, (refunds.get(ret.saleId) || 0) + (ret.refundAmountIQD || 0));
+        costs.set(ret.saleId, (costs.get(ret.saleId) || 0) + ((ret as any).totalCostIQD || 0));
+      }
+    }
+    return { refundsBySaleId: refunds, refundCostBySaleId: costs };
+  }, [returnsList]);
+
+  // Returns created within the current [startDate, endDate] window
+  const periodReturnTotals = useMemo(() => {
+    let refundTotal = 0;
+    let costTotal = 0;
+    for (const ret of returnsList) {
+      if (!ret.createdAt) continue;
+      const d = ret.createdAt.split('T')[0];
+      if (d >= startDate && d <= endDate) {
+        refundTotal += ret.refundAmountIQD || 0;
+        costTotal += (ret as any).totalCostIQD || 0;
+      }
+    }
+    return { refundTotal, costTotal };
+  }, [returnsList, startDate, endDate]);
+
   const handlePrintSummary = async () => {
-    if (sales.length === 0 || !window.evaApi || !token) return;
+    if (sales.length === 0) return;
 
     try {
-      const returnsResponse = await window.evaApi.returns.list(token, {
-        range: { startDate, endDate: new Date().toISOString().split('T')[0] },
-      });
-      const returns = returnsResponse || [];
-
-      const refundsBySaleId = new Map<number, number>();
-      for (const ret of returns) {
-        if (ret.saleId) {
-          const current = refundsBySaleId.get(ret.saleId) || 0;
-          refundsBySaleId.set(ret.saleId, current + (ret.refundAmountIQD || 0));
-        }
-      }
-
       const salesWithNetAmounts = sales.map((sale) => {
         const refundedAmount = refundsBySaleId.get(sale.id) || 0;
         const netTotal = sale.totalIQD - refundedAmount;
@@ -234,15 +257,34 @@ const SalesHistoryPage = (): JSX.Element => {
     });
   }, [sales, searchTerm]);
 
-  // Summary Metrics
+  // Summary Metrics (NET Revenue & NET Profit - matching Dashboard & Print Report)
   const stats = useMemo(() => {
-    const totalRev = filteredSales.reduce((acc, s) => acc + (s.totalIQD || 0), 0);
-    const totalProf = filteredSales.reduce((acc, s) => acc + (s.profitIQD || 0), 0);
+    const isSearching = !!searchTerm.trim();
+
+    let grossRev = 0;
+    let grossProf = 0;
+    let searchRefunds = 0;
+    let searchRefundCosts = 0;
+
+    for (const s of filteredSales) {
+      grossRev += s.totalIQD || 0;
+      grossProf += s.profitIQD || 0;
+      if (isSearching) {
+        searchRefunds += refundsBySaleId.get(s.id) || 0;
+        searchRefundCosts += refundCostBySaleId.get(s.id) || 0;
+      }
+    }
+
+    const totalRefunds = isSearching ? searchRefunds : periodReturnTotals.refundTotal;
+    const totalRefundCost = isSearching ? searchRefundCosts : periodReturnTotals.costTotal;
+
+    const totalRev = Math.max(0, grossRev - totalRefunds);
+    const totalProf = grossProf - (totalRefunds - totalRefundCost);
     const count = filteredSales.length;
     const avgTicket = count > 0 ? Math.round(totalRev / count) : 0;
 
-    return { totalRev, totalProf, count, avgTicket };
-  }, [filteredSales]);
+    return { grossRev, totalRefunds, totalRev, totalProf, count, avgTicket };
+  }, [filteredSales, searchTerm, refundsBySaleId, refundCostBySaleId, periodReturnTotals]);
 
   // Payment Badge Helper
   const renderPaymentBadge = (method?: string | null) => {
@@ -450,8 +492,29 @@ const SalesHistoryPage = (): JSX.Element => {
             <DollarSign size={22} />
           </div>
           <div className="ActivityLogs-kpiData">
-            <span className="SalesHistory-kpiLabel">{t('totalRevenue')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="SalesHistory-kpiLabel">{t('totalRevenue')}</span>
+              {stats.totalRefunds > 0 && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    background: 'var(--bg-subtle, rgba(255,255,255,0.06))',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {t('net')}
+                </span>
+              )}
+            </div>
             <span className="SalesHistory-kpiValue">{stats.totalRev.toLocaleString('en-IQ')} IQD</span>
+            {stats.totalRefunds > 0 && (
+              <span style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px', display: 'block', fontWeight: 500 }}>
+                -{stats.totalRefunds.toLocaleString('en-IQ')} IQD {t('returns')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -473,6 +536,11 @@ const SalesHistoryPage = (): JSX.Element => {
                 ? `-${Math.abs(stats.totalProf).toLocaleString('en-IQ')} IQD`
                 : `${stats.totalProf.toLocaleString('en-IQ')} IQD`}
             </span>
+            {stats.totalRefunds > 0 && (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                {t('afterReturns')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -652,6 +720,11 @@ const SalesHistoryPage = (): JSX.Element => {
 
                     <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
                       {sale.totalIQD.toLocaleString('en-IQ')} IQD
+                      {sale.isReturned && refundsBySaleId.has(sale.id) && refundsBySaleId.get(sale.id)! > 0 && (
+                        <div style={{ fontSize: '11px', color: '#ef4444', fontWeight: 500, marginTop: '2px' }}>
+                          -{refundsBySaleId.get(sale.id)!.toLocaleString('en-IQ')} IQD
+                        </div>
+                      )}
                     </td>
 
                     <td>{renderPaymentBadge(sale.paymentMethod)}</td>
