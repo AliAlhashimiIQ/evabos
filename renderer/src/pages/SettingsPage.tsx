@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext';
+import {
+  useTheme,
+  DARK_TONE_PRESETS,
+  DEFAULT_DARK_TONE_ID,
+  ACCENT_COLOR_PRESETS,
+  DEFAULT_ACCENT_COLOR,
+} from '../contexts/ThemeContext';
 import {
   Palette,
   Moon,
@@ -67,7 +73,18 @@ const SETTINGS_TABS: TabItem[] = [
 const SettingsPage = (): JSX.Element => {
   const { token, hasRole, user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const {
+    theme,
+    setTheme,
+    darkToneId,
+    setDarkToneId,
+    customDarkBg,
+    setCustomDarkBg,
+    resetDarkTheme,
+    accentColor,
+    setAccentColor,
+    resetAccentColor,
+  } = useTheme();
 
   const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
 
@@ -723,6 +740,266 @@ const SettingsPage = (): JSX.Element => {
                     <div className="SettingsPage-optionDesc">{t('lightModeDesc')}</div>
                   </div>
                   {theme === 'light' && <Check size={20} className="SettingsPage-optionCheck" />}
+                </div>
+              </div>
+
+              {/* ─── Dark Mode Surface Tone (Anti-Glare / Reflective Screen Controls) ─── */}
+              {theme === 'dark' && (
+                <div className="SettingsPage-accentSection" style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light, rgba(255, 255, 255, 0.08))' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                        درجة لون الوضع الليلي (Dark Surface & Anti-Glare Tone)
+                      </h3>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                        تحكم بدرجة قتامة الخلفية والبطاقات لتناسب إضاءة المتجر والشاشات العاكسة وتمنع لمعان الزجاج
+                      </p>
+                    </div>
+                    {darkToneId !== DEFAULT_DARK_TONE_ID && (
+                      <button
+                        type="button"
+                        className="SettingsPage-btn"
+                        onClick={resetDarkTheme}
+                        style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <RefreshCcw size={13} />
+                        استعادة الافتراضي
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dark Tone Preset Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                    {DARK_TONE_PRESETS.map((preset) => {
+                      const isSelected = darkToneId === preset.id;
+                      return (
+                        <div
+                          key={preset.id}
+                          onClick={() => setDarkToneId(preset.id)}
+                          style={{
+                            padding: '0.85rem 1rem',
+                            borderRadius: '12px',
+                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            background: preset.bgCard,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.4rem',
+                            transition: 'all 0.18s ease',
+                            boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.4)' : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span
+                                style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  background: preset.bgPrimary,
+                                  border: '2px solid rgba(255,255,255,0.4)',
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <strong style={{ fontSize: '0.88rem', color: '#ffffff' }}>{preset.nameAr}</strong>
+                            </div>
+                            {isSelected && <Check size={16} color="var(--accent-primary)" strokeWidth={3} />}
+                          </div>
+                          <span style={{ fontSize: '0.74rem', color: '#cbd5e1', lineHeight: '1.3' }}>
+                            {preset.descAr}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Background Color Picker */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'var(--bg-input)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', maxWidth: '440px' }}>
+                    <label htmlFor="custom-bg-picker" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
+                      <input
+                        id="custom-bg-picker"
+                        type="color"
+                        value={customDarkBg}
+                        onChange={(e) => setCustomDarkBg(e.target.value)}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          padding: 0,
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: 'transparent',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        لون خلفية مخصص بالكامل:
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customDarkBg.toUpperCase()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                          setCustomDarkBg(val);
+                        }
+                      }}
+                      placeholder="#1E293B"
+                      maxLength={7}
+                      style={{
+                        width: '100px',
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-card)',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'monospace',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        background: customDarkBg,
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        boxShadow: `0 2px 6px ${customDarkBg}44`,
+                        flexShrink: 0,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Accent Color Customizer */}
+              <div className="SettingsPage-accentSection" style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light, rgba(255, 255, 255, 0.08))' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                      لون المظهر المميز (Theme Accent Color)
+                    </h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                      تخصيص اللون الرئيسي للأزرار والتبويبات والعناصر النشطة في كامل النظام
+                    </p>
+                  </div>
+                  {accentColor.toLowerCase() !== DEFAULT_ACCENT_COLOR.toLowerCase() && (
+                    <button
+                      type="button"
+                      className="SettingsPage-btn"
+                      onClick={resetAccentColor}
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <RefreshCcw size={13} />
+                      استعادة الافتراضي
+                    </button>
+                  )}
+                </div>
+
+                {/* Preset Swatches */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                  {ACCENT_COLOR_PRESETS.map((preset) => {
+                    const isSelected = accentColor.toLowerCase() === preset.value.toLowerCase();
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setAccentColor(preset.value)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          padding: '0.6rem 0.85rem',
+                          borderRadius: '10px',
+                          border: isSelected ? `2px solid ${preset.value}` : '1px solid var(--border-color)',
+                          background: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-input)',
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease',
+                          textAlign: 'start',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: preset.value,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: `0 2px 6px ${preset.value}55`,
+                          }}
+                        >
+                          {isSelected && <Check size={12} color="#ffffff" strokeWidth={3} />}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? 700 : 500, color: 'var(--text-primary)' }}>
+                          {preset.label.split(' ')[0]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Color Picker */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'var(--bg-input)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)', maxWidth: '420px' }}>
+                  <label htmlFor="custom-accent-picker" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
+                    <input
+                      id="custom-accent-picker"
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        padding: 0,
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: 'transparent',
+                      }}
+                    />
+                    <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      لون مخصص:
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={accentColor.toUpperCase()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                        setAccentColor(val);
+                      }
+                    }}
+                    placeholder="#3B82F6"
+                    maxLength={7}
+                    style={{
+                      width: '100px',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-card)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      background: accentColor,
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      boxShadow: `0 2px 6px ${accentColor}44`,
+                      flexShrink: 0,
+                    }}
+                  />
                 </div>
               </div>
             </div>

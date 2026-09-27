@@ -1,6 +1,6 @@
 {
   "name": "madar-pos",
-  "version": "6.1.1",
+  "version": "6.1.2",
   "productName": "Madar POS",
   "description": "Madar POS Desktop Application - نظام مدار لإدارة المتاجر ونقاط البيع",
   "main": "dist-electron/main.js",
@@ -44,15 +44,17 @@
       "dist-electron/**/*",
       "renderer/dist/**/*",
       "package.json",
-      "legal/**/*"
+      "legal/**/*",
+      "build/icon.ico",
+      "build/icon.png"
     ],
     "extraFiles": [],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-Setup.${ext}",
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false,
-      "signAndEditExecutable": false
+      "forceCodeSigning": false
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable.${ext}",
@@ -64,6 +66,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Madar POS",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "menuCategory": "Business"

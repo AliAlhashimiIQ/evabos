@@ -49,6 +49,11 @@ import { checkEmailRecoveryOnStartup } from './db/emailReports';
 // Set explicit application name to lock userData directory across updates
 app.setName('Madar POS');
 
+// Enforce Windows Application User Model ID for taskbar grouping and icon binding
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.eva.pos');
+}
+
 // Enforce single application instance (prevent opening multiple windows/tabs)
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
@@ -147,16 +152,38 @@ async function loadWindowContent(targetWindow: BrowserWindow): Promise<void> {
   await targetWindow.loadURL(appUrl);
 }
 
+function getAppIconPath(): string {
+  const isWindows = process.platform === 'win32';
+  const iconFileName = isWindows ? 'icon.ico' : 'icon.png';
+  const candidates = [
+    path.join(app.getAppPath(), 'build', iconFileName),
+    path.join(app.getAppPath(), iconFileName),
+    path.join(process.resourcesPath, 'build', iconFileName),
+    path.join(process.resourcesPath, iconFileName),
+    path.join(__dirname, '../build', iconFileName),
+    path.join(__dirname, '../../build', iconFileName),
+    path.join(app.getAppPath(), 'build', 'icon.png'),
+    path.join(__dirname, '../build', 'icon.png'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.join(__dirname, '../build/icon.png');
+}
+
 async function createWindow(): Promise<void> {
+  const iconPath = getAppIconPath();
+  log.info('[main] Resolved application icon path:', iconPath);
+
   mainWindow = new BrowserWindow({
     title: 'Madar POS - نظام مدار لإدارة المتاجر ونقاط البيع',
     width: 1280,
     height: 850,
     minWidth: 1024,
     minHeight: 700,
-    icon: process.platform === 'win32' && fs.existsSync(path.join(__dirname, '../build/icon.ico'))
-      ? path.join(__dirname, '../build/icon.ico')
-      : path.join(__dirname, '../build/icon.png'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -165,6 +192,14 @@ async function createWindow(): Promise<void> {
       // webSecurity is true by default - do NOT disable it
     },
   });
+
+  if (process.platform === 'win32' && iconPath) {
+    try {
+      mainWindow.setIcon(iconPath);
+    } catch (iconErr) {
+      log.warn('[main] Failed to explicitly set window icon:', iconErr);
+    }
+  }
 
   if (!isDev) {
     mainWindow.removeMenu();

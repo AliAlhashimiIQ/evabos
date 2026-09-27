@@ -38,7 +38,7 @@ const MainLayout = (): JSX.Element => {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [appVersion, setAppVersion] = useState<string>('6.1.1');
+  const [appVersion, setAppVersion] = useState<string>('6.1.2');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   useEffect(() => {

@@ -6,20 +6,20 @@
 
 /* Theme Variables */
 :root[data-theme='dark'] {
-  --bg-primary: #0a0f1d;
-  --bg-secondary: #0d1527;
-  --bg-tertiary: rgba(19, 28, 49, 0.7);
-  --bg-card: #131c31;
-  --bg-input: #101828;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #cbd5e1;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.05);
-  --shadow: rgba(0, 0, 0, 0.45);
-  --hover-bg: rgba(255, 255, 255, 0.06);
+  --bg-primary: #0f172a;        /* Deep matte slate - prevents reflective mirror glare */
+  --bg-secondary: #131c31;      /* Elevated structural layer for sidebar/nav */
+  --bg-tertiary: #1c273d;       /* Sub-containers and table headers */
+  --bg-card: #1e293b;           /* Elevated high-contrast card surface (Slate 800) */
+  --bg-input: #151f33;          /* Distinct, visible inputs with defined contrast */
+  --text-primary: #ffffff;      /* Pure crisp white for maximum legibility */
+  --text-secondary: #cbd5e1;    /* Slate 300 - clear high contrast even under ambient glare */
+  --text-tertiary: #94a3b8;     /* Slate 400 - clean muted metadata */
+  --border-color: rgba(255, 255, 255, 0.14); /* Crisp, visible structure */
+  --border-light: rgba(255, 255, 255, 0.08); /* Secondary subtle dividers */
+  --shadow: rgba(0, 0, 0, 0.55);
+  --hover-bg: rgba(255, 255, 255, 0.08);
   --accent-primary: #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.25);
+  --accent-glow: rgba(59, 130, 246, 0.35);
   color-scheme: dark;
 }
 
