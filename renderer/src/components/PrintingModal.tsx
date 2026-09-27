@@ -216,17 +216,17 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
   <body>
     <div class="header">
       ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="text-align: center; margin-bottom: 10px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" /></div>` : ''}
-      <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
+      <div class="store-name">${payload.storeName || 'Madar Store'}</div>
       <div class="store-info">
-        ${payload.branchName ? `<div><strong>Branch:</strong> ${payload.branchName}</div>` : ''}
+        ${payload.branchName ? `<div><strong>الفرع:</strong> ${payload.branchName}</div>` : ''}
         ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
-        ${payload.branchPhone ? `<div>Tel: ${payload.branchPhone}</div>` : ''}
+        ${payload.branchPhone ? `<div>هاتف: ${payload.branchPhone}</div>` : ''}
       </div>
       <div class="sale-header">
         <h2>${payload.title}</h2>
         <p><strong>${payload.subtitle}</strong></p>
-        <p>Date: ${formatReceiptDateTime(payload.saleDate)}</p>
-        ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
+        <p>التاريخ: ${formatReceiptDateTime(payload.saleDate)}</p>
+        ${payload.showCustomer && payload.customer ? `<p><strong>الزبون:</strong> ${payload.customer}</p>` : ''}
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 10px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 100%; height: auto;" /></div>` : ''}
     </div>
@@ -234,10 +234,10 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     <table>
       <thead>
         <tr>
-          <th style="width: 38%; text-align: right; padding-right: 2px;">Item</th>
-          <th style="width: 12%; text-align: center;">Qty</th>
-          <th style="width: 25%; text-align: center;">Price</th>
-          <th style="width: 25%; text-align: left;">Total</th>
+          <th style="width: 38%; text-align: right; padding-right: 2px;">المادة</th>
+          <th style="width: 12%; text-align: center;">العدد</th>
+          <th style="width: 25%; text-align: center;">السعر</th>
+          <th style="width: 25%; text-align: left;">المجموع</th>
         </tr>
       </thead>
       <tbody>
@@ -260,7 +260,7 @@ const generateReceiptHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         ${payload.totals.map(total => `
           <tr>
             <td style="text-align: right;">${total.label}</td>
-            <td style="text-align: left;">${total.value.toLocaleString('en-IQ')} IQD</td>
+            <td style="text-align: left;">${total.value.toLocaleString('en-IQ')} د.ع</td>
           </tr>
         `).join('')}
       </tbody>
@@ -452,17 +452,17 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     <div class="header">
       <div class="header-left">
         ${payload.showLogo && payload.logoBase64 ? `<div class="logo" style="margin-bottom: 15px;"><img src="${payload.logoBase64}" alt="Logo" style="max-width: 200px; max-height: 100px; object-fit: contain;" /></div>` : ''}
-        <div class="store-name">${payload.storeName || 'EVA CLOTHING'}</div>
+        <div class="store-name">${payload.storeName || 'Madar Store'}</div>
         <div class="store-info">
-          ${payload.branchName ? `<div><strong>Branch:</strong> ${payload.branchName}</div>` : ''}
+          ${payload.branchName ? `<div><strong>الفرع:</strong> ${payload.branchName}</div>` : ''}
           ${payload.branchAddress ? `<div>${payload.branchAddress}</div>` : ''}
-          ${payload.branchPhone ? `<div>Tel: ${payload.branchPhone}</div>` : ''}
+          ${payload.branchPhone ? `<div>هاتف: ${payload.branchPhone}</div>` : ''}
         </div>
         <div class="sale-header">
           <h2>${payload.title}</h2>
           <p><strong>${payload.subtitle}</strong></p>
-          <p>Date: ${formatReceiptDateTime(payload.saleDate)}</p>
-          ${payload.showCustomer && payload.customer ? `<p><strong>Customer:</strong> ${payload.customer}</p>` : ''}
+          <p>التاريخ: ${formatReceiptDateTime(payload.saleDate)}</p>
+          ${payload.showCustomer && payload.customer ? `<p><strong>الزبون:</strong> ${payload.customer}</p>` : ''}
         </div>
       </div>
       ${payload.showBarcode && barcodeDataUrl ? `<div class="barcode" style="text-align: center; margin: 20px 0;"><img src="${barcodeDataUrl}" alt="Barcode" style="max-width: 300px; height: auto;" /></div>` : ''}
@@ -470,11 +470,11 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     <table>
       <thead>
         <tr>
-          <th>Item</th>
-          <th>Variant</th>
-          <th style="text-align: center;">Qty</th>
-          <th style="text-align: right;">Unit Price</th>
-          <th style="text-align: right;">Total</th>
+          <th>المادة / المنتج</th>
+          <th>النوع / المقاس</th>
+          <th style="text-align: center;">الكمية</th>
+          <th style="text-align: right;">سعر المفرد</th>
+          <th style="text-align: right;">الإجمالي</th>
         </tr>
       </thead>
       <tbody>
@@ -484,10 +484,10 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
               <strong>${item.name}</strong>
               ${item.directionTag ? `<div style="font-size: 11px; color: #555; margin-top: 2px;">${item.directionTag}</div>` : ''}
             </td>
-            <td style="color: #666;">${item.variant ?? 'N/A'}</td>
+            <td style="color: #666;">${item.variant ?? '—'}</td>
             <td style="text-align: center;">${item.quantity}</td>
-            <td style="text-align: right;">${item.priceIQD.toLocaleString('en-IQ')} IQD</td>
-            <td style="text-align: right;"><strong>${(item.priceIQD * item.quantity).toLocaleString('en-IQ')} IQD</strong></td>
+            <td style="text-align: right;">${item.priceIQD.toLocaleString('en-IQ')} د.ع</td>
+            <td style="text-align: right;"><strong>${(item.priceIQD * item.quantity).toLocaleString('en-IQ')} د.ع</strong></td>
           </tr>
         `).join('')}
       </tbody>
@@ -497,7 +497,7 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
         ${payload.totals.map(total => `
           <tr>
             <td>${total.label}</td>
-            <td style="text-align:right;">${total.value.toLocaleString('en-IQ')} IQD</td>
+            <td style="text-align:right;">${total.value.toLocaleString('en-IQ')} د.ع</td>
           </tr>
         `).join('')}
       </tbody>
@@ -509,8 +509,8 @@ const generateInvoiceHtml = (payload: ReceiptPayload, barcodeDataUrl?: string): 
     ` : ''}
     ${payload.paymentMethod || (payload.showCashier && payload.cashierName) ? `
       <div class="payment-section">
-        ${payload.paymentMethod ? `<p><strong>Payment Method:</strong> ${payload.paymentMethod.toUpperCase()}</p>` : ''}
-        ${payload.showCashier && payload.cashierName ? `<p><strong>Cashier:</strong> ${payload.cashierName}</p>` : ''}
+        ${payload.paymentMethod ? `<p><strong>طريقة الدفع:</strong> ${payload.paymentMethod === 'cash' ? 'نقداً (كاش)' : payload.paymentMethod.toUpperCase()}</p>` : ''}
+        ${payload.showCashier && payload.cashierName ? `<p><strong>الكاشير:</strong> ${payload.cashierName}</p>` : ''}
       </div>
     ` : ''}
     <div class="footer">${payload.footer}</div>
@@ -654,7 +654,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
   const [cashierInfo, setCashierInfo] = useState<{ username: string } | null>(null);
   const [isAutoPrinting, setIsAutoPrinting] = useState(false);
 
-  // Custom Receipt Settings
+  // Custom Receipt Settings with immediate localStorage fallback
   const [customSettings, setCustomSettings] = useState<{
     storeName: string;
     footerText: string;
@@ -663,45 +663,80 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
     showBarcode: boolean;
     showCashier: boolean;
     showCustomer: boolean;
-  }>({
-    storeName: 'EVA CLOTHING',
-    footerText: DEFAULT_STORE_FOOTER,
-    showLogo: false,
-    logoBase64: '',
-    showBarcode: true,
-    showCashier: true,
-    showCustomer: true,
+  }>(() => {
+    const localStore = typeof window !== 'undefined' ? localStorage.getItem('receipt_store_name') : null;
+    const localFooter = typeof window !== 'undefined' ? localStorage.getItem('receipt_footer_text') : null;
+    const localShowLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_show_logo') : null;
+    const localLogoBase64 = typeof window !== 'undefined' ? localStorage.getItem('receipt_logo_base64') : null;
+    const localShowBarcode = typeof window !== 'undefined' ? localStorage.getItem('receipt_show_barcode') : null;
+    const localShowCashier = typeof window !== 'undefined' ? localStorage.getItem('receipt_show_cashier') : null;
+    const localShowCustomer = typeof window !== 'undefined' ? localStorage.getItem('receipt_show_customer') : null;
+
+    return {
+      storeName: localStore || 'Madar Store',
+      footerText: localFooter || DEFAULT_STORE_FOOTER,
+      showLogo: localShowLogo === 'true',
+      logoBase64: localLogoBase64 || '',
+      showBarcode: localShowBarcode !== 'false',
+      showCashier: localShowCashier !== 'false',
+      showCustomer: localShowCustomer === 'true',
+    };
   });
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  // Fetch custom settings
+  // Fetch custom settings from database
   useEffect(() => {
-    if (!visible || !window.electronAPI) return;
+    if (!visible) return;
 
+    let mounted = true;
     const loadSettings = async () => {
       try {
-        const storeName = await window.electronAPI.getSetting('receipt_store_name');
-        const footerText = await window.electronAPI.getSetting('receipt_footer_text');
-        const showLogo = await window.electronAPI.getSetting('receipt_show_logo');
-        const logoBase64 = await window.electronAPI.getSetting('receipt_logo_base64');
-        const showBarcode = await window.electronAPI.getSetting('receipt_show_barcode');
-        const showCashier = await window.electronAPI.getSetting('receipt_show_cashier');
-        const showCustomer = await window.electronAPI.getSetting('receipt_show_customer');
+        let storeName = null;
+        let footerText = null;
+        let showLogo = null;
+        let logoBase64 = null;
+        let showBarcode = null;
+        let showCashier = null;
+        let showCustomer = null;
+
+        if (window.electronAPI) {
+          storeName = await window.electronAPI.getSetting('receipt_store_name');
+          footerText = await window.electronAPI.getSetting('receipt_footer_text');
+          showLogo = await window.electronAPI.getSetting('receipt_show_logo');
+          logoBase64 = await window.electronAPI.getSetting('receipt_logo_base64');
+          showBarcode = await window.electronAPI.getSetting('receipt_show_barcode');
+          showCashier = await window.electronAPI.getSetting('receipt_show_cashier');
+          showCustomer = await window.electronAPI.getSetting('receipt_show_customer');
+        }
+
+        if (!mounted) return;
+
+        const effectiveStore = storeName || localStorage.getItem('receipt_store_name') || 'Madar Store';
+        const effectiveFooter = footerText || localStorage.getItem('receipt_footer_text') || DEFAULT_STORE_FOOTER;
+
+        if (storeName) localStorage.setItem('receipt_store_name', storeName);
+        if (footerText) localStorage.setItem('receipt_footer_text', footerText);
 
         setCustomSettings({
-          storeName: storeName || 'EVA CLOTHING',
-          footerText: footerText || DEFAULT_STORE_FOOTER,
-          showLogo: showLogo === 'true',
-          logoBase64: logoBase64 || '',
-          showBarcode: showBarcode !== 'false',
-          showCashier: showCashier !== 'false',
-          showCustomer: showCustomer !== 'false',
+          storeName: effectiveStore,
+          footerText: effectiveFooter,
+          showLogo: showLogo !== null ? showLogo === 'true' : localStorage.getItem('receipt_show_logo') === 'true',
+          logoBase64: logoBase64 || localStorage.getItem('receipt_logo_base64') || '',
+          showBarcode: showBarcode !== null ? showBarcode !== 'false' : localStorage.getItem('receipt_show_barcode') !== 'false',
+          showCashier: showCashier !== null ? showCashier !== 'false' : localStorage.getItem('receipt_show_cashier') !== 'false',
+          showCustomer: showCustomer !== null ? showCustomer === 'true' : localStorage.getItem('receipt_show_customer') === 'true',
         });
+        setSettingsLoaded(true);
       } catch (err) {
         console.error('Failed to load custom receipt settings:', err);
+        if (mounted) setSettingsLoaded(true);
       }
     };
 
     loadSettings();
+    return () => {
+      mounted = false;
+    };
   }, [visible]);
 
   // Fetch sale detail if sale doesn't have product names
@@ -789,8 +824,8 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
       });
 
       return {
-        title: 'EVA POS Receipt',
-        subtitle: `Sale #${sale.id} `,
+        title: 'إيصال مبيعات (فاتورة)',
+        subtitle: `وصل مبيعات رقم #${sale.id}`,
         items,
         totals: [
           { label: 'المجموع الفرعي', value: sale.subtotalIQD },
@@ -798,8 +833,8 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
           { label: 'المجموع الكلي', value: sale.totalIQD },
         ],
         footer: customSettings.footerText,
-        barcodeValue: `SALE${sale.id} `,
-        customer: sale.customerId ? `Customer #${sale.customerId} ` : undefined,
+        barcodeValue: `SALE${sale.id}`,
+        customer: sale.customerId ? `زبون رقم #${sale.customerId}` : undefined,
         branchName: branchInfo?.name,
         branchAddress: branchInfo?.address || undefined,
         branchPhone: branchInfo?.phone || undefined,
@@ -852,7 +887,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
 
       return {
         title: isExchange ? 'إيصال استبدال بضاعة' : 'إيصال إرجاع بضاعة',
-        subtitle: `${isExchange ? 'Exchange' : 'Return'} #${returnData.id}`,
+        subtitle: `${isExchange ? 'استبدال' : 'إرجاع'} رقم #${returnData.id}`,
         items: returnData.items.map((item) => {
           let dirTag = '';
           if (item.direction === 'exchange_in') {
@@ -925,7 +960,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
         subtitle: `إغلاق الصندوق #${zReportData.id}`,
         items: [],
         totals: totalsList,
-        footer: `EVA POS • نتيجة الجرد: ${statusStr}`,
+        footer: `Madar POS • نتيجة الجرد: ${statusStr}`,
         barcodeValue: `ZREP${zReportData.id}`,
         branchName: zReportData.branchName || branchInfo?.name,
         branchAddress: branchInfo?.address || undefined,
@@ -942,7 +977,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
       };
     }
     return null;
-  }, [sale, returnData, zReportData, saleDetail, branchInfo, cashierInfo, user]);
+  }, [sale, returnData, zReportData, saleDetail, branchInfo, cashierInfo, user, customSettings]);
 
   // Prevent body scroll when modal is open (simplified to avoid focus issues)
   useEffect(() => {
@@ -1009,16 +1044,31 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
     }
   }, [payload, visible]);
 
+  // Construct active payload guaranteed to have latest customSettings
+  const activePayload = useMemo(() => {
+    if (!payload) return null;
+    return {
+      ...payload,
+      storeName: customSettings.storeName || 'Madar Store',
+      footer: customSettings.footerText || DEFAULT_STORE_FOOTER,
+      showLogo: customSettings.showLogo,
+      logoBase64: customSettings.logoBase64,
+      showBarcode: customSettings.showBarcode,
+      showCashier: customSettings.showCashier,
+      showCustomer: customSettings.showCustomer,
+    };
+  }, [payload, customSettings]);
+
   const handlePrint = async (silent: boolean = true) => {
     if (!window.evaApi) return;
 
     let html = '';
     if (salesSummary) {
       html = generateSalesSummaryHtml(salesSummary);
-    } else if (payload) {
+    } else if (activePayload) {
       html = template === 'receipt'
-        ? generateReceiptHtml(payload, barcodeDataUrl)
-        : generateInvoiceHtml(payload, barcodeDataUrl);
+        ? generateReceiptHtml(activePayload, barcodeDataUrl)
+        : generateInvoiceHtml(activePayload, barcodeDataUrl);
     } else {
       return;
     }
@@ -1038,7 +1088,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
   // Handle auto-print
   useEffect(() => {
     const shouldAutoPrint = visible && autoPrint && !isAutoPrinting;
-    const hasData = (payload && (barcodeDataUrl || !payload.barcodeValue)) || salesSummary;
+    const hasData = (activePayload && (barcodeDataUrl || !activePayload.barcodeValue)) || salesSummary;
 
     // If we have a sale, wait for saleDetail to be loaded so product names are available
     if (sale && !saleDetail && !salesSummary) {
@@ -1047,6 +1097,11 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
 
     // Wait for printers to load so we have the correct printer selected
     if (printers.length === 0) {
+      return;
+    }
+
+    // Wait for settings to load if not already retrieved from localStorage
+    if (!settingsLoaded && !localStorage.getItem('receipt_store_name')) {
       return;
     }
 
@@ -1060,10 +1115,10 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
         let html = '';
         if (salesSummary) {
           html = generateSalesSummaryHtml(salesSummary);
-        } else if (payload) {
+        } else if (activePayload) {
           html = template === 'receipt'
-            ? generateReceiptHtml(payload, barcodeDataUrl)
-            : generateInvoiceHtml(payload, barcodeDataUrl);
+            ? generateReceiptHtml(activePayload, barcodeDataUrl)
+            : generateInvoiceHtml(activePayload, barcodeDataUrl);
         } else {
           return;
         }
@@ -1084,7 +1139,7 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
       };
       performAutoPrint();
     }
-  }, [visible, autoPrint, isAutoPrinting, payload, barcodeDataUrl, printers, printerName, salesSummary, sale, saleDetail]);
+  }, [visible, autoPrint, isAutoPrinting, activePayload, barcodeDataUrl, printers, printerName, salesSummary, sale, saleDetail, settingsLoaded]);
 
   // Reset auto-print state when modal closes
   useEffect(() => {
@@ -1093,17 +1148,17 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
     }
   }, [visible]);
 
-  if (!visible || (!payload && !salesSummary)) {
+  if (!visible || (!activePayload && !salesSummary)) {
     return null;
   }
 
   let previewHtml = '';
   if (salesSummary) {
     previewHtml = generateSalesSummaryHtml(salesSummary);
-  } else if (payload) {
+  } else if (activePayload) {
     previewHtml = template === 'receipt'
-      ? generateReceiptHtml(payload, barcodeDataUrl)
-      : generateInvoiceHtml(payload, barcodeDataUrl);
+      ? generateReceiptHtml(activePayload, barcodeDataUrl)
+      : generateInvoiceHtml(activePayload, barcodeDataUrl);
   }
 
   return (
@@ -1124,23 +1179,23 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
       ) : (
         <div className="PrintingModal-card">
           <header>
-            <h3>Print {salesSummary ? 'Report' : (zReportData ? 'Z-Report' : (sale ? 'Receipt' : 'Return'))}</h3>
-            <button onClick={onClose} aria-label="Close"><X size={18} /></button>
+            <h3>طباعة {salesSummary ? 'التقرير' : (zReportData ? 'تقرير Z-Report' : (sale ? 'الإيصال' : 'إيصال المرتجع'))}</h3>
+            <button onClick={onClose} aria-label="إغلاق" title="إغلاق"><X size={18} /></button>
           </header>
           <div className="PrintingModal-controls">
             {!salesSummary && (
               <label>
-                Template
+                نموذج الطباعة
                 <select value={template} onChange={(event) => setTemplate(event.target.value as 'receipt' | 'invoice')}>
-                  <option value="receipt">80mm Receipt</option>
-                  <option value="invoice">A4 Invoice</option>
+                  <option value="receipt">إيصال حراري (80mm)</option>
+                  <option value="invoice">فاتورة قياسية (A4)</option>
                 </select>
               </label>
             )}
             <label>
-              Printer
+              الطابعة
               <select value={printerName ?? ''} onChange={(event) => setPrinterName(event.target.value || null)}>
-                <option value="">System Prompt</option>
+                <option value="">الافتراضي / نافذة النظام</option>
                 {printers.map((printer) => (
                   <option key={printer.name} value={printer.name}>
                     {printer.name}
@@ -1152,15 +1207,15 @@ const PrintingModal = ({ visible, onClose, sale, returnData, salesSummary, zRepo
           <div className="PrintingModal-preview">
             <iframe 
               srcDoc={previewHtml} 
-              title="Receipt Preview"
+              title="معاينة الطباعة"
               style={{ width: '100%', height: '100%', minHeight: '400px', border: 'none', background: '#fff', borderRadius: '0.5rem' }}
             />
           </div>
           <div className="PrintingModal-actions">
             <button className="ghost" onClick={onClose}>
-              Close
+              إغلاق
             </button>
-            <button onClick={() => handlePrint(false)}>Print</button>
+            <button onClick={() => handlePrint(false)}>طباعة</button>
           </div>
         </div>
       )}

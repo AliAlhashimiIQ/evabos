@@ -9,7 +9,6 @@ release/
 *.db-journal
 .vscode/
 .idea/
-build/icon.ico
 
 # License generator tool - KEEP PRIVATE, do not commit to public repos
 # Remove this line only if you're using a private repository

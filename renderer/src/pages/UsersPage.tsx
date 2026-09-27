@@ -123,7 +123,7 @@ const UsersPage = (): JSX.Element => {
         await window.evaApi.users.update(token, updateData);
       } else {
         if (!userFormData.username || !userFormData.password) {
-          alert('Username and password are required');
+          alert(t('pleaseEnterUsernameAndPassword') || 'اسم المستخدم وكلمة المرور مطلوبان');
           return;
         }
         const createData: UserInput = {
@@ -305,9 +305,11 @@ const UsersPage = (): JSX.Element => {
                   <tr key={user.id}>
                     <td>{user.username}</td>
                     <td>
-                      <span className={`Users-role Users-role-${user.role}`}>{user.role}</span>
+                      <span className={`Users-role Users-role-${user.role}`}>
+                        {user.role === 'admin' ? (t('adminRole') || 'مسؤول النظام (Admin)') : user.role === 'manager' ? (t('managerRole') || 'مدير') : (t('cashierRole') || 'كاشير')}
+                      </span>
                     </td>
-                    <td>{user.branchName || t('notAssigned') || 'No Branch'}</td>
+                    <td>{user.branchName || t('noBranch') || 'بدون فرع (عام)'}</td>
                     <td>
                       {user.isLocked ? (
                         <span className="Users-status Users-status-locked">{t('locked') || 'Locked'}</span>
@@ -395,7 +397,7 @@ const UsersPage = (): JSX.Element => {
           <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Users-modalHeader">
               <h2>{editingUser ? t('edit') : t('add')} {t('users')}</h2>
-              <button className="Users-modalClose" onClick={handleCloseUserModal} aria-label="Close">
+              <button className="Users-modalClose" onClick={handleCloseUserModal} aria-label="إغلاق" title="إغلاق">
                 <X size={18} />
               </button>
             </div>
@@ -412,7 +414,7 @@ const UsersPage = (): JSX.Element => {
               </div>
 
               <div className="Users-formGroup">
-                <label>{t('password')} {editingUser ? '(leave blank to keep current)' : '*'}</label>
+                <label>{t('password')} {editingUser ? (t('leaveBlankToKeepCurrent') || '(اتركه فارغاً للإبقاء على كلمة المرور الحالية)') : '*'}</label>
                 <input
                   type="password"
                   value={userFormData.password}
@@ -422,7 +424,7 @@ const UsersPage = (): JSX.Element => {
               </div>
 
               <div className="Users-formGroup">
-                <label>{t('role') || 'Role'} *</label>
+                <label>{t('role') || 'الصلاحية / الدور'} *</label>
                 <select
                   value={userFormData.role}
                   onChange={(e) =>
@@ -430,14 +432,14 @@ const UsersPage = (): JSX.Element => {
                   }
                   required
                 >
-                  <option value="cashier">Cashier</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  <option value="cashier">{t('cashierRole') || 'كاشير (محاسب)'}</option>
+                  <option value="manager">{t('managerRole') || 'مدير'}</option>
+                  <option value="admin">{t('adminRole') || 'مسؤول النظام (Admin)'}</option>
                 </select>
               </div>
 
               <div className="Users-formGroup">
-                <label>{t('branch') || 'Branch'}</label>
+                <label>{t('branch') || 'الفرع'}</label>
                 <select
                   value={userFormData.branchId ?? ''}
                   onChange={(e) =>
@@ -447,7 +449,7 @@ const UsersPage = (): JSX.Element => {
                     })
                   }
                 >
-                  <option value="">No Branch</option>
+                  <option value="">{t('noBranch') || 'بدون فرع (عام)'}</option>
                   {branches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name}
@@ -464,7 +466,7 @@ const UsersPage = (): JSX.Element => {
                       checked={userFormData.isLocked || false}
                       onChange={(e) => setUserFormData({ ...userFormData, isLocked: e.target.checked })}
                     />
-                    {t('lockPOS') || 'Lock Account'}
+                    {t('lockAccount') || 'قفل الحساب'}
                   </label>
                 </div>
               )}
@@ -488,7 +490,7 @@ const UsersPage = (): JSX.Element => {
           <div className="Users-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Users-modalHeader">
               <h2>{editingEmployee ? t('editEmployee') : t('addEmployee')}</h2>
-              <button className="Users-modalClose" onClick={handleCloseEmployeeModal} aria-label="Close">
+              <button className="Users-modalClose" onClick={handleCloseEmployeeModal} aria-label="إغلاق" title="إغلاق">
                 <X size={18} />
               </button>
             </div>

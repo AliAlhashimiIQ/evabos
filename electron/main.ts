@@ -47,12 +47,12 @@ import {
 import { checkEmailRecoveryOnStartup } from './db/emailReports';
 
 // Set explicit application name to lock userData directory across updates
-app.setName('EVA POS');
+app.setName('Madar POS');
 
 // Enforce single application instance (prevent opening multiple windows/tabs)
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
-  log.warn('[main] Another instance of EVA POS is already running. Terminating duplicate instance.');
+  log.warn('[main] Another instance of Madar POS is already running. Terminating duplicate instance.');
   app.quit();
 } else {
   app.on('second-instance', () => {
@@ -149,12 +149,14 @@ async function loadWindowContent(targetWindow: BrowserWindow): Promise<void> {
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
+    title: 'Madar POS - نظام مدار لإدارة المتاجر ونقاط البيع',
     width: 1280,
     height: 850,
     minWidth: 1024,
     minHeight: 700,
-    autoHideMenuBar: true, // Hide menu bar (File, Edit, View, etc.)
-    icon: path.join(__dirname, '../build/icon.png'), // App icon
+    icon: process.platform === 'win32' && fs.existsSync(path.join(__dirname, '../build/icon.ico'))
+      ? path.join(__dirname, '../build/icon.ico')
+      : path.join(__dirname, '../build/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

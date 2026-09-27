@@ -127,7 +127,7 @@ const SettingsPage = (): JSX.Element => {
   const [otpError, setOtpError] = useState<string | null>(null);
 
   // Receipt Settings
-  const [receiptStoreName, setReceiptStoreName] = useState('EVA CLOTHING');
+  const [receiptStoreName, setReceiptStoreName] = useState('Madar Store');
   const [receiptFooterText, setReceiptFooterText] = useState('لا يوجد تبديل ولا يوجد استرجاع');
   const [receiptShowLogo, setReceiptShowLogo] = useState(false);
   const [receiptLogoBase64, setReceiptLogoBase64] = useState('');
@@ -268,6 +268,21 @@ const SettingsPage = (): JSX.Element => {
   };
 
   const loadReceiptSettings = async () => {
+    const localStore = localStorage.getItem('receipt_store_name');
+    if (localStore) setReceiptStoreName(localStore);
+    const localFooter = localStorage.getItem('receipt_footer_text');
+    if (localFooter) setReceiptFooterText(localFooter);
+    const localShowLogo = localStorage.getItem('receipt_show_logo');
+    if (localShowLogo) setReceiptShowLogo(localShowLogo === 'true');
+    const localLogoBase64 = localStorage.getItem('receipt_logo_base64');
+    if (localLogoBase64) setReceiptLogoBase64(localLogoBase64);
+    const localShowBarcode = localStorage.getItem('receipt_show_barcode');
+    if (localShowBarcode) setReceiptShowBarcode(localShowBarcode !== 'false');
+    const localShowCashier = localStorage.getItem('receipt_show_cashier');
+    if (localShowCashier) setReceiptShowCashier(localShowCashier !== 'false');
+    const localShowCustomer = localStorage.getItem('receipt_show_customer');
+    if (localShowCustomer) setReceiptShowCustomer(localShowCustomer === 'true');
+
     if (!window.electronAPI) return;
     try {
       const storeName = await window.electronAPI.getSetting('receipt_store_name');
@@ -278,13 +293,34 @@ const SettingsPage = (): JSX.Element => {
       const showCashier = await window.electronAPI.getSetting('receipt_show_cashier');
       const showCustomer = await window.electronAPI.getSetting('receipt_show_customer');
 
-      if (storeName) setReceiptStoreName(storeName);
-      if (footerText) setReceiptFooterText(footerText);
-      if (showLogo) setReceiptShowLogo(showLogo === 'true');
-      if (logoBase64) setReceiptLogoBase64(logoBase64);
-      if (showBarcode) setReceiptShowBarcode(showBarcode !== 'false');
-      if (showCashier) setReceiptShowCashier(showCashier !== 'false');
-      if (showCustomer) setReceiptShowCustomer(showCustomer === 'true');
+      if (storeName) {
+        setReceiptStoreName(storeName);
+        localStorage.setItem('receipt_store_name', storeName);
+      }
+      if (footerText) {
+        setReceiptFooterText(footerText);
+        localStorage.setItem('receipt_footer_text', footerText);
+      }
+      if (showLogo !== null && showLogo !== undefined) {
+        setReceiptShowLogo(showLogo === 'true');
+        localStorage.setItem('receipt_show_logo', showLogo);
+      }
+      if (logoBase64 !== null && logoBase64 !== undefined) {
+        setReceiptLogoBase64(logoBase64);
+        localStorage.setItem('receipt_logo_base64', logoBase64);
+      }
+      if (showBarcode !== null && showBarcode !== undefined) {
+        setReceiptShowBarcode(showBarcode !== 'false');
+        localStorage.setItem('receipt_show_barcode', showBarcode);
+      }
+      if (showCashier !== null && showCashier !== undefined) {
+        setReceiptShowCashier(showCashier !== 'false');
+        localStorage.setItem('receipt_show_cashier', showCashier);
+      }
+      if (showCustomer !== null && showCustomer !== undefined) {
+        setReceiptShowCustomer(showCustomer === 'true');
+        localStorage.setItem('receipt_show_customer', showCustomer);
+      }
     } catch (err) {
       console.error('Failed to load receipt settings:', err);
     }
@@ -393,7 +429,21 @@ const SettingsPage = (): JSX.Element => {
   };
 
   const handleSaveReceiptSettings = async () => {
-    if (!window.electronAPI) return;
+    // Save to localStorage immediately so all components see it synchronously
+    localStorage.setItem('receipt_store_name', receiptStoreName);
+    localStorage.setItem('receipt_footer_text', receiptFooterText);
+    localStorage.setItem('receipt_show_logo', receiptShowLogo ? 'true' : 'false');
+    localStorage.setItem('receipt_logo_base64', receiptLogoBase64);
+    localStorage.setItem('receipt_show_barcode', receiptShowBarcode ? 'true' : 'false');
+    localStorage.setItem('receipt_show_cashier', receiptShowCashier ? 'true' : 'false');
+    localStorage.setItem('receipt_show_customer', receiptShowCustomer ? 'true' : 'false');
+
+    if (!window.electronAPI) {
+      setReceiptMessage(t('receiptSettingsSaved') || 'تم حفظ إعدادات الفاتورة بنجاح!');
+      setTimeout(() => setReceiptMessage(null), 3000);
+      return;
+    }
+
     try {
       setReceiptSaving(true);
       setReceiptMessage(null);
@@ -404,10 +454,10 @@ const SettingsPage = (): JSX.Element => {
       await window.electronAPI.setSetting('receipt_show_barcode', receiptShowBarcode ? 'true' : 'false');
       await window.electronAPI.setSetting('receipt_show_cashier', receiptShowCashier ? 'true' : 'false');
       await window.electronAPI.setSetting('receipt_show_customer', receiptShowCustomer ? 'true' : 'false');
-      setReceiptMessage(t('receiptSettingsSaved') || 'Receipt settings saved successfully!');
+      setReceiptMessage(t('receiptSettingsSaved') || 'تم حفظ إعدادات الفاتورة بنجاح!');
       setTimeout(() => setReceiptMessage(null), 3000);
     } catch (err) {
-      setReceiptMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setReceiptMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setReceiptSaving(false);
     }
@@ -418,7 +468,7 @@ const SettingsPage = (): JSX.Element => {
     if (!file) return;
 
     if (file.size > 500 * 1024) {
-      alert('Logo file is too large. Please use an image smaller than 500KB.');
+      alert('حجم الشعار كبير جداً. يرجى اختيار صورة أصغر من 500 كيلوبايت.');
       return;
     }
 
@@ -444,10 +494,10 @@ const SettingsPage = (): JSX.Element => {
         emailEnabled: emailEnabled,
         sendTime: emailSendTime,
       });
-      setEmailMessage(t('emailSettingsSaved') || 'Email settings saved successfully!');
+      setEmailMessage(t('emailSettingsSaved') || 'تم حفظ إعدادات البريد بنجاح!');
       setTimeout(() => setEmailMessage(null), 3000);
     } catch (err) {
-      setEmailMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setEmailMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setEmailSaving(false);
     }
@@ -460,12 +510,12 @@ const SettingsPage = (): JSX.Element => {
       setEmailMessage(null);
       const result = (await window.evaApi.email.sendTest(token)) as { success: boolean; error?: string };
       if (result.success) {
-        setEmailMessage(t('testEmailSuccess') || 'Test email sent! Check your inbox.');
+        setEmailMessage(t('testEmailSuccess') || 'تم إرسال بريد تجريبي بنجاح! تفقد صندوق الوارد.');
       } else {
-        setEmailMessage(result.error || t('testEmailFailed') || 'Email not sent. Please check settings.');
+        setEmailMessage(result.error || t('testEmailFailed') || 'فشل في إرسال البريد التجريبي. تأكد من صحة البيانات.');
       }
     } catch (err) {
-      setEmailMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setEmailMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setEmailTesting(false);
     }
@@ -483,10 +533,10 @@ const SettingsPage = (): JSX.Element => {
         notifyOnSale: telegramNotifyOnSale,
         notifyOnClose: telegramNotifyOnClose,
       });
-      setTelegramMessage(t('telegramSettingsSaved') || 'Telegram settings saved successfully!');
+      setTelegramMessage(t('telegramSettingsSaved') || 'تم حفظ إعدادات إشعارات تيليجرام بنجاح!');
       setTimeout(() => setTelegramMessage(null), 3000);
     } catch (err) {
-      setTelegramMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setTelegramMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setTelegramSaving(false);
     }
@@ -506,12 +556,12 @@ const SettingsPage = (): JSX.Element => {
       });
       const result = (await window.evaApi.telegram.sendTest(token)) as { success: boolean; error?: string };
       if (result.success) {
-        setTelegramMessage(t('testTelegramSuccess') || 'Test message sent! Check your Telegram.');
+        setTelegramMessage(t('testTelegramSuccess') || 'تم إرسال رسالة الاختبار بنجاح! تفقد تطبيق تيليجرام.');
       } else {
-        setTelegramMessage(result.error || t('testTelegramFailed') || 'Failed to send test message.');
+        setTelegramMessage(result.error || t('testTelegramFailed') || 'فشل في إرسال رسالة الاختبار عبر تيليجرام.');
       }
     } catch (err) {
-      setTelegramMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setTelegramMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setTelegramTesting(false);
     }
@@ -524,12 +574,12 @@ const SettingsPage = (): JSX.Element => {
       setTelegramMessage(null);
       const result = (await window.evaApi.telegram.sendDailyReportNow(token)) as { success: boolean; error?: string };
       if (result.success) {
-        setTelegramMessage(t('telegramReportSent') || 'Daily report and database backup sent to Telegram!');
+        setTelegramMessage(t('telegramReportSent') || 'تم إرسال التقرير اليومي والنسخة الاحتياطية إلى تيليجرام بنجاح!');
       } else {
-        setTelegramMessage(result.error || 'Failed to send report & backup to Telegram.');
+        setTelegramMessage(result.error || 'فشل في إرسال التقرير والنسخة الاحتياطية إلى تيليجرام.');
       }
     } catch (err) {
-      setTelegramMessage('Error: ' + (err instanceof Error ? err.message : String(err)));
+      setTelegramMessage('خطأ: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setTelegramReporting(false);
     }
@@ -1076,7 +1126,7 @@ const SettingsPage = (): JSX.Element => {
                           type="button"
                           className="SettingsPage-inputAction"
                           onClick={() => copyToClipboard(telegramChatId, 'chatId')}
-                          title="Copy Chat ID"
+                          title="نسخ معرف المحادثة"
                         >
                           {copiedKey === 'chatId' ? <Check size={16} style={{ color: '#10b981' }} /> : <Copy size={16} />}
                         </button>
@@ -1424,7 +1474,7 @@ const SettingsPage = (): JSX.Element => {
                         <option value="">{t('systemDefault') || 'طابعة الويندوز الافتراضية (System Default)'}</option>
                         {systemPrinters.map((p) => (
                           <option key={p.name} value={p.name}>
-                            {p.name} {p.isDefault ? `(${t('default') || 'Default'})` : ''}
+                            {p.name} {p.isDefault ? `(${t('default') || 'افتراضي'})` : ''}
                           </option>
                         ))}
                       </select>
@@ -1451,7 +1501,7 @@ const SettingsPage = (): JSX.Element => {
                         <option value="">{t('systemDefault') || 'طابعة الويندوز الافتراضية (System Default)'}</option>
                         {systemPrinters.map((p) => (
                           <option key={p.name} value={p.name}>
-                            {p.name} {p.isDefault ? `(${t('default') || 'Default'})` : ''}
+                            {p.name} {p.isDefault ? `(${t('default') || 'افتراضي'})` : ''}
                           </option>
                         ))}
                       </select>
@@ -1536,7 +1586,7 @@ const SettingsPage = (): JSX.Element => {
                         type="text"
                         value={receiptStoreName}
                         onChange={(e) => setReceiptStoreName(e.target.value)}
-                        placeholder="EVA CLOTHING"
+                        placeholder="Madar Store"
                       />
                     </div>
 
@@ -1638,7 +1688,7 @@ const SettingsPage = (): JSX.Element => {
                           className="SettingsPage-btn secondary"
                           onClick={() => document.getElementById('logo-upload-input')?.click()}
                         >
-                          <Upload size={16} /> {t('uploadLogo') || 'Upload Logo'}
+                          <Upload size={16} /> {t('uploadLogo') || 'رفع الشعار'}
                         </button>
 
                         {receiptLogoBase64 && (
@@ -1648,15 +1698,15 @@ const SettingsPage = (): JSX.Element => {
                             onClick={() => setReceiptLogoBase64('')}
                             style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
                           >
-                            <Trash2 size={14} /> {t('remove') || 'Remove'}
+                            <Trash2 size={14} /> {t('remove') || 'إزالة'}
                           </button>
                         )}
                       </div>
                     )}
 
                     {receiptMessage && (
-                      <div className={`SettingsPage-message ${receiptMessage.includes('Error') ? 'error' : 'success'}`}>
-                        {receiptMessage.includes('Error') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+                      <div className={`SettingsPage-message ${receiptMessage.includes('Error') || receiptMessage.includes('خطأ') ? 'error' : 'success'}`}>
+                        {receiptMessage.includes('Error') || receiptMessage.includes('خطأ') ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
                         <span>{receiptMessage}</span>
                       </div>
                     )}
@@ -1685,7 +1735,7 @@ const SettingsPage = (): JSX.Element => {
                         <img src={receiptLogoBase64} alt="Store Logo" className="ReceiptPreview-logo" />
                       )}
 
-                      <div className="ReceiptPreview-storeName">{receiptStoreName || 'EVA CLOTHING'}</div>
+                      <div className="ReceiptPreview-storeName">{receiptStoreName || 'Madar Store'}</div>
                       <div style={{ fontSize: '11px', color: '#555' }}>بغداد - المنصور - شارع 14 رمضان</div>
                       <div style={{ fontSize: '10px', color: '#777', marginTop: '2px' }}>{new Date().toLocaleString('ar-IQ')}</div>
 
@@ -1851,8 +1901,8 @@ const SettingsPage = (): JSX.Element => {
                     <AlertTriangle size={20} />
                   </div>
                   <div className="SettingsPage-cardHeaderTitle">
-                    <h2 style={{ color: '#ef4444' }}>{t('dangerZone') || 'Danger Zone'}</h2>
-                    <p>{t('systemResetDesc') || 'Reset system and wipe all sales, inventory, and transaction records'}</p>
+                    <h2 style={{ color: '#ef4444' }}>{t('dangerZone') || 'منطقة العمليات الحرجة'}</h2>
+                    <p>{t('systemResetDesc') || 'إعادة ضبط النظام ومسح جميع سجلات المبيعات والمخزون والعمليات'}</p>
                   </div>
                 </div>
               </div>

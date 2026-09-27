@@ -63,7 +63,7 @@ const InventoryAdjustModal = ({
               {variant.productName} • {[variant.color, variant.size].filter(Boolean).join(' / ') || '—'}
             </p>
           </div>
-          <button className="InventoryAdjustModal-closeBtn" onClick={onClose} aria-label="Close">
+          <button className="InventoryAdjustModal-closeBtn" onClick={onClose} aria-label="إغلاق" title="إغلاق">
             <X size={18} />
           </button>
         </header>

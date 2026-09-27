@@ -6,51 +6,55 @@
 
 /* Theme Variables */
 :root[data-theme='dark'] {
-  --bg-primary: #0f172a;
-  --bg-secondary: #0b1220;
-  --bg-tertiary: rgba(15, 23, 42, 0.7);
-  --bg-card: rgba(15, 23, 42, 0.6);
-  --bg-input: rgba(15, 23, 42, 0.9);
+  --bg-primary: #0a0f1d;
+  --bg-secondary: #0d1527;
+  --bg-tertiary: rgba(19, 28, 49, 0.7);
+  --bg-card: #131c31;
+  --bg-input: #101828;
   --text-primary: #f8fafc;
-  --text-secondary: rgba(248, 250, 252, 0.65);
-  --text-tertiary: rgba(226, 232, 240, 0.9);
-  --border-color: rgba(148, 163, 184, 0.2);
-  --border-light: rgba(248, 250, 252, 0.08);
-  --shadow: rgba(15, 23, 42, 0.45);
-  --hover-bg: rgba(148, 163, 184, 0.15);
+  --text-secondary: #94a3b8;
+  --text-tertiary: #cbd5e1;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --shadow: rgba(0, 0, 0, 0.45);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --accent-primary: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.25);
   color-scheme: dark;
 }
 
 :root[data-theme='light'] {
-  --bg-primary: #f1f5f9;
-  --bg-secondary: #e2e8f0;
-  --bg-tertiary: #f8fafc;
-  --bg-card: #fafbfc;
-  --bg-input: #fafbfc;
-  --text-primary: #1e293b;
-  --text-secondary: rgba(30, 41, 59, 0.7);
-  --text-tertiary: rgba(30, 41, 59, 0.85);
-  --border-color: rgba(30, 41, 59, 0.15);
-  --border-light: rgba(30, 41, 59, 0.1);
-  --shadow: rgba(0, 0, 0, 0.1);
-  --hover-bg: rgba(30, 41, 59, 0.08);
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --border-color: rgba(226, 232, 240, 0.9);
+  --border-light: rgba(241, 245, 249, 0.95);
+  --shadow: rgba(15, 23, 42, 0.06);
+  --hover-bg: rgba(241, 245, 249, 0.85);
+  --accent-primary: #2563eb;
+  --accent-glow: rgba(37, 99, 235, 0.15);
   color-scheme: light;
 }
 
 html,
 body {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
 }
 
 /* RTL Support */
 [dir="rtl"] {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Cairo', 'Amiri', 'Tajawal', sans-serif;
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
 }
 
 [dir="rtl"] body {
@@ -61,6 +65,23 @@ body {
 [dir="rtl"] textarea,
 [dir="rtl"] select {
   text-align: right;
+}
+
+/* Sleek minimalist scrollbars (macOS / iOS style) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
 }
 
 code {

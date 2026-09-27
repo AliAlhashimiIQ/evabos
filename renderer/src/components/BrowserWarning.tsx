@@ -10,30 +10,28 @@ export function BrowserWarning(): JSX.Element | null {
   }
 
   return (
-    <div className="BrowserWarning">
+    <div className="BrowserWarning" dir="rtl">
       <div className="BrowserWarning-content">
         <div className="BrowserWarning-icon"><AlertTriangle size={48} /></div>
-        <h2>This App Must Run in Electron</h2>
+        <h2>يجب تشغيل هذا التطبيق داخل نافذة Electron المكتبية</h2>
         <p>
-          It looks like you&apos;re opening this app in a browser. This application is designed to run as a <strong>desktop application</strong> that
-          must run in Electron.
+          يبدو أنك تحاول فتح هذا النظام في متصفح ويب عادي. هذا النظام مصمم ليعمل كـ <strong>تطبيق مكتبي مخصص</strong> داخل بيئة Electron لربط الطابعات وأجهزة الباركود وقواعد البيانات المحلية.
         </p>
         <div className="BrowserWarning-steps">
-          <h3>How to Run Correctly:</h3>
+          <h3>طريقة التشغيل الصحيحة:</h3>
           <ol>
-            <li>Close this browser tab</li>
-            <li>Open PowerShell/Command Prompt in the project folder</li>
-            <li>Run: <code>npm run dev</code></li>
-            <li>Wait for the Electron window to open automatically</li>
-            <li>Use the Electron window (not the browser)</li>
+            <li>أغلق علامة تبويب المتصفح هذه.</li>
+            <li>افتح موجه الأوامر (PowerShell / Command Prompt) في مجلد المشروع.</li>
+            <li>نفذ الأمر: <code dir="ltr">npm run dev</code></li>
+            <li>انتظر حتى تفتح نافذة البرنامج المكتبية تلقائياً.</li>
+            <li>استخدم نافذة البرنامج المكتبية مباشرة (وليس المتصفح).</li>
           </ol>
         </div>
         <div className="BrowserWarning-note">
-          <strong>Note:</strong> The Electron window will open automatically when you run <code>npm run dev</code>. Do
-          not open http://localhost:5174 in your browser.
+          <strong>ملاحظة:</strong> ستفتح نافذة النظام تلقائياً بعد تشغيل الأمر <code dir="ltr">npm run dev</code>. لا تقم بفتح الرابط داخل المتصفح يدوياً.
         </div>
       </div>
-    </div >
+    </div>
   );
 }
 

@@ -51,7 +51,13 @@ const resolveDbPath = (): string => {
             fs.mkdirSync(userDataDir, { recursive: true });
           }
           fs.copyFileSync(altPath, userDataPath);
-          log.info('[db] MIGRATION: Successfully migrated database to:', userDataPath);
+          if (fs.existsSync(altPath + '-wal')) {
+            fs.copyFileSync(altPath + '-wal', userDataPath + '-wal');
+          }
+          if (fs.existsSync(altPath + '-shm')) {
+            fs.copyFileSync(altPath + '-shm', userDataPath + '-shm');
+          }
+          log.info('[db] MIGRATION: Successfully migrated database and WAL to:', userDataPath);
           break;
         } catch (migrationErr) {
           log.error('[db] MIGRATION: Failed to copy database from', altPath, migrationErr);

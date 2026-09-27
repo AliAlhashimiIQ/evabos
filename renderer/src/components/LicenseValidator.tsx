@@ -31,7 +31,7 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
       }
     } catch (err) {
       console.error('License check failed:', err);
-      setStatus({ valid: false, reason: 'System error during validation' });
+      setStatus({ valid: false, reason: 'خطأ في النظام أثناء التحقق من الترخيص' });
     } finally {
       setChecking(false);
     }
@@ -57,10 +57,10 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
           setSuccess(false);
         }, 1500);
       } else {
-        setError(res.error || 'Activation failed');
+        setError(res.error || 'فشل تفعيل الترخيص');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError('حدث خطأ غير متوقع أثناء التفعيل');
     } finally {
       setActivating(false);
     }
@@ -68,14 +68,14 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
 
   const copyMachineId = () => {
     navigator.clipboard.writeText(machineId);
-    alert('Machine ID copied to clipboard!');
+    alert('تم نسخ معرف الجهاز إلى الحافظة!');
   };
 
   if (checking) {
     return (
       <div className="LicenseValidator-loading">
         <div className="LicenseValidator-spinner"></div>
-        <p>Validating license...</p>
+        <p>جاري التحقق من الترخيص...</p>
       </div>
     );
   }
@@ -84,37 +84,39 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
     return (
       <div className="LicenseValidator-error">
         <div className="LicenseValidator-overlay">
-          <div className="LicenseCard">
+          <div className="LicenseCard" dir="rtl">
             <div className="LicenseCard-header">
               <div className="LicenseCard-icon"><ShieldCheck size={48} /></div>
-              <h1>Product Activation</h1>
-              <p>Please activate your copy of EVA POS to continue.</p>
+              <h1>تفعيل النظام</h1>
+              <p>يرجى تفعيل نسختك من نظام Madar POS للمتابعة.</p>
             </div>
 
             <div className="LicenseCard-body">
               {error && <div className="LicenseCard-alert error">{error}</div>}
-              {success && <div className="LicenseCard-alert success">License Activated! Reloading...</div>}
+              {success && <div className="LicenseCard-alert success">تم تفعيل الترخيص بنجاح! جاري إعادة التحميل...</div>}
 
               <div className="MachineInfo">
-                <label>Your Machine ID</label>
-                <div className="MachineInfo-row">
+                <label>معرف هذا الجهاز (Machine ID)</label>
+                <div className="MachineInfo-row" dir="ltr">
                   <code>{machineId}</code>
-                  <button type="button" onClick={copyMachineId} title="Copy ID"><Copy size={16} /></button>
+                  <button type="button" onClick={copyMachineId} title="نسخ المعرف"><Copy size={16} /></button>
                 </div>
-                <small>Send this ID to your provider to receive your license key.</small>
+                <small>أرسل هذا المعرف إلى المزود لاستلام مفتاح التفعيل الخاص بك.</small>
               </div>
 
               <form onSubmit={handleActivate}>
                 <div className="LicenseInput">
-                  <label htmlFor="license-key">License Key</label>
+                  <label htmlFor="license-key">مفتاح الترخيص (License Key)</label>
                   <input
                     id="license-key"
                     type="text"
-                    placeholder="EVA-XXXX-XXXX-XXXX-XXXX"
+                    placeholder="MADAR-XXXX-XXXX-XXXX-XXXX"
                     value={licenseKey}
                     onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
                     disabled={activating || success}
                     required
+                    dir="ltr"
+                    style={{ textAlign: 'center', letterSpacing: '1px' }}
                   />
                 </div>
 
@@ -123,13 +125,13 @@ export function LicenseValidator({ children }: { children: React.ReactNode }): J
                   className="ActivateButton"
                   disabled={activating || success || !licenseKey}
                 >
-                  {activating ? 'Activating...' : 'Activate System'}
+                  {activating ? 'جاري التفعيل...' : 'تفعيل النظام'}
                 </button>
               </form>
             </div>
 
             <div className="LicenseCard-footer">
-              <p>Need help? Contact <a href="mailto:support@evapos.com">support@evapos.com</a></p>
+              <p>هل تحتاج إلى مساعدة؟ تواصل معنا: <a href="mailto:support@evapos.com">support@evapos.com</a></p>
             </div>
           </div>
         </div>

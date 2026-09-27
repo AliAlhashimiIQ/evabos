@@ -418,7 +418,7 @@ function getCompanionHtml(): string {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#f1f5f9">
-  <title>EVA POS — الماسح الميداني</title>
+  <title>Madar POS — الماسح الميداني</title>
   <script src="/vendor/html5-qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1724,7 +1724,7 @@ function ensureWindowsFirewallRule(port: number): void {
   if (process.platform !== 'win32') return;
   try {
     const ports = `${port - 1}-${port}`;
-    const cmd = `netsh advfirewall firewall show rule name="EVA POS Mobile Companion" >nul 2>&1 || netsh advfirewall firewall add rule name="EVA POS Mobile Companion" dir=in action=allow protocol=TCP localport=${ports} profile=private,domain`;
+    const cmd = `netsh advfirewall firewall show rule name="Madar POS Mobile Companion" >nul 2>&1 || netsh advfirewall firewall add rule name="Madar POS Mobile Companion" dir=in action=allow protocol=TCP localport=${ports} profile=private,domain`;
     exec(cmd, () => {});
   } catch {}
 }

@@ -17,7 +17,7 @@ export function PosLockOverlay(): JSX.Element | null {
 
   const handleUnlock = async () => {
     if (!canUnlock) {
-      setError('Only admin or manager can unlock POS');
+      setError('المسؤول أو المدير فقط يمكنهما إلغاء القفل');
       return;
     }
     setUnlocking(true);
@@ -26,34 +26,40 @@ export function PosLockOverlay(): JSX.Element | null {
       await unlockPos();
       setPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unlock POS');
+      setError(err instanceof Error ? err.message : 'فشل في إلغاء قفل نقطة البيع');
     } finally {
       setUnlocking(false);
     }
   };
 
+  const getRoleLabel = (role: string) => {
+    if (role === 'admin') return 'مسؤول النظام';
+    if (role === 'manager') return 'مدير';
+    return 'كاشير';
+  };
+
   return (
-    <div className="PosLockOverlay">
+    <div className="PosLockOverlay" dir="rtl">
       <div className="PosLockOverlay-content">
         <div className="PosLockOverlay-icon">
           <Lock size={44} />
         </div>
-        <h2>POS Locked</h2>
-        <p>The POS system is currently locked.</p>
+        <h2>نقطة البيع مقفلة</h2>
+        <p>نظام نقطة البيع مقفل حالياً لأسباب أمنية.</p>
         {canUnlock ? (
           <div className="PosLockOverlay-unlock">
-            <p>You have permission to unlock the system.</p>
+            <p>لديك الصلاحية لإلغاء قفل النظام.</p>
             {error && <div className="PosLockOverlay-error">{error}</div>}
             <button onClick={handleUnlock} disabled={unlocking} className="PosLockOverlay-button">
-              {unlocking ? 'Unlocking...' : 'Unlock POS'}
+              {unlocking ? 'جاري إلغاء القفل...' : 'إلغاء قفل نقطة البيع'}
             </button>
           </div>
         ) : (
-          <p className="PosLockOverlay-message">Please contact an administrator or manager to unlock the system.</p>
+          <p className="PosLockOverlay-message">يرجى مراجعة مسؤول النظام أو المدير لإلغاء قفل نقطة البيع.</p>
         )}
         {user && (
           <div className="PosLockOverlay-user">
-            Logged in as: <strong>{user.username}</strong> ({user.role})
+            تم تسجيل الدخول باسم: <strong>{user.username}</strong> ({getRoleLabel(user.role)})
           </div>
         )}
       </div>

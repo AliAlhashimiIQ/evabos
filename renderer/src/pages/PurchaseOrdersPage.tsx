@@ -203,10 +203,10 @@ const PurchaseOrdersPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>Variant</th>
-                <th>Qty</th>
-                <th>Cost USD</th>
-                <th>Cost IQD</th>
+                <th>{t('product') || 'المنتج / المقاس واللون'}</th>
+                <th>{t('quantity') || 'الكمية'}</th>
+                <th>{t('costUSD') || 'التكلفة ($)'}</th>
+                <th>{t('costIQD') || 'التكلفة (د.ع)'}</th>
                 <th />
               </tr>
             </thead>
@@ -219,7 +219,7 @@ const PurchaseOrdersPage = (): JSX.Element => {
                     <td>
                       <strong>{variant.productName}</strong>
                       <small>
-                        {variant.color ?? 'Any'} / {variant.size ?? 'Any'}
+                        {variant.color ?? 'عام'} / {variant.size ?? 'عام'}
                       </small>
                     </td>
                     <td>
@@ -284,12 +284,12 @@ const PurchaseOrdersPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Supplier</th>
-                <th>Status</th>
-                <th>Subtotal USD</th>
-                <th>Items</th>
-                <th>Actions</th>
+                <th>#</th>
+                <th>{t('supplier') || 'المورد'}</th>
+                <th>{t('status') || 'الحالة'}</th>
+                <th>{t('subtotalUSD') || 'المجموع ($)'}</th>
+                <th>{t('items') || 'العناصر'}</th>
+                <th>{t('actions') || 'الإجراءات'}</th>
               </tr>
             </thead>
             <tbody>
@@ -298,13 +298,15 @@ const PurchaseOrdersPage = (): JSX.Element => {
                   <td>{po.id}</td>
                   <td>{po.supplierName}</td>
                   <td>
-                    <span className={`PurchaseOrdersPage-status ${po.status}`}>{po.status}</span>
+                    <span className={`PurchaseOrdersPage-status ${po.status}`}>
+                      {po.status === 'received' ? 'مستلم' : po.status === 'pending' ? 'قيد الانتظار' : po.status}
+                    </span>
                   </td>
-                  <td>{po.subtotalUSD.toFixed(2)}</td>
+                  <td>${po.subtotalUSD.toFixed(2)}</td>
                   <td>{po.items.length}</td>
                   <td>
                     {po.status !== 'received' && (
-                      <button onClick={() => handleReceive(po.id)}>Mark Received</button>
+                      <button onClick={() => handleReceive(po.id)}>تأكيد الاستلام</button>
                     )}
                   </td>
                 </tr>
@@ -318,12 +320,12 @@ const PurchaseOrdersPage = (): JSX.Element => {
         <div className="PurchaseOrdersPage-variantsOverlay">
           <div className="PurchaseOrdersPage-variantsCard">
             <header>
-              <h3>Select Variants</h3>
-              <button onClick={() => setShowVariants(false)} aria-label="Close"><X size={18} /></button>
+              <h3>اختيار المنتجات والمقاسات</h3>
+              <button onClick={() => setShowVariants(false)} aria-label="إغلاق" title="إغلاق"><X size={18} /></button>
             </header>
             <ProductVariantTable
               products={products}
-              actionLabel="Add Item"
+              actionLabel="إضافة للطلب"
               onAction={(variantId) => {
                 const variant = products.find((p) => p.id === variantId);
                 if (variant) {

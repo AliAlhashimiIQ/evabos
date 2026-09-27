@@ -59,7 +59,7 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
         }, 2000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import Excel file');
+      setError(err instanceof Error ? err.message : 'فشل في استيراد ملف Excel');
     } finally {
       setImporting(false);
     }
@@ -75,10 +75,10 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
 
   return (
     <div className="ExcelImportModal-overlay" onClick={onClose}>
-      <div className="ExcelImportModal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="ExcelImportModal-content" onClick={(e) => e.stopPropagation()} dir="rtl">
         <div className="ExcelImportModal-header">
-          <h2>Import Products from Excel</h2>
-          <button className="ExcelImportModal-close" onClick={onClose} aria-label="Close">
+          <h2>استيراد المنتجات من ملف Excel</h2>
+          <button className="ExcelImportModal-close" onClick={onClose} aria-label="إغلاق" title="إغلاق">
             <X size={18} />
           </button>
         </div>
@@ -87,45 +87,45 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
           {!result ? (
             <>
               <div className="ExcelImportModal-instructions">
-                <h3>Excel File Format</h3>
-                <p>Your Excel file should have the following columns (first row is header):</p>
+                <h3>تنسيق ملف Excel المطلوب</h3>
+                <p>يجب أن يحتوي ملف Excel على الأعمدة التالية في الصف الأول (عناوين الأعمدة بالإنجليزية أو العربية):</p>
                 <ul>
                   <li>
-                    <strong>name</strong> (required) - Product name
+                    <strong>name</strong> (مطلوب) - اسم المنتج
                   </li>
                   <li>
-                    <strong>code</strong> (optional) - Product code
+                    <strong>code</strong> (اختياري) - كود المنتج / الرمز
                   </li>
                   <li>
-                    <strong>category</strong> (optional) - Product category
+                    <strong>category</strong> (اختياري) - قسم / تصنيف المنتج
                   </li>
                   <li>
-                    <strong>description</strong> (optional) - Product description
+                    <strong>description</strong> (اختياري) - وصف المنتج
                   </li>
                   <li>
-                    <strong>color</strong> (optional) - Color variant
+                    <strong>color</strong> (اختياري) - اللون (المتغير)
                   </li>
                   <li>
-                    <strong>size</strong> (optional) - Size variant
+                    <strong>size</strong> (اختياري) - القياس / المقاس
                   </li>
                   <li>
-                    <strong>Sale Price (IQD)</strong> (required) - Selling price in IQD
+                    <strong>Sale Price (IQD)</strong> (مطلوب) - سعر البيع بالدينار العراقي
                   </li>
                   <li>
-                    <strong>Purchase Cost (USD)</strong> (required) - Purchase cost in USD
+                    <strong>Purchase Cost (USD)</strong> (مطلوب) - تكلفة الشراء بالدولار
                   </li>
                   <li>
-                    <strong>Stock</strong> (optional) - Initial stock quantity
+                    <strong>Stock</strong> (اختياري) - الكمية الأولية في المخزون
                   </li>
                   <li>
-                    <strong>Barcode</strong> (optional) - Product barcode
+                    <strong>Barcode</strong> (اختياري) - الباركود
                   </li>
                 </ul>
               </div>
 
               <div className="ExcelImportModal-fileInput">
                 <label>
-                  <span>Select Excel File</span>
+                  <span>اختر ملف Excel (.xlsx, .xls)</span>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -137,34 +137,34 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
               </div>
 
               {error && <div className="ExcelImportModal-error">{error}</div>}
-              {importing && <div className="ExcelImportModal-loading">Importing products... Please wait.</div>}
+              {importing && <div className="ExcelImportModal-loading">جاري استيراد المنتجات... يرجى الانتظار.</div>}
             </>
           ) : (
             <div className="ExcelImportModal-result">
-              <h3>Import Complete</h3>
+              <h3>اكتمل الاستيراد</h3>
               <div className="ExcelImportModal-stats">
                 <div className="ExcelImportModal-stat ExcelImportModal-stat--success">
-                  <span>Successfully Imported</span>
+                  <span>تم استيرادها بنجاح</span>
                   <strong>{result.success}</strong>
                 </div>
                 <div className="ExcelImportModal-stat ExcelImportModal-stat--failed">
-                  <span>Failed</span>
+                  <span>فشل الاستيراد</span>
                   <strong>{result.failed}</strong>
                 </div>
               </div>
 
               {result.errors.length > 0 && (
                 <div className="ExcelImportModal-errors">
-                  <h4>Errors ({result.errors.length}):</h4>
+                  <h4>الأخطاء ({result.errors.length}):</h4>
                   <div className="ExcelImportModal-errorsList">
                     {result.errors.slice(0, 10).map((err, idx) => (
                       <div key={idx} className="ExcelImportModal-errorItem">
-                        <strong>Row {err.row}:</strong> {err.error}
+                        <strong>السطر {err.row}:</strong> {err.error}
                       </div>
                     ))}
                     {result.errors.length > 10 && (
                       <div className="ExcelImportModal-errorItem">
-                        ... and {result.errors.length - 10} more errors
+                        ... و {result.errors.length - 10} أخطاء أخرى
                       </div>
                     )}
                   </div>
@@ -172,8 +172,8 @@ const ExcelImportModal = ({ isOpen, onClose, onSuccess }: ExcelImportModalProps)
               )}
 
               <div className="ExcelImportModal-actions">
-                <button onClick={handleReset}>Import Another File</button>
-                <button onClick={onClose}>Close</button>
+                <button onClick={handleReset}>استيراد ملف آخر</button>
+                <button onClick={onClose}>إغلاق</button>
               </div>
             </div>
           )}

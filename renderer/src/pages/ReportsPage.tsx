@@ -163,44 +163,44 @@ const ReportsPage = (): JSX.Element => {
   const printReport = async () => {
     if (!reports || !window.evaApi) return;
     const pa = reports.profitAnalysis;
-    const reportHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>EVA POS - Reports</title>
-<style>@media print{@page{margin:1cm}body{margin:0}}body{font-family:Arial,sans-serif;padding:20px;color:#333}
+    const reportHtml = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>مدار نقاط البيع - تقرير المبيعات</title>
+<style>@media print{@page{margin:1cm}body{margin:0}}body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;padding:20px;color:#333;direction:rtl;text-align:right}
 h1{text-align:center;color:#2c3e50;border-bottom:3px solid #3498db;padding-bottom:10px;margin-bottom:30px}
 .report-header{text-align:center;margin-bottom:30px;color:#7f8c8d}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:30px}
 .stat-card{background:#ecf0f1;padding:15px;border-radius:5px;text-align:center}
 .stat-label{font-size:12px;color:#7f8c8d;margin-bottom:5px}.stat-value{font-size:20px;font-weight:bold;color:#2c3e50}
-table{width:100%;border-collapse:collapse;margin-bottom:30px;page-break-inside:avoid}
-table th{background:#34495e;color:white;padding:10px;text-align:left;font-weight:bold}
-table td{padding:8px 10px;border-bottom:1px solid #ddd}table tr:nth-child(even){background:#f9f9f9}
-.section-title{font-size:18px;font-weight:bold;margin:30px 0 15px 0;color:#2c3e50;border-left:4px solid #3498db;padding-left:10px}</style>
-</head><body><h1>EVA POS - Reports</h1>
-<div class="report-header"><p><strong>Period:</strong> ${range.startDate} to ${range.endDate}</p>
-<p><strong>Generated:</strong> ${new Date().toLocaleString()}</p></div>
+table{width:100%;border-collapse:collapse;margin-bottom:30px;page-break-inside:avoid;text-align:right}
+table th{background:#34495e;color:white;padding:10px;text-align:right;font-weight:bold}
+table td{padding:8px 10px;border-bottom:1px solid #ddd;text-align:right}table tr:nth-child(even){background:#f9f9f9}
+.section-title{font-size:18px;font-weight:bold;margin:30px 0 15px 0;color:#2c3e50;border-right:4px solid #3498db;padding-right:10px}</style>
+</head><body><h1>مدار نقاط البيع - تقرير المبيعات</h1>
+<div class="report-header"><p><strong>الفترة:</strong> من ${range.startDate} إلى ${range.endDate}</p>
+<p><strong>تاريخ وتوقيت الاستخراج:</strong> ${new Date().toLocaleString('ar-IQ')}</p></div>
 <div class="stats-grid">
-<div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-value">${pa.revenueIQD.toLocaleString('en-IQ')} IQD</div></div>
-<div class="stat-card"><div class="stat-label">Cost</div><div class="stat-value">${pa.costIQD.toLocaleString('en-IQ')} IQD</div></div>
-<div class="stat-card"><div class="stat-label">Expenses</div><div class="stat-value">${pa.expensesIQD.toLocaleString('en-IQ')} IQD</div></div>
-<div class="stat-card"><div class="stat-label">Net Profit</div><div class="stat-value">${pa.netProfitIQD.toLocaleString('en-IQ')} IQD</div></div>
+<div class="stat-card"><div class="stat-label">المبيعات الإجمالية</div><div class="stat-value">${pa.revenueIQD.toLocaleString('en-IQ')} د.ع</div></div>
+<div class="stat-card"><div class="stat-label">التكلفة الإجمالية</div><div class="stat-value">${pa.costIQD.toLocaleString('en-IQ')} د.ع</div></div>
+<div class="stat-card"><div class="stat-label">المصروفات</div><div class="stat-value">${pa.expensesIQD.toLocaleString('en-IQ')} د.ع</div></div>
+<div class="stat-card"><div class="stat-label">صافي الربح</div><div class="stat-value">${pa.netProfitIQD.toLocaleString('en-IQ')} د.ع</div></div>
 </div>
-<div class="section-title">Daily Sales</div>
-<table><thead><tr><th>Date</th><th>Orders</th><th>Total (IQD)</th><th>Avg Ticket</th></tr></thead><tbody>
+<div class="section-title">المبيعات اليومية</div>
+<table><thead><tr><th>التاريخ</th><th>عدد الفواتير</th><th>المجموع (د.ع)</th><th>متوسط الفاتورة</th></tr></thead><tbody>
 ${reports.dailySales.map(e => `<tr><td>${e.date}</td><td>${e.orders}</td><td>${e.totalIQD.toLocaleString('en-IQ')}</td><td>${e.avgTicket.toLocaleString('en-IQ')}</td></tr>`).join('')}
 </tbody></table>
-<div class="section-title">Best Selling Items</div>
-<table><thead><tr><th>Item</th><th>Qty</th><th>Sales (IQD)</th></tr></thead><tbody>
+<div class="section-title">المنتجات الأكثر مبيعاً</div>
+<table><thead><tr><th>المنتج</th><th>الكمية المباعة</th><th>المبيعات (د.ع)</th></tr></thead><tbody>
 ${reports.bestSellingItems.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.amountIQD.toLocaleString('en-IQ')}</td></tr>`).join('')}
 </tbody></table>
 ${(onlineOrdersAnalytics && onlineOrdersAnalytics.summary.totalOrders > 0) ? `
-<div class="section-title">Online Orders Overview</div>
+<div class="section-title">نظرة عامة على طلبات الأونلاين</div>
 <div class="stats-grid">
-  <div class="stat-card"><div class="stat-label">Confirmed Online Sales</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalRevenueIQD.toLocaleString('en-IQ')} IQD</div></div>
-  <div class="stat-card"><div class="stat-label">Confirmed Orders</div><div class="stat-value">${onlineOrdersAnalytics.summary.confirmedOrders} (${onlineOrdersAnalytics.summary.confirmationRate}%)</div></div>
-  <div class="stat-card"><div class="stat-label">Average Ticket</div><div class="stat-value">${onlineOrdersAnalytics.summary.avgOrderValueIQD.toLocaleString('en-IQ')} IQD</div></div>
-  <div class="stat-card"><div class="stat-label">Items Sold Online</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalItemsSold}</div></div>
+  <div class="stat-card"><div class="stat-label">مبيعات الأونلاين المؤكدة</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalRevenueIQD.toLocaleString('en-IQ')} د.ع</div></div>
+  <div class="stat-card"><div class="stat-label">الطلبات المؤكدة</div><div class="stat-value">${onlineOrdersAnalytics.summary.confirmedOrders} (${onlineOrdersAnalytics.summary.confirmationRate}%)</div></div>
+  <div class="stat-card"><div class="stat-label">متوسط قيمة الطلب</div><div class="stat-value">${onlineOrdersAnalytics.summary.avgOrderValueIQD.toLocaleString('en-IQ')} د.ع</div></div>
+  <div class="stat-card"><div class="stat-label">القطع المباعة أونلاين</div><div class="stat-value">${onlineOrdersAnalytics.summary.totalItemsSold}</div></div>
 </div>
-<div class="section-title">Online Sales by Channel</div>
-<table><thead><tr><th>Channel</th><th>Orders</th><th>Confirmed</th><th>Revenue (IQD)</th><th>Success %</th></tr></thead><tbody>
+<div class="section-title">مبيعات الأونلاين حسب القناة</div>
+<table><thead><tr><th>القناة</th><th>إجمالي الطلبات</th><th>المؤكدة</th><th>الإيرادات (د.ع)</th><th>نسبة النجاح %</th></tr></thead><tbody>
 ${onlineOrdersAnalytics.bySource.map(s => `<tr><td>${s.source}</td><td>${s.totalOrders}</td><td>${s.confirmedOrders}</td><td>${s.revenueIQD.toLocaleString('en-IQ')}</td><td>${s.confirmationRate}%</td></tr>`).join('')}
 </tbody></table>
 ` : ''}

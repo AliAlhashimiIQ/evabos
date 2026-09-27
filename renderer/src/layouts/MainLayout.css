@@ -1,6 +1,7 @@
+/* ─── Main Application Layout ─── */
 .Layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px 1fr;
   height: 100vh;
   max-height: 100vh;
   min-height: 100vh;
@@ -8,64 +9,151 @@
   position: relative;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Cairo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
 }
 
-.Layout-sidebar {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
+/* ─── Sidebar Styling ─── */
 .Layout-sidebar {
   background: var(--bg-secondary);
-  padding: 2rem 1.5rem;
+  border-inline-end: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  border-right: 1px solid var(--border-light);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.25rem 1rem 1rem 1rem;
+  gap: 1.25rem;
+  box-shadow: 2px 0 12px var(--shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
-.Layout-brand {
+/* Minimalist Mac-style scrollbar for sidebar */
+.Layout-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.Layout-sidebar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.Layout-sidebar:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+}
+
+/* ─── Brand Card (Sidebar Top) ─── */
+.Layout-brandCard {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2563eb;
+  gap: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(99, 102, 241, 0.04));
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.Layout-brandCard:hover {
+  border-color: rgba(37, 99, 235, 0.3);
 }
 
-.Layout-brandIcon {
-  color: #2563eb;
+.Layout-brandLogoWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: #ffffff;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.Layout-brandLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.Layout-brandMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.Layout-brandName {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.Layout-brandBadge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.Layout-brandSub {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.Layout-versionTag {
+  font-size: 0.65rem;
+  font-family: 'Plus Jakarta Sans', monospace;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--hover-bg);
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+/* ─── Navigation ─── */
+.Layout-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
 }
 
 .Layout-navLink {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  margin-bottom: 0.5rem;
+  gap: 0.75rem;
+  padding: 0.625rem 0.85rem;
+  border-radius: 10px;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .Layout-navIcon {
   flex-shrink: 0;
-  opacity: 0.8;
-  transition: transform 0.2s ease;
-}
-
-.Layout-navLink:hover .Layout-navIcon {
-  transform: translateX(2px);
-  opacity: 1;
-}
-
-.Layout-navLink.active {
-  background: linear-gradient(120deg, #2563eb, #7c3aed);
-  color: white;
+  opacity: 0.75;
+  transition: transform 0.18s ease, opacity 0.18s ease;
 }
 
 .Layout-navLink:hover {
@@ -73,78 +161,81 @@
   background: var(--hover-bg);
 }
 
-.Layout-main {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-primary);
-  overflow: hidden;
-  min-height: 0;
-  transition: background-color 0.3s ease;
+.Layout-navLink:hover .Layout-navIcon {
+  opacity: 1;
+  transform: translateX(-2px);
+}
+[dir="ltr"] .Layout-navLink:hover .Layout-navIcon {
+  transform: translateX(2px);
 }
 
-[data-theme='dark'] .Layout-main {
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.2), transparent 45%),
-    var(--bg-primary);
+.Layout-navLink.active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-.Layout-header {
-  padding: 1.75rem 2.5rem;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: border-color 0.3s ease;
+.Layout-navLink.active .Layout-navIcon {
+  opacity: 1;
+  color: #ffffff;
 }
 
-.Layout-header h1 {
-  font-size: 1.35rem;
-  margin: 0;
-}
-
-.Layout-status {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.Layout-content {
-  flex: 1;
-  padding: 1.25rem 1.75rem 2.5rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-}
-
+/* ─── Sidebar Footer ─── */
 .Layout-sidebarFooter {
   margin-top: auto;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-light);
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  transition: border-color 0.3s ease;
+  gap: 0.65rem;
 }
 
 .Layout-userInfo {
-  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
   background: var(--hover-bg);
-  border-radius: 0.5rem;
-  transition: background-color 0.3s ease;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.Layout-userAvatarMini {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  flex-shrink: 0;
+}
+
+.Layout-userMetaMini {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .Layout-userName {
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: var(--text-primary);
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .Layout-userRole {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
-  text-transform: capitalize;
-  margin-top: 0.25rem;
-  transition: color 0.3s ease;
+  font-weight: 500;
 }
 
 .Layout-logoutButton {
@@ -152,55 +243,282 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
-  padding: 0.625rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
-
 .Layout-logoutButton:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
+/* ─── Main Content Container ─── */
+.Layout-main {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+/* ─── Top Header (State of the Art) ─── */
+.Layout-header {
+  height: 64px;
+  padding: 0 1.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  box-shadow: 0 1px 4px var(--shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Header Start: Page Title & Icon */
+.Layout-headerStart {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.Layout-pageIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+:root[data-theme='dark'] .Layout-pageIconWrap {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.25);
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.Layout-pageInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.Layout-pageTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.Layout-pageSubtitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+/* Header Center: Live Clock & Status Telemetry */
+.Layout-headerCenter {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.Layout-clockWidget {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.Layout-clockIcon {
+  color: #2563eb;
+  opacity: 0.9;
+}
+:root[data-theme='dark'] .Layout-clockIcon {
+  color: #60a5fa;
+}
+
+.Layout-clockTime {
+  font-family: 'Plus Jakarta Sans', 'Cairo', monospace;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.Layout-clockDivider {
+  opacity: 0.4;
+}
+
+.Layout-clockDate {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+
+/* Header End: Action Buttons & User Chip */
 .Layout-headerActions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
+}
+
+.Layout-actionButton {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.Layout-actionButton:hover {
+  background: var(--hover-bg);
+  border-color: rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+.Layout-actionButton:active {
+  transform: scale(0.97);
+}
+
+.Layout-themeButton {
+  padding: 0.45rem;
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.Layout-themeButton:hover {
+  color: #f59e0b;
 }
 
 .Layout-lockButton {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(59, 130, 246, 0.2);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: #93c5fd;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s;
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.25);
+  color: #2563eb;
 }
-
-.Layout-lockButton:hover {
-  background: rgba(59, 130, 246, 0.3);
-  border-color: rgba(59, 130, 246, 0.6);
+:root[data-theme='dark'] .Layout-lockButton {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
 }
 
 .Layout-lockButton--locked {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  animation: pulse-locked 2s infinite;
 }
 
-.Layout-lockButton--locked:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.6);
+@keyframes pulse-locked {
+  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.25); }
+}
+
+/* User Profile Chip */
+.Layout-userChip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-light);
+}
+
+.Layout-userAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25);
+}
+
+.Layout-userChipMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-inline-end: 0.35rem;
+}
+
+.Layout-userChipName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.Layout-roleBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  line-height: 1.2;
+}
+
+.Layout-roleBadge--admin {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.Layout-roleBadge--manager {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.Layout-roleBadge--cashier {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ─── Content Viewport ─── */
+.Layout-content {
+  flex: 1;
+  padding: 1.25rem 1.5rem 2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .Layout-headerCenter {
+    display: none;
+  }
 }

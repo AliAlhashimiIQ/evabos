@@ -143,7 +143,7 @@ body {
 </style>
 </head>
 <body>
-<div class="store-name">EVA CLOTHING</div>
+<div class="store-name">Madar Store</div>
 <div class="voucher-title">قسيمة خصم</div>
 <div class="customer-name">${customerName ? `العميل: <strong>${customerName}</strong>` : 'لحامل هذه القسيمة'}</div>
 <div class="discount">${discount}% خصم</div>
@@ -362,7 +362,7 @@ body {
                     <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h3>{t('newCustomer')}</h3>
-                            <button onClick={() => setModalOpen(false)} aria-label="Close"><X size={18} /></button>
+                            <button onClick={() => setModalOpen(false)} aria-label="إغلاق" title="إغلاق"><X size={18} /></button>
                         </header>
                         <form onSubmit={handleSubmit}>
                             <label>
@@ -409,11 +409,11 @@ body {
                     <div className="CustomersPage-modal" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h3>{t('createVoucher')}</h3>
-                            <button onClick={() => setVoucherModalOpen(false)} aria-label="Close"><X size={18} /></button>
+                            <button onClick={() => setVoucherModalOpen(false)} aria-label="إغلاق" title="إغلاق"><X size={18} /></button>
                         </header>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('searchCustomer') || 'Search Customer'}</span>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('searchCustomer') || 'بحث عن عميل'}</span>
                                 <input
                                     type="text"
                                     placeholder={t('searchByNameOrPhone')}

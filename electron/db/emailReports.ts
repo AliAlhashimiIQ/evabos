@@ -109,7 +109,7 @@ export async function sendDailyReport(customDateStr?: string): Promise<{ success
     await transporter.sendMail({
       from: settings.smtpUser,
       to: settings.emailRecipient,
-      subject: `📊 EVA POS - ملخص يومي${customDateStr ? ' [استرجاع]' : ''} - ${formatArabicDate(targetDateObj)}`,
+      subject: `📊 Madar POS - ملخص يومي${customDateStr ? ' [استرجاع]' : ''} - ${formatArabicDate(targetDateObj)}`,
       html,
       attachments,
     });
@@ -200,7 +200,7 @@ function buildArabicEmailHtml(
 <body>
   <div class="container">
     <div class="header">
-      <h1>EVA POS - ملخص يومي</h1>
+      <h1>Madar POS - ملخص يومي</h1>
       <p>${formatArabicDate(date)}</p>
     </div>
     
@@ -267,7 +267,7 @@ function buildArabicEmailHtml(
     </div>
 
     <div class="footer">
-      تم إنشاء هذا التقرير تلقائياً بواسطة EVA POS
+      تم إنشاء هذا التقرير تلقائياً بواسطة نظام مدار (Madar POS)
     </div>
   </div>
 </body>

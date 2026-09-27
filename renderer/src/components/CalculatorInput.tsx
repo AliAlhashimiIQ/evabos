@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface CalculatorInputProps {
     value: number;
@@ -10,10 +10,26 @@ interface CalculatorInputProps {
 }
 
 /**
- * A number input that works as a calculator.
+ * Format a number or numeric string with standard thousands comma separators:
+ * 40000 -> "40,000"
+ */
+export const formatWithCommas = (val: number | string | null | undefined): string => {
+    if (val === null || val === undefined || val === '') return '';
+    const str = String(val).replace(/,/g, '').trim();
+    if (str === '') return '';
+    const hasMinus = str.startsWith('-');
+    const cleanStr = hasMinus ? str.slice(1) : str;
+    const parts = cleanStr.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (hasMinus ? '-' : '') + parts.join('.');
+};
+
+/**
+ * A number input that works as a calculator with Iraqi Dinar / currency thousands support:
+ * - Automatically displays numbers with commas (e.g. 40,000)
+ * - Supports typing digits with automatic thousands comma formatting
  * - Type "40+50+45" → press Enter → evaluates to 135
- * - Type "30k"      → evaluates to 30,000  (k = ×1,000)
- * - Type "30k+50k"  → evaluates to 80,000
+ * - Type "30k" or "30ك" or "30 الف" → evaluates to 30,000 (thousand shorthand)
  * - Shows a live "= X" preview while typing an expression
  */
 const CalculatorInput: React.FC<CalculatorInputProps> = ({
@@ -24,25 +40,27 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
     placeholder,
     className,
 }) => {
-    const [displayValue, setDisplayValue] = useState<string>(String(value));
+    const [displayValue, setDisplayValue] = useState<string>(() => (value ? formatWithCommas(value) : (value === 0 ? '0' : '')));
     const [isExpression, setIsExpression] = useState(false);
     const [preview, setPreview] = useState<number | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Sync display when external value changes (only when not mid-expression)
     useEffect(() => {
         if (!isExpression) {
-            setDisplayValue(String(value));
+            setDisplayValue(value ? formatWithCommas(value) : (value === 0 ? '0' : ''));
         }
     }, [value, isExpression]);
 
-    /** Expand 'k' shorthand: "30k" → "(30*1000)" */
+    /** Expand thousand shorthands: "30k", "30ك", "30 الف", "30ألف" → "(30*1000)" */
     const expandK = (expr: string): string =>
-        expr.replace(/(\d+(?:\.\d+)?)k/gi, '($1*1000)');
+        expr.replace(/(\d+(?:\.\d+)?)\s*(?:k|ك|ألف|الف)/gi, '($1*1000)');
 
     const evaluateExpression = (expression: string): number | null => {
         try {
-            const expanded = expandK(expression.replace(/\s/g, ''));
-            // After expanding k, only digits and math operators should remain
+            const cleanExpr = expression.replace(/,/g, '').replace(/\s/g, '');
+            const expanded = expandK(cleanExpr);
+            // After expanding thousand shortcuts, only digits and math operators should remain
             if (!/^[\d+\-*/().]+$/.test(expanded)) return null;
             if (/[a-zA-Z]/.test(expanded)) return null;
             // eslint-disable-next-line no-new-func
@@ -63,8 +81,11 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
 
     const commit = (raw: string) => {
         const result = evaluateExpression(raw);
-        const constrained = constrain(result !== null ? result : (parseFloat(raw) || 0));
-        setDisplayValue(String(constrained));
+        const clean = raw.replace(/,/g, '').trim();
+        const fallback = parseFloat(clean) || 0;
+        const evaluated = result !== null ? result : fallback;
+        const constrained = constrain(evaluated);
+        setDisplayValue(constrained > 0 ? formatWithCommas(constrained) : (constrained === 0 ? '0' : ''));
         setIsExpression(false);
         setPreview(null);
         onChange(constrained);
@@ -72,18 +93,72 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const raw = e.target.value;
-        setDisplayValue(raw);
 
-        // 'k' counts as an operator/expression indicator
-        const hasOperators = /[+\-*/k]/i.test(raw);
+        // Check if user is typing an expression: math symbols or thousand abbreviations
+        const hasOperators = /[+\-*/kك]/i.test(raw) || /ألف|الف/.test(raw);
         setIsExpression(hasOperators);
 
-        if (!hasOperators) {
-            onChange(constrain(parseFloat(raw) || 0));
-            setPreview(null);
-        } else {
+        if (hasOperators) {
+            setDisplayValue(raw);
             const result = evaluateExpression(raw);
             setPreview(result !== null ? constrain(result) : null);
+        } else {
+            // Plain number entry: strip commas first
+            const clean = raw.replace(/,/g, '').trim();
+
+            if (clean === '') {
+                setDisplayValue('');
+                setPreview(null);
+                onChange(0);
+                return;
+            }
+
+            // Allow trailing decimal point while typing, e.g. "40."
+            if (clean.endsWith('.')) {
+                const numPart = clean.slice(0, -1);
+                const formatted = formatWithCommas(numPart) + '.';
+                setDisplayValue(formatted);
+                const num = parseFloat(numPart) || 0;
+                onChange(constrain(num));
+                setPreview(null);
+                return;
+            }
+
+            const num = parseFloat(clean);
+            if (isNaN(num) || !isFinite(num)) {
+                setDisplayValue(raw);
+                return;
+            }
+
+            const constrained = constrain(num);
+            onChange(constrained);
+            setPreview(null);
+
+            // Format with commas
+            const formatted = formatWithCommas(clean);
+
+            // Calculate non-comma cursor offset to maintain natural typing cursor
+            const input = inputRef.current;
+            const cursorPos = input?.selectionStart || 0;
+            const nonCommasBeforeCursor = raw.slice(0, cursorPos).replace(/,/g, '').length;
+
+            setDisplayValue(formatted);
+
+            requestAnimationFrame(() => {
+                if (!inputRef.current) return;
+                let newCursor = 0;
+                let counted = 0;
+                for (let i = 0; i < formatted.length; i++) {
+                    if (formatted[i] !== ',') {
+                        counted++;
+                    }
+                    if (counted === nonCommasBeforeCursor) {
+                        newCursor = i + 1;
+                        break;
+                    }
+                }
+                inputRef.current.setSelectionRange(newCursor, newCursor);
+            });
         }
     };
 
@@ -95,7 +170,17 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
     };
 
     const handleBlur = () => {
-        if (isExpression) commit(displayValue);
+        if (isExpression) {
+            commit(displayValue);
+        } else if (displayValue) {
+            // Ensure clean formatting on blur
+            const clean = displayValue.replace(/,/g, '').trim();
+            const num = parseFloat(clean);
+            if (!isNaN(num) && isFinite(num)) {
+                const constrained = constrain(num);
+                setDisplayValue(constrained > 0 ? formatWithCommas(constrained) : (constrained === 0 ? '0' : ''));
+            }
+        }
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -105,6 +190,7 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
     return (
         <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
             <input
+                ref={inputRef}
                 type="text"
                 inputMode="decimal"
                 value={displayValue}
@@ -127,7 +213,7 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
                     style={{
                         position: 'absolute',
                         bottom: '-1.5rem',
-                        left: 0,
+                        insetInlineStart: 0,
                         fontSize: '0.75rem',
                         color: '#3b82f6',
                         fontWeight: 600,
@@ -136,7 +222,7 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
                         zIndex: 10,
                     }}
                 >
-                    = {preview.toLocaleString('en-IQ')}
+                    = {preview.toLocaleString('en-IQ')} IQD
                 </div>
             )}
         </div>

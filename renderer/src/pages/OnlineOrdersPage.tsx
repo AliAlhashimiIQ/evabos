@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShoppingBag, CheckCircle2, XCircle, AlertTriangle, Clock, Plus, Search,
   Loader2, Instagram, Phone, MessageCircle, Globe, Package,
@@ -26,11 +27,11 @@ const SOURCE_ICONS: Record<OnlineOrderSource, JSX.Element> = {
   other: <Globe size={14} style={{ color: '#6366f1' }} />,
 };
 const SOURCE_LABELS: Record<OnlineOrderSource, string> = {
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  whatsapp: 'WhatsApp',
-  phone: 'Phone',
-  other: 'Other',
+  instagram: 'انستغرام (Instagram)',
+  tiktok: 'تيك توك (TikTok)',
+  whatsapp: 'واتساب (WhatsApp)',
+  phone: 'هاتف (اتصال مباشر)',
+  other: 'أخرى',
 };
 const STATUS_CFG: Record<OnlineOrderStatus, { label: string; cls: string; icon: JSX.Element }> = {
   pending:   { label: 'قيد الانتظار',   cls: 'OO-badge--pending',   icon: <Clock size={12} /> },
@@ -71,7 +72,7 @@ const OnlineOrdersPage = (): JSX.Element => {
   // New Modals State
   const [printingOrder, setPrintingOrder] = useState<OnlineOrder | null>(null);
   const [whatsAppOrder, setWhatsAppOrder] = useState<OnlineOrder | null>(null);
-  const [storeName, setStoreName] = useState('EVA POS');
+  const [storeName, setStoreName] = useState('Madar POS');
 
   // Auto-refresh state
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
@@ -105,9 +106,14 @@ const OnlineOrdersPage = (): JSX.Element => {
 
   // Load store name for WhatsApp and Waybill
   useEffect(() => {
+    const local = localStorage.getItem('receipt_store_name');
+    if (local) setStoreName(local);
     if (!window.electronAPI) return;
     window.electronAPI.getSetting('receipt_store_name').then((val: string | null) => {
-      if (val) setStoreName(val);
+      if (val) {
+        setStoreName(val);
+        localStorage.setItem('receipt_store_name', val);
+      }
     }).catch(() => {});
   }, []);
 
@@ -528,11 +534,11 @@ const OnlineOrdersPage = (): JSX.Element => {
             onChange={(e) => setSourceFilter(e.target.value as OnlineOrderSource | 'all')}
           >
             <option value="all">جميع المصادر</option>
-            <option value="instagram">Instagram</option>
-            <option value="tiktok">TikTok</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="phone">Phone</option>
-            <option value="other">Other</option>
+            <option value="instagram">انستغرام (Instagram)</option>
+            <option value="tiktok">تيك توك (TikTok)</option>
+            <option value="whatsapp">واتساب (WhatsApp)</option>
+            <option value="phone">هاتف (اتصال مباشر)</option>
+            <option value="other">أخرى</option>
           </select>
         </div>
       </div>
@@ -598,7 +604,7 @@ const OnlineOrdersPage = (): JSX.Element => {
                     <span>فاتورة شحن</span>
                   </button>
 
-                  <span className="OO-total">{order.totalIQD.toLocaleString('en-IQ')} IQD</span>
+                  <span className="OO-total">{order.totalIQD.toLocaleString('en-IQ')} د.ع</span>
                   <span className="OO-date" dir="ltr">{formatEnglishDateTime(order.createdAt)}</span>
                   {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
@@ -676,12 +682,12 @@ const OnlineOrdersPage = (): JSX.Element => {
       </div>
 
       {/* New / Edit Order Modal */}
-      {showForm && (
+      {showForm && createPortal(
         <div className="OO-overlay" onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
           <div className="OO-modal OO-modal--large">
-            <div className="OO-modal-header">
+            <div className="OO-modal-header" dir="rtl">
               <h2>{editOrderId ? `تعديل طلب #${editOrderId}` : 'طلب جديد أونلاين'}</h2>
-              <button className="OO-closeBtn" onClick={() => setShowForm(false)}><X size={20} /></button>
+              <button className="OO-closeBtn" onClick={() => setShowForm(false)} title="إغلاق"><X size={20} /></button>
             </div>
             
             <div className="OO-modal-body OO-modal-split">
@@ -824,14 +830,21 @@ const OnlineOrdersPage = (): JSX.Element => {
                     <label>الهاتف<input value={formCustomerPhone} onChange={(e) => setFormCustomerPhone(e.target.value)} placeholder="07xx-xxx-xxxx" /></label>
                     <label>المصدر
                       <select value={formSource} onChange={(e) => setFormSource(e.target.value as OnlineOrderSource)}>
-                        <option value="instagram">Instagram</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="phone">Phone</option>
-                        <option value="other">Other</option>
+                        <option value="instagram">انستغرام (Instagram)</option>
+                        <option value="tiktok">تيك توك (TikTok)</option>
+                        <option value="whatsapp">واتساب (WhatsApp)</option>
+                        <option value="phone">هاتف (اتصال مباشر)</option>
+                        <option value="other">أخرى</option>
                       </select>
                     </label>
-                    <label>ملاحظة<input value={formNote} onChange={(e) => setFormNote(e.target.value)} placeholder="العنوان، طلبات خاصة…" /></label>
+                    <label>
+                      ملاحظة
+                      <input
+                        value={formNote}
+                        onChange={(e) => setFormNote(e.target.value)}
+                        placeholder="العنوان، طلبات خاصة…"
+                      />
+                    </label>
                   </div>
                 </div>
 
@@ -839,7 +852,8 @@ const OnlineOrdersPage = (): JSX.Element => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Waybill Print Modal */}

@@ -359,7 +359,7 @@ export async function notifyTelegramSale(sale: SaleDetail): Promise<void> {
       hour12: true,
     });
 
-    let message = `🛍️ <b>عملية بيع جديدة — EVA POS</b>\n`;
+    let message = `🛍️ <b>عملية بيع جديدة — Madar POS</b>\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n`;
     message += `🧾 <b>رقم الفاتورة:</b> #<code>${sale.id}</code>\n`;
     message += `💰 <b>الإجمالي:</b> <b>${sale.totalIQD.toLocaleString('en-IQ')} د.ع</b>\n`;
@@ -456,7 +456,7 @@ export async function sendTelegramDailyReportAndBackup(
     const totalItems = reports.totalItemsSold || 0;
     const grossProfitIQD = (profit.revenueIQD || 0) - (profit.costIQD || 0);
 
-    let reportMsg = `📊 <b>تقرير نهاية اليوم — EVA POS</b>\n`;
+    let reportMsg = `📊 <b>تقرير نهاية اليوم — Madar POS</b>\n`;
     reportMsg += `📅 <b>اليوم:</b> ${formattedDateStr}\n`;
     reportMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
     reportMsg += `🧾 <b>عدد الفواتير:</b> ${totalOrders} فاتورة\n`;
@@ -569,7 +569,7 @@ export async function sendTelegramTest(): Promise<{ success: boolean; error?: st
     hour12: true,
   });
 
-  const testMessage = `🤖 <b>تم الاتصال بنجاح مع بوت EVA POS الذكي!</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ البوت يعمل وجاهز لاستقبال إشعارات المبيعات والتقارير المباشرة.\n\n💡 <b>الأوامر السريعة المتاحة:</b>\n📊 /report — تقرير مبيعات اليوم المباشر\n📅 /yesterday — تقرير يوم أمس\n🗓️ /month — تقرير مبيعات الشهر\n⚠️ /stock — تنبيه نواقص المخزون\n🏆 /top — أكثر 10 منتجات مبيعاً\n💵 /cash — فحص الصندوق وحساب الكاش\n📉 /expenses — مصروفات اليوم\n👥 /employees — مبيعات الكادر اليوم\n💾 /backup — نسخة احتياطية فورية\n❓ /help — قائمة بجميع الأوامر\n\n🕒 <b>الوقت:</b> ${now}`;
+  const testMessage = `🤖 <b>تم الاتصال بنجاح مع بوت Madar POS الذكي!</b>\n━━━━━━━━━━━━━━━━━━━━\n✅ البوت يعمل وجاهز لاستقبال إشعارات المبيعات والتقارير المباشرة.\n\n💡 <b>الأوامر السريعة المتاحة:</b>\n📊 /report — تقرير مبيعات اليوم المباشر\n📅 /yesterday — تقرير يوم أمس\n🗓️ /month — تقرير مبيعات الشهر\n⚠️ /stock — تنبيه نواقص المخزون\n🏆 /top — أكثر 10 منتجات مبيعاً\n💵 /cash — فحص الصندوق وحساب الكاش\n📉 /expenses — مصروفات اليوم\n👥 /employees — مبيعات الكادر اليوم\n💾 /backup — نسخة احتياطية فورية\n❓ /help — قائمة بجميع الأوامر\n\n🕒 <b>الوقت:</b> ${now}`;
 
   return sendTelegramMessage(testMessage, 'HTML');
 }
@@ -1188,7 +1188,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       const netProfit = reports?.profitAnalysis?.netProfitIQD || 0;
       const totalOrders = reports?.dailySales?.reduce((acc: number, d: any) => acc + (d.orders || 0), 0) || 0;
 
-      let statusMsg = `🟢 <b>نظام EVA POS متصل ويعمل الآن</b>\n`;
+      let statusMsg = `🟢 <b>نظام Madar POS متصل ويعمل الآن</b>\n`;
       statusMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
       statusMsg += `🧾 <b>فواتير اليوم:</b> ${totalOrders} فاتورة\n`;
       statusMsg += `💰 <b>مبيعات اليوم:</b> <b>${totalRevenue.toLocaleString('en-IQ')} د.ع</b>\n`;
@@ -1272,7 +1272,7 @@ async function handleTelegramBotCommand(commandText: string, chatId: string, bot
       norm.includes('ازرار') ||
       norm.includes('منيو')
     ) {
-      let helpMsg = `🤖 <b>أزرار وقائمة بوت كاشير EVA POS الذكي:</b>\n`;
+      let helpMsg = `🤖 <b>أزرار وقائمة بوت كاشير Madar POS الذكي:</b>\n`;
       helpMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
       helpMsg += `💡 <i>تم تفعيل أزرار التحكم السريعة أسفل الشاشة للوصول المباشر!</i>\n\n`;
       helpMsg += `📊 <b>التقارير والمبيعات:</b>\n`;
@@ -1992,7 +1992,7 @@ export async function requestTelegramUnlockOtp(): Promise<{ success: boolean; er
     const msg =
       `🔐 <b>رمز الأمان لفك قفل الإعدادات</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `طلب شخص ما فك قفل وتعديل إعدادات التيليجرام والبريد في نظام EVA POS.\n\n` +
+      `طلب شخص ما فك قفل وتعديل إعدادات التيليجرام والبريد في نظام Madar POS.\n\n` +
       `🔢 <b>رمز التحقق السري:</b> <code>${code}</code>\n` +
       `⏱️ <b>الصلاحية:</b> 5 دقائق\n` +
       `🕒 <b>الوقت:</b> ${now}\n\n` +

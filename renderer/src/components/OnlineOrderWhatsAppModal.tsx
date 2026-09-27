@@ -64,7 +64,7 @@ export const OnlineOrderWhatsAppModal: React.FC<OnlineOrderWhatsAppModalProps> =
   visible,
   onClose,
   order,
-  storeName = 'EVA POS',
+  storeName = 'Madar POS',
 }) => {
   const toast = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState<'confirm' | 'out_for_delivery' | 'ready_pickup'>('confirm');

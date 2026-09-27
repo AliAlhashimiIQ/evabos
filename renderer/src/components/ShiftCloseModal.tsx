@@ -219,7 +219,7 @@ export const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({
             <h3>{t('closeShiftTitle') || 'إغلاق الصندوق والوردية (Z-Report)'}</h3>
             {summary && activeTab === 'current' && (
               <p>
-                <span>{summary.branchName || 'EVA Main'}</span>
+                <span>{summary.branchName || 'الفرع الرئيسي'}</span>
                 <span>•</span>
                 <span>{summary.salesCount === 0 ? 'وردية جديدة (لا توجد مبيعات بعد)' : `بدء الوردية: ${formattedShiftStart}`}</span>
                 <span>•</span>
@@ -232,7 +232,7 @@ export const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({
               </p>
             )}
           </div>
-          <button className="ShiftCloseModal-closeBtn" onClick={onClose} aria-label="Close">
+          <button className="ShiftCloseModal-closeBtn" onClick={onClose} aria-label="إغلاق" title="إغلاق">
             <X size={18} />
           </button>
         </div>

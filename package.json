@@ -1,8 +1,8 @@
 {
-  "name": "eva-pos-desktop",
-  "version": "6.0.3",
-  "productName": "EVA POS",
-  "description": "EVA POS Desktop Application",
+  "name": "madar-pos",
+  "version": "6.1.1",
+  "productName": "Madar POS",
+  "description": "Madar POS Desktop Application - نظام مدار لإدارة المتاجر ونقاط البيع",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "npm run build:electron && concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -21,9 +21,10 @@
     "pos",
     "electron",
     "react",
-    "typescript"
+    "typescript",
+    "madar"
   ],
-  "author": "EVA Clothing",
+  "author": "Madar POS",
   "license": "MIT",
   "build": {
     "appId": "com.eva.pos",
@@ -34,7 +35,7 @@
         "repo": "evabos"
       }
     ],
-    "productName": "EVA POS",
+    "productName": "Madar POS",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -62,7 +63,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "EVA POS",
+      "shortcutName": "Madar POS",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "menuCategory": "Business"

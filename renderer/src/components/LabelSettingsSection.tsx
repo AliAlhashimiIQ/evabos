@@ -333,7 +333,7 @@ const LabelSettingsSection = (): JSX.Element => {
               type="text"
               value={settings.customText3}
               onChange={(e) => updateSetting('customText3', e.target.value)}
-              placeholder={t('exampleStoreName') || 'EVA CLOTHING'}
+              placeholder={t('exampleStoreName') || 'Madar Store'}
               maxLength={50}
             />
           </div>

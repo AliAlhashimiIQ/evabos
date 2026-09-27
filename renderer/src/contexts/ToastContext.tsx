@@ -97,7 +97,8 @@ export function ToastProvider({ children }: { children: ReactNode }): JSX.Elemen
             <button
               className="Toast-close"
               onClick={() => removeToast(t.id)}
-              aria-label="Close"
+              aria-label="إغلاق"
+              title="إغلاق"
             >
               <X size={16} />
             </button>

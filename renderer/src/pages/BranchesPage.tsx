@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import './Pages.css';
 import './BranchesPage.css';
 
@@ -10,6 +11,7 @@ type BranchUpdateInput = import('../types/electron').BranchUpdateInput;
 
 const BranchesPage = (): JSX.Element => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ const BranchesPage = (): JSX.Element => {
 
   const loadBranches = async () => {
     if (!window.evaApi || !token) {
-      setError('Desktop bridge unavailable.');
+      setError(t('desktopBridgeUnavailable') || 'جسر الاتصال بسطح المكتب غير متوفر.');
       return;
     }
 
@@ -37,7 +39,7 @@ const BranchesPage = (): JSX.Element => {
       const data = await window.evaApi.branches.list(token);
       setBranches(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load branches.');
+      setError(err instanceof Error ? err.message : (t('failedToLoadBranches') || 'فشل في تحميل الفروع.'));
     } finally {
       setLoading(false);
     }
@@ -95,7 +97,7 @@ const BranchesPage = (): JSX.Element => {
         await window.evaApi.branches.update(token, updateData);
       } else {
         if (!formData.name) {
-          alert('Branch name is required');
+          alert(t('branchNameRequired') || 'اسم الفرع مطلوب.');
           return;
         }
         const createData: BranchInput = {
@@ -109,7 +111,7 @@ const BranchesPage = (): JSX.Element => {
       await loadBranches();
       handleCloseModal();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save branch');
+      alert(err instanceof Error ? err.message : (t('failedToSaveBranch') || 'فشل في حفظ بيانات الفرع.'));
     } finally {
       setLoading(false);
     }
@@ -119,9 +121,9 @@ const BranchesPage = (): JSX.Element => {
     return (
       <div className="Page">
         <div className="Page-header">
-          <h1>Branch Management</h1>
+          <h1>{t('branches') || 'إدارة الفروع'}</h1>
         </div>
-        <div className="Page-content">Loading...</div>
+        <div className="Page-content">{t('loading') || 'جاري التحميل...'}</div>
       </div>
     );
   }
@@ -129,9 +131,9 @@ const BranchesPage = (): JSX.Element => {
   return (
     <div className="Page Branches">
       <div className="Page-header">
-        <h1>Branch Management</h1>
+        <h1>{t('branches') || 'إدارة الفروع'}</h1>
         <button className="Branches-addButton" onClick={() => handleOpenModal()}>
-          + Add Branch
+          + {t('addBranch') || 'إضافة فرع جديد'}
         </button>
       </div>
 
@@ -142,12 +144,12 @@ const BranchesPage = (): JSX.Element => {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Phone</th>
-                <th>Currency</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>{t('name') || 'اسم الفرع'}</th>
+                <th>{t('address') || 'العنوان'}</th>
+                <th>{t('phone') || 'الهاتف'}</th>
+                <th>{t('currency') || 'العملة'}</th>
+                <th>{t('status') || 'الحالة'}</th>
+                <th>{t('actions') || 'الإجراءات'}</th>
               </tr>
             </thead>
             <tbody>
@@ -159,14 +161,14 @@ const BranchesPage = (): JSX.Element => {
                   <td>{branch.currency}</td>
                   <td>
                     {branch.isActive ? (
-                      <span className="Branches-status Branches-status-active">Active</span>
+                      <span className="Branches-status Branches-status-active">{t('active') || 'نشط'}</span>
                     ) : (
-                      <span className="Branches-status Branches-status-inactive">Inactive</span>
+                      <span className="Branches-status Branches-status-inactive">{t('inactive') || 'غير نشط'}</span>
                     )}
                   </td>
                   <td>
                     <button className="Branches-edit" onClick={() => handleOpenModal(branch)}>
-                      Edit
+                      {t('edit') || 'تعديل'}
                     </button>
                   </td>
                 </tr>
@@ -180,14 +182,14 @@ const BranchesPage = (): JSX.Element => {
         <div className="Branches-modalOverlay" onClick={handleCloseModal}>
           <div className="Branches-modal" onClick={(e) => e.stopPropagation()}>
             <div className="Branches-modalHeader">
-              <h2>{editingBranch ? 'Edit Branch' : 'Add Branch'}</h2>
-              <button className="Branches-modalClose" onClick={handleCloseModal} aria-label="Close">
+              <h2>{editingBranch ? (t('editBranch') || 'تعديل بيانات الفرع') : (t('addBranch') || 'إضافة فرع جديد')}</h2>
+              <button className="Branches-modalClose" onClick={handleCloseModal} aria-label="إغلاق" title="إغلاق">
                 <X size={18} />
               </button>
             </div>
             <form className="Branches-form" onSubmit={handleSubmit}>
               <div className="Branches-formGroup">
-                <label>Branch Name *</label>
+                <label>{t('branchName') || 'اسم الفرع'} *</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -197,7 +199,7 @@ const BranchesPage = (): JSX.Element => {
               </div>
 
               <div className="Branches-formGroup">
-                <label>Address</label>
+                <label>{t('address') || 'العنوان'}</label>
                 <input
                   type="text"
                   value={formData.address ?? ''}
@@ -206,7 +208,7 @@ const BranchesPage = (): JSX.Element => {
               </div>
 
               <div className="Branches-formGroup">
-                <label>Phone</label>
+                <label>{t('phone') || 'الهاتف'}</label>
                 <input
                   type="text"
                   value={formData.phone ?? ''}
@@ -215,13 +217,13 @@ const BranchesPage = (): JSX.Element => {
               </div>
 
               <div className="Branches-formGroup">
-                <label>Currency</label>
+                <label>{t('currency') || 'العملة الرئيسية'}</label>
                 <select
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
-                  <option value="IQD">IQD</option>
-                  <option value="USD">USD</option>
+                  <option value="IQD">دينار عراقي (IQD)</option>
+                  <option value="USD">دولار أمريكي (USD)</option>
                 </select>
               </div>
 
@@ -233,17 +235,17 @@ const BranchesPage = (): JSX.Element => {
                       checked={formData.isActive ?? true}
                       onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     />
-                    Active
+                    {t('active') || 'نشط'}
                   </label>
                 </div>
               )}
 
               <div className="Branches-formActions">
                 <button type="button" className="Branches-cancel" onClick={handleCloseModal}>
-                  Cancel
+                  {t('cancel') || 'إلغاء'}
                 </button>
                 <button type="submit" className="Branches-save" disabled={loading}>
-                  {loading ? 'Saving...' : editingBranch ? 'Update' : 'Create'}
+                  {loading ? (t('saving') || 'جاري الحفظ...') : editingBranch ? (t('update') || 'تحديث') : (t('create') || 'إضافة')}
                 </button>
               </div>
             </form>

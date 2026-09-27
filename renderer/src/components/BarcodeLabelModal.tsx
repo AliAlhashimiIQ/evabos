@@ -181,7 +181,7 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
         <div style={{ width: '100%', maxWidth: '700px' }}>
           <div className="BarcodeLabelModal-header">
             <h2>{t('printBarcodeLabel')}</h2>
-            <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="Close">
+            <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="إغلاق" title="إغلاق">
               <X size={18} />
             </button>
           </div>
@@ -360,7 +360,7 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
       <div style={{ width: '100%', maxWidth: '700px' }}>
         <div className="BarcodeLabelModal-header">
           <h2>{t('printBarcodeLabel')}</h2>
-          <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="Close">
+          <button className="BarcodeLabelModal-close" onClick={onClose} aria-label="إغلاق" title="إغلاق">
             <X size={18} />
           </button>
         </div>
@@ -401,7 +401,7 @@ const BarcodeLabelModal = ({ product, isOpen = true, onClose }: BarcodeLabelModa
                       <option value="">{t('systemDefault')}</option>
                       {(printers || []).map((printer) => (
                         <option key={printer.name} value={printer.name}>
-                          {printer.name} {printer.isDefault ? '(Default)' : ''}
+                          {printer.name} {printer.isDefault ? '(افتراضي)' : ''}
                         </option>
                       ))}
                     </select>

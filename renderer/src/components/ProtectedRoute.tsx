@@ -13,7 +13,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div>Loading...</div>
+        <div>جاري التحميل...</div>
       </div>
     );
   }
@@ -29,7 +29,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     }
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div>Access denied. You do not have permission to view this page.</div>
+        <div dir="rtl" style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          تم رفض الوصول. ليس لديك الصلاحية المطلوبة لعرض هذه الصفحة.
+        </div>
       </div>
     );
   }

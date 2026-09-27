@@ -170,7 +170,7 @@ const DashboardPage = (): JSX.Element => {
               </span>
               <span className="Dashboard-branchBadge">
                 <Building2 size={12} />
-                <span>EVA Main</span>
+                <span>{t('mainBranch') || 'الفرع الرئيسي'}</span>
               </span>
             </div>
           </div>

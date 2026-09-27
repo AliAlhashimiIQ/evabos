@@ -101,14 +101,14 @@ export const ConfirmDialogHost = (): JSX.Element | null => {
 
         <div className="ConfirmDialog-actions">
           <button className="ConfirmDialog-btn ConfirmDialog-btn--cancel" onClick={handleCancel}>
-            {state.cancelText || 'Cancel'}
+            {state.cancelText || 'إلغاء'}
           </button>
           <button
             ref={confirmBtnRef}
             className={`ConfirmDialog-btn ${isDanger ? 'ConfirmDialog-btn--danger' : 'ConfirmDialog-btn--confirm'}`}
             onClick={handleConfirm}
           >
-            {state.confirmText || 'Confirm'}
+            {state.confirmText || 'تأكيد'}
           </button>
         </div>
       </div>

@@ -1285,14 +1285,12 @@ const PosPage = (): JSX.Element => {
                 <label className="Pos-fieldLabel" style={{ fontSize: '0.8rem', color: '#1d4ed8' }}>
                   {document.documentElement.dir === 'rtl' ? 'المبلغ نقداً (كاش)' : 'Cash Amount'}
                 </label>
-                <input
-                  type="number"
-                  min="0"
+                <CalculatorInput
+                  min={0}
                   max={totalIQD}
-                  value={mixedCashIQD || ''}
-                  placeholder={String(Math.round(totalIQD / 2))}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
+                  value={mixedCashIQD || 0}
+                  placeholder={Math.round(totalIQD / 2).toLocaleString('en-IQ')}
+                  onChange={(val) => {
                     const clampedCash = Math.min(Math.max(0, val), totalIQD);
                     updateCurrentProfile((p) => ({
                       ...p,
@@ -1300,21 +1298,19 @@ const PosPage = (): JSX.Element => {
                       mixedCardIQD: Math.max(0, totalIQD - clampedCash),
                     }));
                   }}
-                  style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.88rem' }}
+                  className="Pos-mixedInput"
                 />
               </div>
               <div className="Pos-field">
                 <label className="Pos-fieldLabel" style={{ fontSize: '0.8rem', color: '#1d4ed8' }}>
                   {document.documentElement.dir === 'rtl' ? 'المبلغ بالبطاقة (كي كارد)' : 'Card Amount'}
                 </label>
-                <input
-                  type="number"
-                  min="0"
+                <CalculatorInput
+                  min={0}
                   max={totalIQD}
-                  value={mixedCardIQD || ''}
-                  placeholder={String(totalIQD - Math.round(totalIQD / 2))}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
+                  value={mixedCardIQD || 0}
+                  placeholder={(totalIQD - Math.round(totalIQD / 2)).toLocaleString('en-IQ')}
+                  onChange={(val) => {
                     const clampedCard = Math.min(Math.max(0, val), totalIQD);
                     updateCurrentProfile((p) => ({
                       ...p,
@@ -1322,7 +1318,7 @@ const PosPage = (): JSX.Element => {
                       mixedCashIQD: Math.max(0, totalIQD - clampedCard),
                     }));
                   }}
-                  style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.88rem' }}
+                  className="Pos-mixedInput"
                 />
               </div>
             </div>
@@ -1390,10 +1386,24 @@ const PosPage = (): JSX.Element => {
                   }
                   placeholder={t('enterFinalPrice') || 'e.g. 40+50+45'}
                 />
+              ) : discountMode === 'amount' ? (
+                <CalculatorInput
+                  min={0}
+                  max={subtotalIQD}
+                  value={discountValue}
+                  onChange={(value) =>
+                    updateCurrentProfile((profile) => ({
+                      ...profile,
+                      discountValue: value,
+                      isManualDiscount: true,
+                    }))
+                  }
+                  placeholder={t('amount') || '0'}
+                />
               ) : (
                 <NumberInput
                   min="0"
-                  max={discountMode === 'percent' ? 100 : undefined}
+                  max={100}
                   value={discountValue}
                   onChange={(event) =>
                     updateCurrentProfile((profile) => ({
@@ -1402,7 +1412,7 @@ const PosPage = (): JSX.Element => {
                       isManualDiscount: true,
                     }))
                   }
-                  placeholder={discountMode === 'percent' ? '0-100' : t('amount')}
+                  placeholder="0-100"
                 />
               )}
               {discountValue > 0 && (

@@ -290,7 +290,7 @@ export const generateWaybillHtml = (
   <!-- Store Header -->
   <div class="store-header">
     ${storeSettings.showLogo && storeSettings.logoBase64 ? `<img src="${storeSettings.logoBase64}" class="store-logo" alt="Logo" />` : ''}
-    <div class="store-name">${storeSettings.storeName || 'EVA POS'}</div>
+    <div class="store-name">${storeSettings.storeName || 'Madar POS'}</div>
     ${storeSettings.phone ? `<div class="store-sub">هاتف المتجر: ${storeSettings.phone}</div>` : ''}
     ${storeSettings.address ? `<div class="store-sub">${storeSettings.address}</div>` : ''}
   </div>
@@ -383,7 +383,7 @@ export const generateWaybillHtml = (
 
   <div class="waybill-footer">
     <div>يرجى معاينة الطلب والتأكد من سلامة الشحنة عند الاستلام</div>
-    <div style="margin-top: 3px; font-weight: 700;">طُبع بواسطة نظام كاشير EVA POS</div>
+    <div style="margin-top: 3px; font-weight: 700;">طُبع بواسطة نظام كاشير Madar POS</div>
   </div>
 
   <!-- Thermal Paper Feed Spacer (advances paper cleanly past cutter/tear bar and exit mouth) -->
@@ -408,7 +408,7 @@ const WaybillPrintModal: React.FC<WaybillPrintModalProps> = ({
   const [barcodeDataUrl, setBarcodeDataUrl] = useState<string>('');
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [storeSettings, setStoreSettings] = useState({
-    storeName: 'EVA POS',
+    storeName: 'Madar POS',
     phone: '',
     address: '',
     logoBase64: '',
@@ -440,7 +440,7 @@ const WaybillPrintModal: React.FC<WaybillPrintModalProps> = ({
     if (!visible) return;
     const loadSettings = async () => {
       try {
-        const storeName = (await window.electronAPI?.getSetting('receipt_store_name')) || 'EVA POS';
+        const storeName = (await window.electronAPI?.getSetting('receipt_store_name')) || 'Madar POS';
         const phone = (await window.electronAPI?.getSetting('receipt_store_phone')) || '';
         const address = (await window.electronAPI?.getSetting('receipt_store_address')) || '';
         const logoBase64 = (await window.electronAPI?.getSetting('receipt_logo_base64')) || '';
@@ -611,7 +611,7 @@ const WaybillPrintModal: React.FC<WaybillPrintModalProps> = ({
             </div>
             <div className="WB-thermalPaperWrap">
               <iframe
-                title="Waybill Preview"
+                title="معاينة بوليصة الشحن"
                 className="WB-thermalFrame"
                 srcDoc={previewHtml}
               />
